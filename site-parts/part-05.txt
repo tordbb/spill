@@ -1,0 +1,250 @@
+  (patLevel.robots||[]).forEach(()=>{ const d=document.createElement('div'); d.className='foe'; d.textContent='🤖'; g.appendChild(d); patRobotEls.push(d); });
+  (patLevel.dogs||[]).forEach(()=>{ const d=document.createElement('div'); d.className='foe'; d.innerHTML='🐶<span class="bonebadge">🦴</span>'; g.appendChild(d); patDogEls.push(d); });
+  const hasFoes = !!(patLevel.robots||patLevel.dogs);
+  $('#pat-wait').style.display = hasFoes ? '' : 'none';
+  $('#pat-bone').style.display = patLevel.dogs ? '' : 'none';
+  patResetActors(false);
+  patRenderQ();
+}
+function patMoveEl(el, pos, anim){
+  if (!el) return;
+  if (anim===false) el.style.transition='none';
+  el.style.transform = `translate(${10 + pos[1]*(patTs+4)}px, ${10 + pos[0]*(patTs+4)}px)`;
+  if (anim===false){ void el.offsetWidth; el.style.transition=''; }
+}
+function patResetActors(anim){
+  const cat=$('#pat-cat');
+  if (cat){ cat.style.opacity='1'; cat.style.transition=''; patCarryBone(false); }
+  patMoveEl(cat, patStart, anim);
+  (patLevel.robots||[]).forEach((o,k)=>{ const r=patRobotEls[k]; if(r){ r.style.opacity='1'; r.style.transition=''; } patMoveEl(r, [o.r,o.c], anim); });
+  (patLevel.dogs||[]).forEach((o,k)=>{ patMoveEl(patDogEls[k], [o.r,o.c], anim); patDogEls[k].classList.remove('flee'); });
+}
+function patRenderQ(){
+  const q=$('#pat-queue'); q.innerHTML='';
+  patQ.forEach((d,i)=>{
+    const c=document.createElement('span'); c.className='qchip'; c.textContent=DIR_EMO[d];
+    c.addEventListener('click', ()=>{ if(patRun) return; sfx('pop'); patQ.splice(i,1); patRenderQ(); });
+    q.appendChild(c);
+  });
+}
+function patCarryBone(show){
+  const cat=$('#pat-cat'); if (!cat) return;
+  let b=cat.querySelector('.catbone');
+  if (show){
+    if (!b){ b=document.createElement('span'); b.className='catbone'; b.textContent='🦴'; cat.appendChild(b); }
+  } else if (b) b.remove();
+}
+
+$$('#pat-pal .palbtn[data-d]').forEach(b=>b.addEventListener('click', ()=>{
+  if (patRun) return;
+  if (patQ.length>=16) return;
+  sfx('click'); b.classList.remove('hintpulse');
+  patQ.push(b.dataset.d); patRenderQ();
+}));
+$('#pat-undo').addEventListener('click', ()=>{ if(patRun) return; sfx('pop'); patQ=[]; patRenderQ(); });
+$('#pat-play').addEventListener('click', ()=>{ if(patRun || !patQ.length) return; patGo(); });
+
+/* pure simulation: each tick -> { i, cat:[...moves], foes:[...moves], win?, fail? }.
+   The UI replays cat moves FIRST, then foe moves, so crashes read clearly. */
+function patSimulate(queue){
+  const rows=patGrid.length, cols=patGrid[0].length;
+  const tree=(r,c)=>r<0||c<0||r>=rows||c>=cols||patGrid[r][c]==='#';
+  let cat=[...patStart];
+  const robots=(patLevel.robots||[]).map(o=>({r:o.r,c:o.c,axis:o.axis,d:o.d,off:false}));
+  const dogs=(patLevel.dogs||[]).map(o=>({r:o.r,c:o.c,flee:false}));
+  const robotAt=(r,c,except)=>robots.findIndex((o,i)=>!o.off&&i!==except&&o.r===r&&o.c===c);
+  const dogAt=(r,c,except)=>dogs.findIndex((o,i)=>i!==except&&o.r===r&&o.c===c);
+  const occupied=(r,c)=>robotAt(r,c,-1)>=0||dogAt(r,c,-1)>=0;
+  const onFish=()=>cat[0]===patFish[0]&&cat[1]===patFish[1];
+  const events=[], catCells=[cat.slice()];
+  const finish=(win,ev)=>{ if(ev)events.push(ev); return {win, events, catCells}; };
+  for (let i=0;i<queue.length;i++){
+    const ev={ i, cat:[], foes:[] };
+    const a=queue[i];
+    if (a==='W'){ ev.cat.push({zzz:true}); }
+    else if (a==='B'){
+      let hit=false;
+      dogs.forEach((dg,k)=>{
+        if (Math.abs(dg.r-cat[0])+Math.abs(dg.c-cat[1])===1 && !dg.flee){ dg.flee=true; hit=true; ev.cat.push({bone:k}); }
+      });
+      if (!hit) ev.cat.push({bonemiss:true});
+    } else {
+      const d=DIRS[a], nr=cat[0]+d[0], nc=cat[1]+d[1];
+      if (tree(nr,nc)){ ev.fail='bump'; ev.bumpFrom=cat.slice(); ev.bumpTo=[nr,nc]; return finish(false, ev); }
+      const stepDog=dogAt(nr,nc,-1);
+      if (stepDog>=0){ ev.fail='caught'; ev.caughtBy=stepDog; return finish(false, ev); }
+      const rk=robotAt(nr,nc,-1);
+      if (rk>=0){
+        const pr=nr+d[0], pc=nc+d[1];
+        const offBoard=pr<0||pc<0||pr>=rows||pc>=cols;
+        if (offBoard){
+          // The cat may shove a robot right off the board. The robot is gone for the rest of this run.
+          robots[rk].r=pr; robots[rk].c=pc; robots[rk].off=true;
+          ev.cat.push({robot:rk, to:[pr,pc], push:true, off:true});
+          cat=[nr,nc]; ev.cat.push({to:cat.slice()});
+        } else if (!tree(pr,pc) && !occupied(pr,pc) && !(pr===cat[0]&&pc===cat[1])){
+          robots[rk].r=pr; robots[rk].c=pc;
+          ev.cat.push({robot:rk, to:[pr,pc], push:true});
+          cat=[nr,nc]; ev.cat.push({to:cat.slice()});
+        } else { ev.fail='bump'; ev.bumpFrom=cat.slice(); ev.bumpTo=[nr,nc]; return finish(false, ev); }
+      } else { cat=[nr,nc]; ev.cat.push({to:cat.slice()}); }
+      catCells.push(cat.slice());
+      if (onFish()){ ev.win=true; return finish(true, ev); }
+    }
+    robots.forEach((o,k)=>{
+      if (o.off) return;
+      const dv=()=>o.axis==='H'?[0,o.d]:[o.d,0];
+      const blocked=(r,c)=>tree(r,c)||robotAt(r,c,k)>=0||dogAt(r,c,-1)>=0;
+      let v=dv(), tr=o.r+v[0], tc=o.c+v[1];
+      if (blocked(tr,tc) && !(tr===cat[0]&&tc===cat[1])){ o.d=-o.d; v=dv(); tr=o.r+v[0]; tc=o.c+v[1]; if (blocked(tr,tc)&&!(tr===cat[0]&&tc===cat[1])) return; }
+      if (tr===cat[0]&&tc===cat[1]){
+        const pr=tr+v[0], pc=tc+v[1];
+        if (!tree(pr,pc) && !occupied(pr,pc)){
+          cat=[pr,pc]; ev.foes.push({who:'cat', to:cat.slice(), pushed:true}); catCells.push(cat.slice());
+          o.r=tr; o.c=tc; ev.foes.push({who:'robot'+k, to:[tr,tc], push:true});
+        } else { o.d=-o.d; }
+      } else if (!blocked(tr,tc)){ o.r=tr; o.c=tc; ev.foes.push({who:'robot'+k, to:[tr,tc]}); }
+    });
+    if (dogAt(cat[0],cat[1],-1)>=0){ ev.fail='caught'; return finish(false, ev); }
+    for (let k=0;k<dogs.length;k++){
+      const dg=dogs[k];
+      const blocked=(r,c)=>tree(r,c)||robotAt(r,c,-1)>=0||dogAt(r,c,k)>=0;
+      const dist=(r,c)=>Math.abs(r-cat[0])+Math.abs(c-cat[1]);
+      if (dg.flee){
+        const sr=Math.sign(dg.r-cat[0]), sc=Math.sign(dg.c-cat[1]);
+        const cands=[];
+        if (sr) cands.push([dg.r+sr,dg.c]);
+        if (sc) cands.push([dg.r,dg.c+sc]);
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([a2,b2])=>cands.push([dg.r+a2,dg.c+b2]));
+        for (const [tr,tc] of cands){
+          if (blocked(tr,tc)) continue;
+          if (tr===cat[0]&&tc===cat[1]) continue;
+          if (dist(tr,tc) < dist(dg.r,dg.c)) continue;
+          dg.r=tr; dg.c=tc; ev.foes.push({who:'dog'+k, to:[tr,tc], flee:true}); break;
+        }
+      } else {
+        const dr=cat[0]-dg.r, dc=cat[1]-dg.c;
+        const stepV=[dg.r+Math.sign(dr), dg.c], stepH=[dg.r, dg.c+Math.sign(dc)];
+        const order = Math.abs(dr) >= Math.abs(dc) ? [dr?stepV:null, dc?stepH:null] : [dc?stepH:null, dr?stepV:null];
+        for (const t of order){
+          if (!t) continue;
+          const [tr,tc]=t;
+          if (tr===cat[0]&&tc===cat[1]){ dg.r=tr; dg.c=tc; ev.foes.push({who:'dog'+k, to:[tr,tc]}); ev.fail='caught'; ev.caughtBy=k; return finish(false, ev); }
+          if (blocked(tr,tc)) continue;
+          dg.r=tr; dg.c=tc; ev.foes.push({who:'dog'+k, to:[tr,tc]}); break;
+        }
+      }
+    }
+    if (onFish()){ ev.win=true; return finish(true, ev); }
+    events.push(ev);
+  }
+  return {win:false, events, catCells};
+}
+function patGo(){
+  patRun=true;
+  patResetActors(false);
+  patCarryBone(patQ.includes('B'));
+  const res=patSimulate(patQ);
+  const chips=$$('#pat-queue .qchip');
+  const applyCat=ev=>ev.cat.forEach(m=>{
+    if (m.zzz) patZzz();
+    else if (m.bone!=null) patBoneThrow(m.bone);
+    else if (m.bonemiss) patBoneMiss();
+    else if (m.robot!=null){
+      const rob=patRobotEls[m.robot];
+      if (m.off && rob){ rob.style.opacity='0'; rob.style.transition='transform .42s ease, opacity .42s ease'; }
+      patMoveEl(rob, m.to); sfx('pop');
+    }
+    else { patMoveEl($('#pat-cat'), m.to); sfx('step'); }
+  });
+  const applyFoes=ev=>ev.foes.forEach(m=>{
+    if (m.who==='cat'){ patMoveEl($('#pat-cat'), m.to); sfx('pop'); }
+    else if (m.who.startsWith('robot')) { patMoveEl(patRobotEls[+m.who.slice(5)], m.to); if (m.push) sfx('pop'); }
+    else { const k=+m.who.slice(3); patMoveEl(patDogEls[k], m.to); if (m.flee) patDogEls[k].classList.add('flee'); }
+  });
+  let e=0;
+  const stepEv=()=>{
+    chips.forEach(c=>c.classList.remove('exec'));
+    if (e>=res.events.length){ patFail(); return; }
+    const ev=res.events[e];
+    if (chips[ev.i]) chips[ev.i].classList.add('exec');
+    applyCat(ev);                 // the cat moves first...
+    if (ev.win && !ev.foes.length){ patWinSoon(chips); return; }
+    if (ev.fail && !ev.foes.length){ patFailAnim(ev); return; }
+    setTimeout(()=>{
+      applyFoes(ev);              // ...then robots and dogs, so pushes read clearly
+      if (ev.win){ patWinSoon(chips); return; }
+      if (ev.fail){ setTimeout(()=>patFailAnim(ev), 380); return; }
+      e++; setTimeout(stepEv, 340);
+    }, 320);
+  };
+  setTimeout(stepEv, 350);
+}
+function patWinSoon(chips){
+  setTimeout(()=>{
+    chips.forEach(c=>c.classList.remove('exec'));
+    patRun=false;
+    award('pat', patCur, ()=>{ if (patCur+1<PAT_LEVELS.length) openPat(patCur+1); else goHome(); });
+  }, 520);
+}
+function patFailAnim(ev){
+  const cat=$('#pat-cat');
+  if (ev.fail==='bump'){
+    // Run halfway into the blocked tree/edge while fading away, then reset gently.
+    const from=ev.bumpFrom||patStart, to=ev.bumpTo||from;
+    const half=[(from[0]+to[0])/2, (from[1]+to[1])/2];
+    cat.style.transition='transform .42s ease, opacity .42s ease';
+    cat.style.opacity='0';
+    patMoveEl(cat, half);
+    sfx('drop');
+    setTimeout(()=>patFail(true), 470);
+  } else { // caught: dog visibly chases the cat all the way home
+    sfx('drop');
+    const k=ev.caughtBy!=null ? ev.caughtBy : 0;
+    const dog=patDogEls[k];
+    setTimeout(()=>{
+      cat.style.transition='transform .75s ease-in';
+      if (dog) dog.style.transition='transform .75s ease-in';
+      patMoveEl(cat, patStart);
+      if (dog) patMoveEl(dog, patStart);
+      setTimeout(()=>{
+        cat.style.transition='';
+        if (dog) dog.style.transition='';
+        patFail(true);
+      }, 800);
+    }, 180);
+  }
+}
+function patZzz(){
+  const cat=$('#pat-cat');
+  const z=document.createElement('div'); z.textContent='💤';
+  z.style.cssText='position:absolute;font-size:20px;margin-top:-14px;margin-left:22px;opacity:0;transition:opacity .3s, transform .8s;';
+  cat.appendChild(z);
+  requestAnimationFrame(()=>{ z.style.opacity=0.9; z.style.transform='translateY(-10px)'; });
+  setTimeout(()=>z.remove(), 900);
+  sfx('step');
+}
+function patBoneThrow(k){
+  const catEl=$('#pat-cat'), dogEl=patDogEls[k];
+  const carried=catEl && catEl.querySelector('.catbone');
+  const cat=catEl.getBoundingClientRect(), dog=dogEl.getBoundingClientRect();
+  const b=document.createElement('span'); b.textContent='🦴';
+  const fs=Math.max(22, patTs*.42);
+  b.style.cssText=`position:fixed;left:${cat.left+cat.width*.58}px;top:${cat.top+cat.height*.08}px;z-index:69;font-size:${fs}px;line-height:1;pointer-events:none;transition:left .26s ease, top .26s ease, transform .26s ease;`;
+  document.body.appendChild(b);
+  if (carried) carried.remove();
+  requestAnimationFrame(()=>{
+    b.style.left=(dog.left+dog.width*.50-fs*.30)+'px';
+    b.style.top=(dog.top+dog.height*.18)+'px';
+    b.style.transform='rotate(180deg) scale(.9)';
+  });
+  setTimeout(()=>{ b.remove(); if (dogEl) dogEl.classList.add('flee'); }, 275);
+  sfx('boing');
+}
+function patBoneMiss(){
+  const catEl=$('#pat-cat');
+  const carried=catEl && catEl.querySelector('.catbone');
+  if (carried) carried.remove();
+  const cat=catEl.getBoundingClientRect();
+  const b=document.createElement('span'); b.textContent='🦴';
+  b.style.cssText=`position:fixed;left:${cat.left+cat.width*.58}px;top:${cat.top+cat.height*.08}px;z-index:69;font-size:${Math.max(22,patTs*.38)}px;pointer-events:none;opacity:.9;transition:transform .6s ease, opacity .6s;`;
