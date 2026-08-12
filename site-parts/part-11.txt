@@ -1,0 +1,10 @@
+  if(p.kidEl){citPlacePerson(p.kidEl,path[path.length-1],true);await citSleep(CITY_CFG.WALK_STEP_MS+120);}
+  p.el.style.transition='';if(p.kidEl)p.kidEl.style.transition='';p.at=p.h;p.kidAt=p.fam?p.h:null;citMergeFamily(p);sfx('snap');
+}
+
+
+/* ---------- boot ---------- */
+renderHome();
+</script>
+</body>
+</html>
