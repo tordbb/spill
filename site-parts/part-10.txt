@@ -1,0 +1,204 @@
+function citFinishPersonDay(p){
+  p.dest=null; p.kind=null; p.school=null; p.shop=null; p.spot=null; p.playStart=null;
+  p.workSlot=null; p.jobThought=null; p.dayOff=false;
+  citClearThought(p.el); if(p.kidEl)citClearThought(p.kidEl);
+  citSetFace(p.el,p.face); citMergeFamily(p);
+}
+
+/* ---------- newcomer hint ---------- */
+function citFirstEdgeRoad(act){
+  for(const i of act){const[r,c]=citRC(i);if(r===0||c===0||r===CITY_CFG.ROWS-1||c===CITY_CFG.COLS-1)return i;}return null;
+}
+function citOutsideXY(edge){
+  const[r,c]=citRC(edge),[x,y]=citTileXY(edge);
+  if(r===0)return[x,y-citTs]; if(r===CITY_CFG.ROWS-1)return[x,y+citTs]; if(c===0)return[x-citTs,y]; return[x+citTs,y];
+}
+async function citPreviewHouseNeed(act){
+  const edge=citFirstEdgeRoad(act);if(edge==null)return;
+  const el=citPersonEl(CITY_CFG.FACES[(cit.arr||0)%CITY_CFG.FACES.length]);const[outX,outY]=citOutsideXY(edge);
+  el.style.left=outX+'px';el.style.top=outY+'px';el.style.transition=`left ${CITY_CFG.WALK_STEP_MS+120}ms linear, top ${CITY_CFG.WALK_STEP_MS+120}ms linear`;
+  await citSleep(40);citPlacePerson(el,edge,true);await citSleep(CITY_CFG.WALK_STEP_MS+150);citSetThought(el,'🏠');await citSleep(CITY_CFG.NEWCOMER_THINK_MS);
+  citClearThought(el);el.style.left=outX+'px';el.style.top=outY+'px';await citSleep(CITY_CFG.WALK_STEP_MS+180);el.remove();
+}
+async function citAddNewcomers(act){
+  const occ=new Set(cit.ppl.map(p=>p.h));
+  const emptyH=[];cit.g.forEach((t,i)=>{if(t==='H'&&citConnected(i,act)&&!occ.has(i))emptyH.push(i);});
+  let emptyF=citFarmVacantCenters().filter(i=>citConnected(i,act));
+  for(let k=0;k<CITY_CFG.NEWCOMERS_PER_NIGHT;k++){
+    const t=citNewcomerTemplate();let home=null;
+    if(t.pref==='M'&&emptyF.length)home=emptyF.shift();
+    else if(emptyH.length)home=emptyH.shift();
+    if(home==null){
+      /* This person really arrived and left again, so advance the arrival sequence.
+         That prevents a house shortage from permanently blocking later farm residents. */
+      await citPreviewHouseNeed(act);cit.arr++;cit.personSeq++;continue;
+    }
+    const path=citRoadPath(home,act);
+    if(!path){cit.arr++;cit.personSeq++;continue;}
+    const p=citCommitNewcomer(t,home);occ.add(home);cit.ppl.push(p);await citWalkIn(p,path);
+  }
+}
+
+/* ---------- day cycle ---------- */
+$('#cit-night').addEventListener('click',()=>{if(!citLock)citNight();});
+async function citNight(){
+  citLock=true;citUpdateUndoButton();const fade=$('#cit-fade');fade.classList.add('on');slide(420,140,0.9,'sine',0.08);
+  await citSleep(CITY_CFG.NIGHT_FADE_MS);fade.classList.remove('on');await citSleep(700);
+  citEnsureExtras();const act=citActive(),weekend=citDayOfWeek()>=5,reachable=(from,i)=>citRoute(from,i,act)!=null;
+  if(weekend)await citWeekend(act,reachable);else await citWeekday(act,reachable);
+  cit.day++;citValidateState('day-end');save();citHud();citRenderTiles();citLock=false;citUpdateUndoButton();
+}
+
+async function citWeekday(act,reachable){
+  const dow=citDayOfWeek();
+  cit.ppl.forEach((p,n)=>citBeginPersonDay(p,n));
+  await citPrepareChildren(act);
+
+  /* Farmers are assigned first so they can refill boutiques before boutique workers arrive. */
+  const farmSet=citFarmWorkersAvailable(act,reachable),farmWorkers=farmSet.workers,farmIdle=farmSet.idle;
+  if(farmWorkers.length)sfx('step');
+  await citAll(farmWorkers,async p=>{await citCommuteToJob(p,act);await citFarmActivity(p,p.dest,2);});
+  await citFarmDeliveries(farmWorkers,act);
+
+  const offices=[];cit.g.forEach((t,i)=>{if(t==='O'&&citConnected(i,act))offices.push({i,cap:CITY_CFG.OFFICE_CAP,used:0});});
+  const shopJobs=[];cit.g.forEach((t,i)=>{if(t==='S'&&citConnected(i,act)&&citShopStocked(i))shopJobs.push({i,cap:CITY_CFG.SHOP_WORK_CAP});});
+  const officeWorkers=[],shopWorkers=[],idleAdults=[...farmIdle],dayOff=[];
+
+  cit.ppl.forEach(p=>{
+    if(p.pref==='M')return;
+    if(p.pref==='S'&&!p.fam&&p.offDays.includes(dow)){p.dayOff=true;dayOff.push(p);return;}
+    if(p.pref==='O'){
+      const of=offices.find(x=>x.cap>0&&reachable(p.h,x.i));
+      if(of){p.workSlot=of.used++;of.cap--;p.dest=of.i;p.kind='O';officeWorkers.push(p);return;}
+    } else if(p.pref==='S'){
+      const sh=shopJobs.find(x=>x.cap>0&&reachable(p.h,x.i));
+      if(sh){sh.cap--;p.dest=sh.i;p.kind='S';shopWorkers.push(p);return;}
+    }
+    idleAdults.push(p);
+  });
+
+  const commuters=[...officeWorkers,...shopWorkers];if(commuters.length)sfx('step');
+  await citAll(commuters,p=>citCommuteToJob(p,act));
+
+  /* Idle parents still take a child to school, then visibly roam and show the missing need. */
+  for(const p of idleAdults){p.jobThought=citJobThought(p,act);citSetThought(p.el,p.jobThought);}
+  const idleSchoolRuns=idleAdults.filter(p=>p.fam&&p.school!=null);
+  await citAll(idleSchoolRuns,async p=>{citClearThought(p.el);await citWalkPair(p,p.school,act);await citWalkW(p,p.h,act);citSetThought(p.el,p.jobThought);});
+  await citAll(idleAdults.filter(p=>citConnected(p.h,act)),p=>citIdleStreet(p,act));
+
+  /* Boutique workers without children take their two stable weekday days off in leisure spaces. */
+  await citWeekdayLeisure(dayOff,act,reachable);
+
+  for(const p of officeWorkers)await citEarn(p.dest,CITY_CFG.OFFICE_INCOME);
+  for(const p of shopWorkers)await citEarn(p.dest,CITY_CFG.SHOPWORK_INCOME);
+
+  /* Customers can only enter a stocked boutique that currently has its worker present. */
+  const staffedShops=new Set(shopWorkers.map(p=>p.dest));
+  const shopSlots=[];cit.g.forEach((t,i)=>{if(t==='S'&&staffedShops.has(i)&&citConnected(i,act)&&citShopStocked(i))shopSlots.push({i,cap:CITY_CFG.SHOP_VISIT_CAP});});
+  const shoppers=[];officeWorkers.forEach(p=>{const sh=shopSlots.find(x=>x.cap>0&&reachable(p.at,x.i));if(sh){sh.cap--;p.shop=sh.i;shoppers.push(p);}});
+  if(shoppers.length){sfx('step');await citAll(shoppers,p=>citWalkW(p,p.shop,act));for(const p of shoppers)await citEarn(p.shop,CITY_CFG.VISIT_INCOME);}
+
+  const worked=[...farmWorkers,...officeWorkers,...shopWorkers];if(worked.length)sfx('step');
+  await citAll(worked,p=>citReturnHome(p,act));
+  await citAll(dayOff.filter(p=>p.at!==p.h),p=>citReturnHome(p,act));
+
+  for(const p of idleAdults){
+    citClearThought(p.el);
+    if(p.fam&&p.school==null&&p.kidAt!==p.h){citClearThought(p.kidEl);const kw={el:p.kidEl,at:p.kidAt};await citDirectStep(kw,p.h);p.kidAt=kw.at;}
+    if(p.at!==p.h)await citWalkW(p,p.h,act);citMergeFamily(p);
+  }
+  cit.ppl.forEach(citFinishPersonDay);
+  for(const p of cit.ppl)await citEarn(p.h,CITY_CFG.HOME_INCOME);
+  await citAddNewcomers(act);
+}
+
+async function citWeekdayLeisure(list,act,reachable){
+  const spots=[];cit.g.forEach((t,i)=>{if(!citConnected(i,act))return;if(t==='B'||t==='E')spots.push({i,cap:CITY_CFG.RELAX_CAP});else if(t==='P')spots.push({i,cap:CITY_CFG.PARK_CAP});});
+  const trips=[];
+  list.forEach((p,n)=>{const s=spots.find(x=>x.cap>0&&reachable(p.h,x.i));if(s){s.cap--;p.spot=s.i;trips.push(p);}else citSetThought(p.el,citConnected(p.h,act)?citNeedIcon(n,false):'🛣️');});
+  if(trips.length)sfx('step');await citAll(trips,async p=>{citClearThought(p.el);await citWalkW(p,p.spot,act);await citSleep(500);});
+  if(trips.length)await citAll(trips,p=>citWalkW(p,p.h,act));
+  list.forEach(p=>{citClearThought(p.el);p.spot=null;citMergeFamily(p);});
+}
+
+async function citWeekend(act,reachable){
+  cit.ppl.forEach((p,n)=>citBeginPersonDay(p,n));
+
+  const shopJobs=[];cit.g.forEach((t,i)=>{if(t==='S'&&citConnected(i,act)&&citShopStocked(i))shopJobs.push({i,cap:CITY_CFG.SHOP_WORK_CAP});});
+  const farms=citFarmCenters().map(i=>({i,used:0}));
+  const weekendWorkers=[],leisure=[];
+
+  cit.ppl.forEach(p=>{
+    if(p.pref==='S'&&!p.fam){
+      const sh=shopJobs.find(x=>x.cap>0&&reachable(p.h,x.i));
+      if(sh){sh.cap--;p.kind='S';p.dest=sh.i;weekendWorkers.push(p);}else{p.jobThought=citJobThought(p,act);leisure.push(p);}return;
+    }
+    if(p.pref==='M'&&citFarmerWorksWeekend(p)){
+      let f=null;if(cit.g[p.h]==='M')f=farms.find(x=>x.i===p.h&&x.used<1);if(!f)f=farms.find(x=>x.used<1&&reachable(p.h,x.i));
+      if(f){f.used++;p.kind='M';p.dest=f.i;weekendWorkers.push(p);return;}
+    }
+    leisure.push(p);
+  });
+
+  if(weekendWorkers.length)sfx('step');
+  await citAll(weekendWorkers,async p=>{await citCommuteToJob(p,act);if(p.kind==='M')await citFarmActivity(p,p.dest,2);});
+  await citFarmDeliveries(weekendWorkers.filter(p=>p.kind==='M'),act);
+  for(const p of weekendWorkers){if(p.kind==='S')await citEarn(p.dest,CITY_CFG.SHOPWORK_INCOME);}
+
+  const staffedShops=new Set(weekendWorkers.filter(p=>p.kind==='S').map(p=>p.dest));
+  await citWeekendLeisure(leisure,act,reachable,staffedShops);
+  await citAll(weekendWorkers,p=>citReturnHome(p,act));
+  for(const p of cit.ppl)await citEarn(p.h,CITY_CFG.HOME_INCOME);
+  cit.ppl.forEach(citFinishPersonDay);
+}
+
+async function citWeekendLeisure(list,act,reachable,staffedShops){
+  staffedShops=staffedShops||new Set();
+  const adultSpots=[],playSpots=[];
+  cit.g.forEach((t,i)=>{
+    if(!citConnected(i,act))return;
+    if(t==='B'||t==='E')adultSpots.push({i,cap:CITY_CFG.RELAX_CAP});else if(t==='P')adultSpots.push({i,cap:CITY_CFG.PARK_CAP});
+    if(CITY_CFG.PLAY_TILES.includes(t))playSpots.push({i,cap:(t==='P'?CITY_CFG.PARK_CAP:CITY_CFG.PLAY_CAP)});
+  });
+  const adultTrips=[],kidTrips=[];
+  list.forEach((p,n)=>{
+    const a=adultSpots.find(x=>x.cap>0&&reachable(p.h,x.i));
+    if(a){a.cap--;p.spot=a.i;adultTrips.push(p);}else citSetThought(p.el,p.jobThought || (citConnected(p.h,act)?citNeedIcon(n,false):'🛣️'));
+    if(p.fam){
+      if(!p.kidEl)citSpawnKid(p,p.h);const k=playSpots.find(x=>x.cap>0&&reachable(p.h,x.i));
+      if(k){k.cap--;p.playStart=k.i;kidTrips.push(p);}else citSetThought(p.kidEl,citConnected(p.h,act)?citNeedIcon(n,true):'🛣️');
+    }
+  });
+  if(adultTrips.length||kidTrips.length)sfx('step');
+  await Promise.all([
+    citAll(adultTrips,p=>{citClearThought(p.el);return citWalkW(p,p.spot,act);}),
+    citAll(kidTrips,async p=>{citClearThought(p.kidEl);const kw={el:p.kidEl,at:p.kidAt};await citWalkW(kw,p.playStart,act);p.kidAt=kw.at;})
+  ]);
+  await Promise.all(kidTrips.map(async p=>{
+    const plays=citTilesNear(p.playStart,CITY_CFG.PLAY_TILES,CITY_CFG.PLAY_RADIUS).filter(i=>citConnected(i,act)&&reachable(p.h,i));
+    for(let h=0;h<CITY_CFG.PLAY_HOPS&&plays.length;h++){const target=plays[(p.id+h+cit.day)%plays.length];await citHop(p.kidEl,target,CITY_CFG.PLAY_HOP_MS);p.kidAt=target;}
+  }));
+  await citSleep(350);
+
+  /* Half of adults who went out for leisure may shop, but only where a boutique worker is actually on duty. */
+  const shopCaps=[];cit.g.forEach((t,i)=>{if(t==='S'&&staffedShops.has(i)&&citConnected(i,act)&&citShopStocked(i))shopCaps.push({i,cap:CITY_CFG.SHOP_VISIT_CAP});});
+  const buyers=[];adultTrips.forEach(p=>{
+    if((p.id+cit.day)%2!==0)return;const sh=shopCaps.find(x=>x.cap>0&&reachable(p.at,x.i));if(sh){sh.cap--;p.shop=sh.i;buyers.push(p);}
+  });
+  if(buyers.length){sfx('step');await citAll(buyers,p=>citWalkW(p,p.shop,act));for(const p of buyers)await citEarn(p.shop,CITY_CFG.VISIT_INCOME);}
+
+  if(adultTrips.length||kidTrips.length)sfx('step');
+  await Promise.all([
+    citAll(adultTrips,p=>citWalkW(p,p.h,act)),
+    citAll(kidTrips,async p=>{const kw={el:p.kidEl,at:p.kidAt};await citWalkW(kw,p.h,act);p.kidAt=kw.at;})
+  ]);
+  list.forEach(p=>{citClearThought(p.el);if(p.kidEl)citClearThought(p.kidEl);p.spot=null;p.playStart=null;p.shop=null;citMergeFamily(p);});
+}
+
+async function citWalkIn(p,path){
+  p.el=citPersonEl(p.face);citMovingPose(p.el);citPlacePerson(p.el,path[0],false);p.at=path[0];if(p.fam)citSpawnKid(p,path[0]);
+  p.el.style.transition=`left ${CITY_CFG.WALK_STEP_MS+120}ms linear, top ${CITY_CFG.WALK_STEP_MS+120}ms linear`;
+  if(p.kidEl)p.kidEl.style.transition=`left ${CITY_CFG.WALK_STEP_MS+120}ms linear, top ${CITY_CFG.WALK_STEP_MS+120}ms linear`;
+  for(let k=1;k<path.length;k++){
+    citPlacePerson(p.el,path[k],true);if(p.kidEl&&k>1)citPlacePerson(p.kidEl,path[k-1],true);await citSleep(CITY_CFG.WALK_STEP_MS+50);
+  }
