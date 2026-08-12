@@ -1,0 +1,268 @@
+function citTileXY(i){ const [r,c]=citRC(i); return [c*citTs, r*citTs]; }
+function citNb(i){
+  const [r,c]=citRC(i), out=[];
+  [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc])=>{
+    if(nr>=0&&nc>=0&&nr<CITY_CFG.ROWS&&nc<CITY_CFG.COLS) out.push(citIdx(nr,nc));
+  });
+  return out;
+}
+const citWalkableTile=t=>t==='R'||t==='A';
+function citWeekNum(){ return Math.floor((((cit&&cit.day)||1)-1)/7); }
+function citDayOfWeek(){ return ((((cit&&cit.day)||1)-1)%7+7)%7; }
+
+/* ---------- farm geometry ---------- */
+function citFarmCells(center){
+  if (center==null) return null;
+  const [r,c]=citRC(center);
+  if (r<1||c<1||r>=CITY_CFG.ROWS-1||c>=CITY_CFG.COLS-1) return null;
+  const out=[];
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) out.push(citIdx(r+dr,c+dc));
+  return out;
+}
+function citFarmCenters(){
+  const out=[]; cit.g.forEach((t,i)=>{ if(t==='M') out.push(i); }); return out;
+}
+function citFarmByCell(i){
+  const [r,c]=citRC(i);
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    const rr=r+dr, cc=c+dc;
+    if(rr<0||cc<0||rr>=CITY_CFG.ROWS||cc>=CITY_CFG.COLS) continue;
+    const j=citIdx(rr,cc);
+    if(cit.g[j]==='M'){
+      const cells=citFarmCells(j);
+      if(cells && cells.includes(i)) return j;
+    }
+  }
+  return null;
+}
+function citCleanPartialFarms(){
+  const valid=new Set();
+  (cit.g||[]).forEach((t,i)=>{
+    if(t!=='M') return;
+    const cells=citFarmCells(i);
+    if(!cells || cells.some(j=>cit.g[j]!=='M'&&cit.g[j]!=='Q')){ cit.g[i]=0; return; }
+    cells.forEach(j=>valid.add(j));
+  });
+  (cit.g||[]).forEach((t,i)=>{ if((t==='M'||t==='Q')&&!valid.has(i)) cit.g[i]=0; });
+}
+function citFarmNearRoad(center){
+  const cells=citFarmCells(center); if(!cells) return false;
+  return cells.some(i=>citNb(i).some(j=>citWalkableTile(cit.g[j])));
+}
+function citFarmRoads(center,act){
+  const cells=citFarmCells(center)||[], out=new Set();
+  cells.forEach(i=>citNb(i).forEach(j=>{ if(act.has(j)) out.add(j); }));
+  return [...out];
+}
+function citFarmEmoji(i){
+  const center=citFarmByCell(i); if(center==null) return '';
+  const cells=citFarmCells(center)||[];
+  const pos=cells.indexOf(i);
+  return CITY_CFG.FARM_DECOR[(pos<0?0:pos)%CITY_CFG.FARM_DECOR.length];
+}
+function citFarmVacantCenters(){
+  const occ=new Set(cit.ppl.map(p=>p.h));
+  return citFarmCenters().filter(i=>!occ.has(i));
+}
+
+/* ---------- rendering / visible status ---------- */
+function citThoughtClass(icon){
+  if(icon==='🏫')return'school';
+  if(icon==='🚜')return'farm';
+  if(icon==='🏠')return'house';
+  if(icon==='🏢')return'office';
+  if(icon==='🛍️')return'shopneed';
+  return'';
+}
+function citApplyThoughtStyle(b,icon){
+  b.className='cit-thought';
+  const k=citThoughtClass(icon); if(k)b.classList.add(k);
+}
+function citMakeThought(icon){
+  const b=document.createElement('span'); citApplyThoughtStyle(b,icon);
+  const i=document.createElement('span'); i.className='cit-thought-icon'; i.textContent=icon; b.appendChild(i);
+  return b;
+}
+function citShopStockWeek(i){ const v=Number(cit.shopStock&&cit.shopStock[i]); return Number.isFinite(v)?v:-Infinity; }
+function citShopStocked(i){ return cit.g[i]==='S' && citShopStockWeek(i)>=citWeekNum(); }
+function citMarkShopStocked(i,week=citWeekNum()){ if(cit.g[i]==='S') cit.shopStock[i]=week; }
+function citFarmDeliveredThisWeek(i,week=citWeekNum()){ return Number(cit.farmDelivery&&cit.farmDelivery[i])>=week; }
+function citMarkFarmDelivered(i,week=citWeekNum()){ if(cit.g[i]==='M') cit.farmDelivery[i]=week; }
+function citRenderTiles(){
+  const g=$('#cit-grid');
+  g.querySelectorAll('.ct').forEach(e=>e.remove());
+  cit.g.forEach((t,i)=>{
+    if (!t) return;
+    const [x,y]=citTileXY(i);
+    const d=document.createElement('div');
+    d.className='ct '+(CIT_CLS[t]||''); d.dataset.i=i;
+    d.style.cssText=`left:${x}px;top:${y}px;width:${citTs}px;height:${citTs}px;font-size:${citTs*0.78}px;`;
+    if (t==='S'){
+      d.textContent=CITY_CFG.SHOP_TYPES[(cit.st[i]||0)%CITY_CFG.SHOP_TYPES.length];
+      if(!citShopStocked(i)) d.classList.add('unstocked');
+    } else if(t==='M'||t==='Q') d.textContent=citFarmEmoji(i);
+    else if (CIT_EMO[t]) d.textContent=CIT_EMO[t];
+    g.appendChild(d);
+  });
+}
+function citPersonEl(face){
+  const d=document.createElement('div'); d.className='citizen';
+  d.style.cssText=`width:${citTs}px;height:${citTs}px;font-size:${citTs*CITY_CFG.CITIZEN_SCALE}px;`;
+  const f=document.createElement('span'); f.className='cit-face'; f.textContent=face; d.appendChild(f);
+  $('#cit-grid').appendChild(d); return d;
+}
+function citSetFace(el, face){ if(!el)return; const f=el.querySelector('.cit-face'); if(f) f.textContent=face; }
+function citSetThought(el, icon){
+  if (!el) return;
+  let b=el.querySelector('.cit-thought');
+  if (!icon){ if (b) b.remove(); return; }
+  if (!b){ b=citMakeThought(icon); el.appendChild(b); }
+  else {
+    citApplyThoughtStyle(b,icon);
+    const glyph=b.querySelector('.cit-thought-icon'); if(glyph)glyph.textContent=icon;
+  }
+}
+function citClearThought(el){ citSetThought(el,null); }
+function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3'); }
+function citHomePose(el, side){
+  if(!el)return; citMovingPose(el);
+  if(side==='parent') el.classList.add('home-parent');
+  if(side==='kid') el.classList.add('home-kid');
+}
+function citOfficePose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('office-slot-'+(slot%4)); }
+function citRenderPeople(){
+  $('#cit-grid').querySelectorAll('.citizen').forEach(e=>e.remove());
+  cit.ppl.forEach((p,n)=>{
+    citEnsurePersonMeta(p,n); p.kidEl=null; p.kidAt=null;
+    p.el=citPersonEl(p.face); citPlacePerson(p.el,p.h,false); p.at=p.h;
+    if(p.fam) citSpawnKid(p,p.h); citMergeFamily(p);
+  });
+}
+function citSpawnKid(p,atIdx){
+  if(!p.kidEl){
+    p.kidEl=citPersonEl(p.kidFace||CITY_CFG.KID_FACES[0]); p.kidEl.classList.add('kid');
+    p.kidEl.style.fontSize=(citTs*CITY_CFG.CITIZEN_SCALE*CITY_CFG.KID_SCALE)+'px';
+  }
+  citSetFace(p.kidEl,p.kidFace||CITY_CFG.KID_FACES[0]); citPlacePerson(p.kidEl,atIdx,false); p.kidAt=atIdx;
+}
+function citMergeFamily(p){
+  if(!p.el)return;
+  if(!p.fam){ if(p.at===p.h) citHomePose(p.el,null); return; }
+  if(!p.kidEl) citSpawnKid(p,p.h);
+  if(p.at===p.h && p.kidAt===p.h){
+    citSetFace(p.el,p.face); citSetFace(p.kidEl,p.kidFace||CITY_CFG.KID_FACES[0]);
+    citPlacePerson(p.el,p.h,false); citPlacePerson(p.kidEl,p.h,false);
+    citHomePose(p.el,'parent'); citHomePose(p.kidEl,'kid');
+  }
+}
+function citPlacePerson(el,i,anim){
+  const [x,y]=citTileXY(i); if(!anim) el.style.transition='none';
+  el.style.left=x+'px'; el.style.top=y+'px';
+  if(!anim){ void el.offsetWidth; el.style.transition=''; }
+}
+function citDirectStep(w,toIdx){
+  return (async()=>{
+    if(!w||!w.el)return; citMovingPose(w.el);
+    w.el.style.transition=`left ${CITY_CFG.WALK_STEP_MS+70}ms linear, top ${CITY_CFG.WALK_STEP_MS+70}ms linear`;
+    citPlacePerson(w.el,toIdx,true); await citSleep(CITY_CFG.WALK_STEP_MS+80); w.el.style.transition=''; w.at=toIdx;
+  })();
+}
+
+/* ---------- citizen metadata / preferences ---------- */
+const CIT_JOB_PREFS=['O','M','S'];
+function citRandomPreference(){ return CIT_JOB_PREFS[Math.floor(Math.random()*CIT_JOB_PREFS.length)]; }
+function citPreferenceForId(id){
+  /* Stable fallback only for legacy people that have no stored preference. */
+  const n=Math.abs(((Number(id)||0)*1103515245+12345)>>>0);
+  return CIT_JOB_PREFS[n%CIT_JOB_PREFS.length];
+}
+function citOffDaysForId(id){
+  let a=(id*3+1)%5, b=(id*7+3)%5; if(a===b) b=(b+2)%5; return [a,b].sort();
+}
+function citEnsurePersonMeta(p,n){
+  if(p.id==null) p.id=cit.personSeq++;
+  if(!p.pref) p.pref=citPreferenceForId(p.id);
+  if(!Array.isArray(p.offDays)||p.offDays.length!==2) p.offDays=citOffDaysForId(p.id);
+  if(!p.homeKind) p.homeKind=(cit.g[p.h]==='M'?'M':'H');
+  if(p.homeKind==='M') p.farmHome=p.h; else p.farmHome=null;
+}
+function citNewcomerTemplate(){
+  const seq=cit.arr||0, id=cit.personSeq||0;
+  const fam=(seq%CITY_CFG.FAMILY_EVERY)===(CITY_CFG.FAMILY_EVERY-1);
+  return { id, face:CITY_CFG.FACES[seq%CITY_CFG.FACES.length], fam,
+    kidFace:fam?CITY_CFG.KID_FACES[seq%CITY_CFG.KID_FACES.length]:null,
+    pref:citRandomPreference(), offDays:citOffDaysForId(id) };
+}
+function citCommitNewcomer(t,h){
+  cit.arr++; cit.personSeq++;
+  return Object.assign(t,{h,homeKind:(cit.g[h]==='M'?'M':'H'),farmHome:(cit.g[h]==='M'?h:null)});
+}
+
+/* ---------- HUD / tools / editing ---------- */
+function citHud(){
+  $('#cit-money').textContent=cit.money;
+  $('#cit-pop').textContent=cit.ppl.length + cit.ppl.filter(p=>p.fam).length;
+  const wk=$('#cit-week'); wk.innerHTML='';
+  for(let d=0;d<7;d++){
+    const s=document.createElement('span'); if(d>=5)s.classList.add('wk'); if(d===citDayOfWeek())s.classList.add('today'); wk.appendChild(s);
+  }
+}
+function citRenderTools(){
+  const tb=$('#cit-tools'); tb.innerHTML='';
+  const groups=[
+    ['🛣️',[['R','<span class="roadswatch"></span>'],['A','<span class="sandswatch"></span>']]],
+    ['🏙️',[['H','🏠'],['O','🏢'],['S','🛍️'],['M','🛖'],['K','🏫']]],
+    ['🌳',[['E','<span class="grassswatch"></span>'],['B','🪑'],['P','🌳'],['G','🎠'],['F','⛲'],['W','<span class="waterswatch"></span>'],['T','🌲']]],
+    ['', [['X','🧹']]]
+  ];
+  groups.forEach(([icon,items])=>{
+    const group=document.createElement('div'); group.className='cit-tool-group';
+    if(icon){ const h=document.createElement('div'); h.className='cit-tool-group-icon'; h.textContent=icon; group.appendChild(h); }
+    items.forEach(([k,emo])=>{
+      const price=CITY_CFG.PRICE[k]||0;
+      const b=document.createElement('button'); b.className='cbtn'+(citTool===k?' sel':'');
+      b.innerHTML=emo+(price?`<span class="price">🪙${price}</span>`:'');
+      b.addEventListener('click',()=>{ sfx('click'); citTool=k; citRenderTools(); }); group.appendChild(b);
+    });
+    tb.appendChild(group);
+  });
+}
+(()=>{
+  const g=$('#cit-grid');
+  const cellOf=e=>{
+    const r=g.getBoundingClientRect(), c=Math.floor((e.clientX-r.left)/citTs), rr=Math.floor((e.clientY-r.top)/citTs);
+    if(rr<0||c<0||rr>=CITY_CFG.ROWS||c>=CITY_CFG.COLS)return null; return citIdx(rr,c);
+  };
+  const paintable=()=>['R','A','W','E','X'].includes(citTool);
+  const finishEdit=()=>{
+    if(citEditChanged)citPushUndo(citEditBefore); citEditBefore=null; citEditChanged=false; citPaint=false;
+  };
+  g.addEventListener('pointerdown',e=>{
+    if(citLock)return; citPaint=true; citEditBefore=citSnapshot(); citEditChanged=false;
+    if(citBuild(cellOf(e))) citEditChanged=true;
+  });
+  g.addEventListener('pointermove',e=>{
+    if(citLock||!citPaint)return; if(paintable()&&citBuild(cellOf(e))) citEditChanged=true;
+  });
+  addEventListener('pointerup',finishEdit); addEventListener('pointercancel',finishEdit);
+})();
+function citBuildFarm(center){
+  const cells=citFarmCells(center); if(!cells || cells.some(i=>cit.g[i]!==0) || !citFarmNearRoad(center)){ sfx('hmm'); return false; }
+  const price=CITY_CFG.PRICE.M;
+  if(cit.money<price){ const m=$('#cit-money-wrap'); m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake'); sfx('hmm'); return false; }
+  cit.money-=price; cells.forEach(i=>cit.g[i]='Q'); cit.g[center]='M'; cit.farmDelivery[center]=citWeekNum()-1; sfx('drop'); save(); citRenderTiles(); citHud(); return true;
+}
+function citBulldoze(i){
+  const t=cit.g[i]; if(!t)return false;
+  const farmCenter=(t==='M'||t==='Q')?citFarmByCell(i):null;
+  if(farmCenter!=null){
+    const cells=citFarmCells(farmCenter)||[]; cells.forEach(j=>{cit.g[j]=0; delete cit.st[j];});
+    delete cit.farmDelivery[farmCenter];
+    cit.money+=CITY_CFG.PRICE.M;
+    cit.ppl=cit.ppl.filter(p=>{
+      if(p.h===farmCenter){ if(p.el)p.el.remove(); if(p.kidEl)p.kidEl.remove(); return false; } return true;
+    });
+  } else {
+    cit.g[i]=0; cit.money+=CITY_CFG.PRICE[t]||0; delete cit.st[i]; delete cit.shopStock[i];
+    cit.ppl=cit.ppl.filter(p=>{ if(p.h===i){ if(p.el)p.el.remove(); if(p.kidEl)p.kidEl.remove(); return false; } return true; });
+  }
