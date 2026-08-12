@@ -1,0 +1,311 @@
+    // Fallback: two equal-duration straight segments, peaking halfway horizontally.
+    cr.style.transition=`transform ${ms/2}ms linear`;
+    requestAnimationFrame(()=>{
+      cr.style.transform=frames[1].transform;
+      setTimeout(()=>{
+        cr.style.transform=frames[2].transform;
+        setTimeout(()=>{ cr.style.transition=''; done(); }, ms/2);
+      }, ms/2);
+    });
+  }
+}
+function walBounceLanding(r, nc, peakRow){
+  // Preserve the old bounce reach: rise up to three rows, then land on the first
+  // supported free cell in the forward column. Only the visual path changes.
+  let lr=peakRow;
+  while (lr<walMap.length && walSolid(lr,nc)) lr--;
+  if (lr<0) lr=0;
+  while (lr+1<walMap.length && !walSolid(lr+1,nc)) lr++;
+  if (lr+1>=walMap.length) return null;
+  return [lr,nc];
+}
+function walGo(){
+  walRun=true; walDir=1; walPos=[...walStart];
+  walMoveCritter(walPos, false);
+  let ticks=0, lastKey='';
+  const cr=$('#wal-critter');
+  const tick=()=>{
+    ticks++;
+    if (ticks>60){ walFail(); return; }
+    let [r,c]=walPos;
+    if (r===walHome[0]&&c===walHome[1]){ walWin(); return; }
+    // falling?
+    if (!walSolid(r+1,c)){
+      if (r+1>=walMap.length){ walFail(); return; }
+      walPos=[r+1,c]; cr.classList.add('fall');
+      walMoveCritter(walPos,true); sfx('step');
+      setTimeout(tick,320); return;
+    }
+    cr.classList.remove('fall');
+    const key=r+','+c;
+    const eff=walPlaced[key];
+    if (eff==='M' && lastKey!=='M'+key){
+      lastKey='M'+key;
+      const nc=c+walDir;
+      if (nc<0||nc>=walMap[0].length){ walFail(); return; }
+      const peakRow=Math.max(0,r-3);
+      const landing=walBounceLanding(r,nc,peakRow);
+      if (!landing){ walFail(); return; }
+      const from=[r,c];
+      walPos=[...landing];
+      sfx('boing');
+      // The jump is two straight, equally timed diagonals: apex exactly halfway
+      // between the start and landing columns, then the mirrored descent.
+      walJumpCritter(from, peakRow, landing, 720, ()=>setTimeout(tick,80));
+      return;
+    }
+    if (eff==='F' && lastKey!=='F'+key){
+      lastKey='F'+key;
+      walDir=-walDir; sfx('pop');
+      walMoveCritter(walPos,true);
+      setTimeout(tick,360); return;
+    }
+    // walk
+    const nc=c+walDir;
+    if (nc<0||nc>=walMap[0].length){ walFail(); return; }
+    if (walSolid(r,nc)){
+      if (!walSolid(r-1,nc) && !walSolid(r-1,c)){ walPos=[r-1,nc]; } // step up
+      else { walDir=-walDir; walMoveCritter(walPos,true); setTimeout(tick,360); return; }
+    } else walPos=[r,nc];
+    if (lastKey && walPos.join(',')!==key) lastKey='';
+    walMoveCritter(walPos,true); sfx('step');
+    setTimeout(tick,340);
+  };
+  setTimeout(tick,350);
+}
+function walFail(){
+  walFails++;
+  const cr=$('#wal-critter');
+  if (cr){
+    cr.style.transition='opacity .7s ease, transform .7s ease';
+    cr.style.opacity='0';
+  }
+  slide(500,180,0.4,'sine',0.1);
+  cheer();
+  setTimeout(()=>{
+    walDir=1; walPos=[...walStart];
+    walRenderGrid();
+    walRun=false;
+  }, 850);
+}
+function walWin(){
+  const cr=$('#wal-critter');
+  cr.style.transition='transform .3s';
+  cr.style.transform+=' scale(1.2)';
+  walTileAt(Math.max(0,walHome[0]-1), walHome[1], '', '💕');
+  setTimeout(()=>{
+    walRun=false;
+    award('wal', walCur, ()=>{ if (walCur+1<WAL_LEVELS.length) openWal(walCur+1); else goHome(); });
+  }, 700);
+}
+
+/* ================= CITY (turn-based top-down city builder) ================= */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚙️  CENTRAL TUNING PARAMETERS — everything adjustable lives in this block.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const CITY_CFG = {
+  /* ---- board ---- */
+  COLS: 15,
+  ROWS: 10,
+  START_MONEY: 100,
+
+  /* ---- tile prices ----
+     R asphalt · A sand · H house · O office · S boutique · K school
+     M farm (3×3 footprint) · P park · G carousel · F fountain · W water
+     T tree · B bench · E grass */
+  PRICE: { R:1, A:1, H:5, O:10, S:7, K:20, M:5, P:3, G:2, F:2, W:1, T:1, B:1, E:1 },
+
+  /* ---- income ---- */
+  OFFICE_INCOME: 3,
+  SHOPWORK_INCOME: 1,
+  VISIT_INCOME: 1,
+  HOME_INCOME: 0,
+  FARM_DELIVERY_INCOME: 1,
+
+  /* ---- capacities ---- */
+  OFFICE_CAP: 4,
+  SHOP_WORK_CAP: 1,
+  SHOP_VISIT_CAP: 2,
+  PARK_CAP: 3,
+  RELAX_CAP: 1,
+  PLAY_CAP: 2,
+  FARM_WORK_CAP: 1,
+
+  /* ---- population ---- */
+  NEWCOMERS_PER_NIGHT: 2,
+  FAMILY_EVERY: 2,
+  SCHOOL_MAX_STEPS: 10,
+
+  /* ---- weekend behavior ---- */
+  PLAY_TILES: ['T','W','G','F','P'],
+  RELAX_TILES: ['B','E'],
+  PLAY_RADIUS: 4,
+  PLAY_HOPS: 6,
+  PLAY_HOP_MS: 1400,
+  RELAX_RADIUS: 3,
+
+  /* ---- animation pacing ---- */
+  WALK_STEP_MS: 230,
+  KID_LAG_MS: 260,
+  COIN_MS: 420,
+  COIN_ANIM_MS: 390,
+  COMMUTE_STAGGER_MS: 140,
+  NIGHT_FADE_MS: 1100,
+  NEWCOMER_THINK_MS: 1500,
+  FARM_HOP_MS: 520,
+
+  /* ---- looks ---- */
+  CITIZEN_SCALE: 0.42,
+  KID_SCALE: 0.50,
+  FACES: ['🧒','👧','🧑','👩','👨','🧓'],
+  KID_FACES: ['🧒','👧','👦'],
+  SHOP_TYPES: ['🥐','🍦','🌷','📚','🧸'],
+  FARM_DECOR: ['🌾','🐄','🌾','🐓','🛖','🌾','🐖','🌾','🐑'],
+};
+/* ═══════════════════════════ end of tuning block ══════════════════════════ */
+
+const CITY_SIZES = { S:{cols:15,rows:10}, M:{cols:30,rows:20}, L:{cols:60,rows:40} };
+const CITY_SETTING_DEFAULTS = {
+  size:'S', HOME_INCOME:0, OFFICE_INCOME:3, SHOPWORK_INCOME:1, VISIT_INCOME:1, FARM_DELIVERY_INCOME:1
+};
+function citLoadSettings(){
+  if (!S.citySettings) S.citySettings={};
+  const cs=S.citySettings;
+  const size=CITY_SIZES[cs.size] ? cs.size : CITY_SETTING_DEFAULTS.size;
+  cs.size=size;
+  CITY_CFG.COLS=CITY_SIZES[size].cols; CITY_CFG.ROWS=CITY_SIZES[size].rows;
+  ['HOME_INCOME','OFFICE_INCOME','SHOPWORK_INCOME','VISIT_INCOME','FARM_DELIVERY_INCOME'].forEach(k=>{
+    const v=Number(cs[k]);
+    CITY_CFG[k]=Number.isFinite(v) && v>=0 ? Math.floor(v) : CITY_SETTING_DEFAULTS[k];
+    cs[k]=CITY_CFG[k];
+  });
+}
+citLoadSettings();
+
+const CIT_EMO={ H:'🏠', O:'🏢', K:'🏫', P:'🌳', G:'🎠', F:'⛲', T:'🌲', B:'🪑', M:'🚜' };
+const CIT_CLS={ R:'road', A:'sand', H:'house', O:'office', S:'shop', K:'school', P:'park',
+                W:'water', G:'deco', F:'deco', T:'deco', B:'bench', E:'grass', M:'farmcenter', Q:'farmplot' };
+let cit=null, citTool='R', citLock=false, citTs=18, citPaint=false, citUndo=[], citEditBefore=null, citEditChanged=false;
+
+$('#card-cit').addEventListener('click', ()=>{ sfx('click'); openCit(); });
+function citDefault(){
+  return { money:CITY_CFG.START_MONEY, day:1, cols:CITY_CFG.COLS, rows:CITY_CFG.ROWS,
+    g:Array(CITY_CFG.COLS*CITY_CFG.ROWS).fill(0), ppl:[], st:{}, shopStock:{}, farmDelivery:{}, ns:0, arr:0, personSeq:0 };
+}
+function citSnapshot(){
+  return JSON.parse(JSON.stringify(cit, (k,v)=>(k==='el'||k==='kidEl') ? undefined : v));
+}
+function citUpdateUndoButton(){
+  const b=$('#cit-undo'); if (b) b.disabled=!citUndo.length || citLock;
+}
+function citPushUndo(state){
+  if (!state) return;
+  citUndo.push(state);
+  if (citUndo.length>40) citUndo.shift();
+  citUpdateUndoButton();
+}
+function citRestore(state){
+  cit=state; S.city=cit;
+  const [c,r]=citInferDims(cit); CITY_CFG.COLS=c; CITY_CFG.ROWS=r; cit.cols=c; cit.rows=r;
+  if (S.citySettings) S.citySettings.size = (c===60?'L':c===30?'M':'S');
+  citEnsureExtras(); save(); citFitBoard(); citRenderTiles(); citRenderPeople(); citHud(); citUpdateUndoButton();
+}
+function citFitBoard(){
+  const g=$('#cit-grid'), tools=$('#cit-tools'), right=$('#cit-right'), scr=$('#g-cit');
+  const vw=scr.clientWidth||innerWidth, vh=scr.clientHeight||innerHeight;
+  const sideW=tools.offsetWidth + right.offsetWidth;
+  const byW=Math.floor((vw - 68 - sideW - 24) / CITY_CFG.COLS);
+  const byH=Math.floor((vh - 8) / CITY_CFG.ROWS);
+  citTs=Math.max(4, Math.min(byW, byH));
+  g.style.width=(CITY_CFG.COLS*citTs)+'px';
+  g.style.height=(CITY_CFG.ROWS*citTs)+'px';
+  g.style.flex='0 0 auto';
+  g.style.backgroundSize=`${citTs}px ${citTs}px, ${citTs}px ${citTs}px, ${citTs}px ${citTs}px`;
+}
+function citInferDims(state){
+  if (state && state.cols && state.rows) return [state.cols,state.rows];
+  const n=state && Array.isArray(state.g) ? state.g.length : 0;
+  if (n===150) return [15,10]; if (n===600) return [30,20]; if (n===2400) return [60,40];
+  return [CITY_CFG.COLS,CITY_CFG.ROWS];
+}
+function citResizeState(newCols,newRows){
+  if (!cit){ CITY_CFG.COLS=newCols; CITY_CFG.ROWS=newRows; cit=citDefault(); S.city=cit; return; }
+  const [oldCols,oldRows]=citInferDims(cit);
+  if (oldCols===newCols && oldRows===newRows){ cit.cols=newCols; cit.rows=newRows; CITY_CFG.COLS=newCols; CITY_CFG.ROWS=newRows; return; }
+  const oldG=cit.g.slice(), oldSt=Object.assign({},cit.st||{}), oldStock=Object.assign({},cit.shopStock||{}), oldFarmDelivery=Object.assign({},cit.farmDelivery||{});
+  const ng=Array(newCols*newRows).fill(0), nst={}, nstock={}, nfd={};
+  const rr=Math.min(oldRows,newRows), cc=Math.min(oldCols,newCols);
+  for (let r=0;r<rr;r++) for (let c=0;c<cc;c++){
+    const oi=r*oldCols+c, ni=r*newCols+c;
+    ng[ni]=oldG[oi]||0;
+    if (oldSt[oi]!=null) nst[ni]=oldSt[oi];
+    if (oldStock[oi]!=null) nstock[ni]=oldStock[oi];
+  }
+  const mapIdx=i=>{
+    if (i==null) return i;
+    const r=Math.floor(i/oldCols), c=i%oldCols;
+    return (r<newRows&&c<newCols)?r*newCols+c:null;
+  };
+  for(const [k,v] of Object.entries(oldFarmDelivery)){ const ni=mapIdx(Number(k)); if(ni!=null) nfd[ni]=v; }
+  cit.ppl=(cit.ppl||[]).map(p=>{
+    const q=Object.assign({},p);
+    ['h','at','kidAt','dest','school','shop','spot','playStart'].forEach(k=>{ if(q[k]!=null) q[k]=mapIdx(q[k]); });
+    return q;
+  });
+  cit.g=ng; cit.st=nst; cit.shopStock=nstock; cit.farmDelivery=nfd; cit.cols=newCols; cit.rows=newRows;
+  CITY_CFG.COLS=newCols; CITY_CFG.ROWS=newRows;
+  citCleanPartialFarms();
+  cit.ppl=cit.ppl.filter(p=>p.h!=null && (cit.g[p.h]==='H'||cit.g[p.h]==='M'));
+  citUndo=[];
+}
+function citEnsureExtras(){
+  if (!cit.st) cit.st={};
+  if (!cit.shopStock) cit.shopStock={};
+  if (!cit.farmDelivery) cit.farmDelivery={};
+  if (cit.ns==null) cit.ns=0;
+  if (cit.arr==null) cit.arr=0;
+  if (cit.personSeq==null) cit.personSeq=0;
+  citCleanPartialFarms();
+  let maxId=-1;
+  (cit.ppl||[]).forEach((p,n)=>{
+    citEnsurePersonMeta(p,n);
+    if (p.id>maxId) maxId=p.id;
+  });
+  cit.personSeq=Math.max(cit.personSeq,maxId+1);
+  const w=citWeekNum();
+  cit.g.forEach((t,i)=>{
+    if (t==='S' && cit.shopStock[i]==null) cit.shopStock[i]=w;
+    if (t!=='S' && cit.shopStock[i]!=null) delete cit.shopStock[i];
+    if (t!=='M' && cit.farmDelivery[i]!=null) delete cit.farmDelivery[i];
+  });
+  citValidateState('ensure');
+}
+function citValidateState(where){
+  /* Development-time invariant checks. They do not change gameplay; they make future state bugs obvious in the console. */
+  const problems=[];
+  if(!cit||!Array.isArray(cit.g)) problems.push('missing grid');
+  else if(cit.g.length!==CITY_CFG.COLS*CITY_CFG.ROWS) problems.push('grid-size mismatch');
+  const ids=new Set(), homes=new Set();
+  (cit&&cit.ppl||[]).forEach(p=>{
+    if(ids.has(p.id))problems.push('duplicate person id '+p.id); ids.add(p.id);
+    if(homes.has(p.h))problems.push('duplicate household home '+p.h); homes.add(p.h);
+    if(p.h==null || (cit.g[p.h]!=='H'&&cit.g[p.h]!=='M')) problems.push('invalid home '+p.h);
+  });
+  if(problems.length) console.warn('[city invariant '+where+']',problems);
+  return problems;
+}
+function openCit(){
+  citLoadSettings();
+  if (!cit){ cit = (S.city && Array.isArray(S.city.g)) ? S.city : citDefault(); S.city=cit; }
+  citResizeState(CITY_CFG.COLS,CITY_CFG.ROWS);
+  citEnsureExtras();
+  show('g-cit');
+  try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
+  citRenderTools(); citHud();
+  requestAnimationFrame(()=>{ citFitBoard(); citRenderTiles(); citRenderPeople(); citUpdateUndoButton(); });
+}
+addEventListener('resize', ()=>{
+  if ($('#g-cit').classList.contains('active')){ citFitBoard(); citRenderTiles(); citRenderPeople(); }
+});
+
+const citIdx=(r,c)=>r*CITY_CFG.COLS+c, citRC=i=>[Math.floor(i/CITY_CFG.COLS), i%CITY_CFG.COLS];
