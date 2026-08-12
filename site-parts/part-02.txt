@@ -1,0 +1,236 @@
+  <div class="top-bar"><button class="icon-btn nav-home">🏡</button><div class="dots" id="bal-dots"></div><button class="icon-btn" id="bal-reset">↺</button></div>
+  <div class="stage-wrap">
+    <div id="bal-boxes">
+      <div class="bbox" id="box-L"></div>
+      <div id="bal-eq">🟰</div>
+      <div class="bbox" id="box-R"></div>
+    </div>
+    <div id="bal-tray"></div>
+  </div>
+</div>
+
+<!-- ============ CREATURE ============ -->
+<div class="screen" id="g-cre">
+  <div class="top-bar"><button class="icon-btn nav-home">🏡</button><div class="dots" id="cre-dots"></div><button class="icon-btn" id="cre-free">🎨</button></div>
+  <div class="stage-wrap">
+    <svg id="cre-svg" viewBox="0 0 100 100"></svg>
+    <div id="cre-tools"></div>
+  </div>
+</div>
+
+<!-- ============ PATH ============ -->
+<div class="screen" id="g-pat">
+  <div class="top-bar"><button class="icon-btn nav-home">🏡</button><div class="dots" id="pat-dots"></div><div style="width:64px"></div></div>
+  <div class="stage-wrap">
+    <div id="pat-grid"></div>
+    <div id="pat-controls">
+      <div id="pat-queue"></div>
+      <div id="pat-pal">
+        <button class="palbtn" data-d="U">⬆️</button>
+        <button class="palbtn" data-d="D">⬇️</button>
+        <button class="palbtn" data-d="L">⬅️</button>
+        <button class="palbtn" data-d="R">➡️</button>
+        <button class="palbtn" data-d="W" id="pat-wait">😴</button>
+        <button class="palbtn" data-d="B" id="pat-bone">🦴</button>
+        <button class="palbtn" id="pat-undo">🧽</button>
+        <button class="palbtn" id="pat-play">▶️</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WALKER ============ -->
+<div class="screen" id="g-wal">
+  <div class="top-bar"><button class="icon-btn nav-home">🏡</button><div class="dots" id="wal-dots"></div><div style="width:64px"></div></div>
+  <div class="stage-wrap">
+    <div id="wal-grid"></div>
+    <div id="wal-toolbox"></div>
+  </div>
+</div>
+
+<!-- ============ CITY ============ -->
+<div class="screen" id="g-cit">
+  <div id="cit-left-nav">
+    <button class="icon-btn nav-home">🏡</button>
+    <button class="icon-btn" id="cit-settings-btn">⚙️</button>
+  </div>
+  <div class="stage-wrap">
+    <div id="cit-tools"></div>
+    <div id="cit-grid"></div>
+    <div id="cit-right">
+      <div id="cit-hud"><span id="cit-money-wrap">🪙<b id="cit-money">100</b></span></div>
+      <div id="cit-week"></div>
+      <span id="cit-pop-wrap">👥<b id="cit-pop">0</b></span>
+      <div id="cit-edit-actions"><button class="icon-btn" id="cit-undo">↶</button><button class="icon-btn" id="cit-clear">🗑️</button></div>
+      <button class="icon-btn" id="cit-night" style="background:linear-gradient(145deg,#3949ab,#1a237e);">🌙</button>
+    </div>
+  </div>
+  <div id="cit-fade">🌙</div>
+  <div id="cit-settings">
+    <div id="cit-settings-card">
+      <div id="cit-size-options">
+        <button class="cit-size-btn" data-size="S"><span class="cit-mini-grid sm"></span><span>15×10</span></button>
+        <button class="cit-size-btn" data-size="M"><span class="cit-mini-grid md"></span><span>30×20</span></button>
+        <button class="cit-size-btn" data-size="L"><span class="cit-mini-grid lg"></span><span>60×40</span></button>
+      </div>
+      <div id="cit-income-settings">
+        <div class="cit-setting-row" data-key="HOME_INCOME"><span class="cit-setting-icon">🏠🌙🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">0</b><button data-d="1">➕</button></div>
+        <div class="cit-setting-row" data-key="OFFICE_INCOME"><span class="cit-setting-icon">🏢🧑🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">3</b><button data-d="1">➕</button></div>
+        <div class="cit-setting-row" data-key="SHOPWORK_INCOME"><span class="cit-setting-icon">🛍️🧑🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
+        <div class="cit-setting-row" data-key="VISIT_INCOME"><span class="cit-setting-icon">🛍️👥🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
+        <div class="cit-setting-row" data-key="FARM_DELIVERY_INCOME"><span class="cit-setting-icon">🚜➡️🛍️🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
+      </div>
+      <button id="cit-settings-close">✅</button>
+    </div>
+  </div>
+</div>
+
+<!-- overlays -->
+<div id="award"><div class="card"><div class="stk">🦄</div><div class="go">👏</div></div></div>
+<div id="cheer">🤗</div>
+<canvas id="fx"></canvas>
+<div id="drag-ghost" style="display:none"></div>
+
+<script>
+'use strict';
+/* ================= shared ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const STICKERS = ['🦄','🌈','🐱','🐴','🦋','🌟','🍓','🐬','🎨','🏆','🐰','🌻','🐢','🎪','🧸','🍦','🐧','⭐','🎁','🌸','🐥','🍭','🚂','🎈','🐠','🌙','🍉','🤖','🎀','🐞','⛄','🎠','🦊','🍩','🫧','🎺','🐳','🦕','🌺','🍀','🎂','🪁'];
+const CHEERS = ['🤔']; // thinking face on a miss — no reward-like emojis when failing
+
+let S = { done:{bal:0,cre:0,pat:0,wal:0}, stickers:[] , muted:false };
+try { const raw = localStorage.getItem('lekeverksted'); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch(e){}
+function save(){ try { localStorage.setItem('lekeverksted', JSON.stringify(S)); } catch(e){} }
+
+function show(id){ $$('.screen').forEach(e=>e.classList.remove('active')); $('#'+id).classList.add('active'); }
+$$('.nav-home').forEach(b => b.addEventListener('click', ()=>{ sfx('click'); goHome(); }));
+function goHome(){ renderHome(); show('home'); }
+
+/* ---------- audio ---------- */
+let AC = null;
+function ac(){ if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} } if (AC && AC.state==='suspended') AC.resume(); return AC; }
+document.addEventListener('pointerdown', ()=>ac(), {once:true});
+function tone(f, when, dur, type, vol){
+  const c = ac(); if (!c || S.muted) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type||'sine'; o.frequency.setValueAtTime(f, c.currentTime+when);
+  g.gain.setValueAtTime(0.0001, c.currentTime+when);
+  g.gain.linearRampToValueAtTime(vol||0.18, c.currentTime+when+0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+when+dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(c.currentTime+when); o.stop(c.currentTime+when+dur+0.05);
+}
+function slide(f1,f2,dur,type,vol){
+  const c = ac(); if (!c || S.muted) return;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(f1,c.currentTime); o.frequency.exponentialRampToValueAtTime(f2,c.currentTime+dur);
+  g.gain.setValueAtTime(vol||0.16,c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);
+  o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+dur+0.05);
+}
+function sfx(n){
+  if (n==='click') tone(660,0,0.06,'square',0.08);
+  else if (n==='pickup') slide(300,520,0.09,'sine',0.12);
+  else if (n==='drop') slide(520,300,0.09,'sine',0.12);
+  else if (n==='pop') { slide(880,340,0.1,'sine',0.2); }
+  else if (n==='step') tone(520,0,0.05,'triangle',0.07);
+  else if (n==='boing') slide(160,640,0.22,'sine',0.2);
+  else if (n==='yay') { [523,659,784,1047].forEach((f,i)=>tone(f,i*0.11,0.22,'triangle',0.16)); }
+  else if (n==='bigyay') { [523,659,784,1047,1319].forEach((f,i)=>tone(f,i*0.1,0.3,'triangle',0.17)); [262,330,392].forEach((f,i)=>tone(f,i*0.1,0.5,'sine',0.1)); }
+  else if (n==='hmm') { tone(392,0,0.16,'sine',0.12); tone(523,0.18,0.22,'sine',0.12); } // hopeful up
+  else if (n==='snap') tone(1200,0,0.05,'square',0.06);
+}
+
+/* ---------- mute ---------- */
+$('#btn-mute').addEventListener('click', ()=>{ S.muted=!S.muted; $('#btn-mute').textContent = S.muted?'🔇':'🔊'; save(); });
+if (S.muted) $('#btn-mute').textContent='🔇';
+
+/* ---------- confetti ---------- */
+const fx = $('#fx'), fctx = fx.getContext('2d');
+function sizeFx(){ fx.width=innerWidth; fx.height=innerHeight; }
+addEventListener('resize', sizeFx); sizeFx();
+let parts=[], fxRunning=false;
+function confetti(n){
+  const colors=['#ff5252','#ffd740','#69f0ae','#40c4ff','#e040fb','#ffab40'];
+  for(let i=0;i<(n||90);i++) parts.push({ x:Math.random()*fx.width, y:-20-Math.random()*fx.height*0.3,
+    vx:(Math.random()-0.5)*2.4, vy:2+Math.random()*3.5, r:4+Math.random()*6, c:colors[i%colors.length], a:Math.random()*6.28, va:(Math.random()-0.5)*0.3 });
+  if (!fxRunning){ fxRunning=true; requestAnimationFrame(fxTick); }
+}
+function fxTick(){
+  fctx.clearRect(0,0,fx.width,fx.height);
+  parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.a+=p.va; fctx.save(); fctx.translate(p.x,p.y); fctx.rotate(p.a); fctx.fillStyle=p.c; fctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.6); fctx.restore(); });
+  parts = parts.filter(p=>p.y < fx.height+30);
+  if (parts.length){ requestAnimationFrame(fxTick); } else { fxRunning=false; fctx.clearRect(0,0,fx.width,fx.height); }
+}
+
+/* ---------- gentle cheer ---------- */
+function cheer(){
+  // no face/icon on a miss — just a soft, hopeful two-note sound while things reset
+  sfx('hmm');
+}
+
+/* ---------- sticker award ---------- */
+let awardCb = null;
+function award(gameKey, lvlIdx, cb){
+  const firstTime = lvlIdx >= S.done[gameKey];
+  if (firstTime){ S.done[gameKey] = lvlIdx+1; S.stickers.push(STICKERS[S.stickers.length % STICKERS.length]); save(); }
+  sfx('bigyay'); confetti(firstTime?120:60);
+  const ov = $('#award');
+  ov.querySelector('.stk').textContent = firstTime ? S.stickers[S.stickers.length-1] : '⭐';
+  awardCb = cb;
+  setTimeout(()=>ov.classList.add('show'), 500);
+}
+$('#award').addEventListener('pointerdown', ()=>{
+  $('#award').classList.remove('show'); sfx('click');
+  const cb = awardCb; awardCb=null; if (cb) cb();
+});
+
+/* ---------- home render ---------- */
+const GAMES = { bal:{card:'card-bal',n:0}, cre:{card:'card-cre',n:0}, pat:{card:'card-pat',n:0}, wal:{card:'card-wal',n:0} };
+function renderHome(){
+  $('#book-count').textContent = S.stickers.length;
+  for (const k in GAMES){
+    const g = GAMES[k], card = $('#'+g.card), prog = card.querySelector('.prog');
+    prog.innerHTML='';
+    for (let i=0;i<g.n;i++){ const s=document.createElement('span'); if (i<S.done[k]) s.classList.add('done'); prog.appendChild(s); }
+    let crown = card.querySelector('.crown');
+    if (S.done[k]>=g.n && g.n>0){ if(!crown){ crown=document.createElement('div'); crown.className='crown'; crown.textContent='👑'; card.appendChild(crown);} }
+    else if (crown) crown.remove();
+  }
+}
+
+/* ---------- sticker book ---------- */
+$('#btn-book').addEventListener('click', ()=>{ sfx('click'); renderBook(); show('book'); });
+function renderBook(){
+  const total = GAMES.bal.n + GAMES.cre.n + GAMES.pat.n + GAMES.wal.n;
+  const grid = $('#book-grid'); grid.innerHTML='';
+  for (let i=0;i<total;i++){
+    const d = document.createElement('div');
+    d.style.cssText='aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:44px;background:#ffffffb0;border-radius:16px;box-shadow:0 3px 0 #00000012;';
+    d.textContent = i < S.stickers.length ? S.stickers[i] : '';
+    if (i >= S.stickers.length) d.style.opacity=0.45;
+    grid.appendChild(d);
+  }
+}
+
+/* ---------- dots ---------- */
+function renderDots(el, n, cur, done, onPick){
+  el.innerHTML='';
+  for (let i=0;i<n;i++){
+    const b=document.createElement('button');
+    if (i<done){ b.classList.add('done'); b.textContent='⭐'; }
+    if (i===cur) b.classList.add('cur');
+    if (i>done) b.classList.add('locked');
+    b.addEventListener('click', ()=>{ if (i<=done){ sfx('click'); onPick(i); } });
+    el.appendChild(b);
+  }
+}
+
+/* ---------- generic ghost drag ---------- */
+const ghost = $('#drag-ghost');
+function startGhost(txt, x, y){ ghost.textContent=txt; ghost.style.display='block'; moveGhost(x,y); }
+function moveGhost(x,y){ ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
+function endGhost(){ ghost.style.display='none'; }
+
+/* ================= BALANCE (DragonBox rules, treasure chest) ================= */
