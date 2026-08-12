@@ -1,0 +1,250 @@
+/* Goal: isolate the question mark ❓ alone in its box — then it sweeps away the remaining opposite-side items.
+   - Tap a tray item: one copy flies into BOTH boxes (equality is kept automatically).
+   - Inside a box, drag an item onto its anti-version (same symbol, inverted colors) to annihilate both.
+   - If the SAME item sits in both boxes, dragging it out of either box removes it from both (undo).
+   - The box opposite the chest must also be cleaned: no annihilable pair may remain before the chest opens.
+   - Extra question marks are removed with anti-question-marks (the same ❓ rendered with inverted colors);
+     levels with n chests in one box always have n-1 in the other, so anti-chests never leave leftovers. */
+const CHEST='❓', ACHEST='❓i';
+const BAL_PAIR = {'❤️':'💚','💚':'❤️','🟦':'🟧','🟧':'🟦'};
+BAL_PAIR[CHEST]=ACHEST; BAL_PAIR[ACHEST]=CHEST;
+const BAL_LEVELS = [
+  { L:[CHEST,'❤️','💚'], R:['🍎'], T:[] },
+  { L:[CHEST,'❤️'], R:['🍎'], T:['💚'] },
+  { L:[CHEST,'🟦'], R:['🍌','🍎'], T:['🟧'] },
+  { L:[CHEST], R:['🍎','❤️','💚'], T:[] },
+  { L:[CHEST,'❤️'], R:['🍎','🍪'], T:['💚','🍪'] },
+  { L:[CHEST,CHEST], R:[CHEST,'🍎'], T:[ACHEST] },
+  { L:['🍓'], R:[CHEST,'💚'], T:['❤️'] },
+  { L:[CHEST,'❤️','❤️'], R:['🍌','🟦','🟧'], T:['💚','💚'] },
+  { L:[CHEST,CHEST,'🟦'], R:[CHEST,'🍌'], T:[ACHEST,'🟧','🍪'] },
+  { L:[CHEST,'💚','🟦'], R:['🍎','❤️','💚'], T:['❤️','🟧','🍪','🍪'] },
+];
+GAMES.bal.n = BAL_LEVELS.length;
+let balCur=0, balL=[], balR=[], balT=[], balLock=false, balPairSince=null, balPulseTimer=null;
+
+$('#card-bal').addEventListener('click', ()=>{ sfx('click'); openBal(Math.min(S.done.bal, BAL_LEVELS.length-1)); });
+$('#bal-reset').addEventListener('click', ()=>{ if (balLock) return; sfx('pop'); openBal(balCur); });
+function openBal(i){
+  balCur=i; balLock=false; balPairSince=null;
+  if (balPulseTimer){ clearTimeout(balPulseTimer); balPulseTimer=null; }
+  const lv = BAL_LEVELS[i];
+  balL=[...lv.L]; balR=[...lv.R]; balT=[...lv.T];
+  show('g-bal'); balRender();
+}
+function balMkItem(it){
+  const s=document.createElement('span'); s.className='bitem';
+  if (it.endsWith('i')){ s.textContent=it.slice(0,-1); s.classList.add('inv'); }
+  else s.textContent=it;
+  s.dataset.item=it;
+  return s;
+}
+function balPairIn(arr){ // first annihilable pair [i,j] in one box, or null
+  for (let i=0;i<arr.length;i++){ const m=BAL_PAIR[arr[i]]; if(!m) continue;
+    for (let j=i+1;j<arr.length;j++){ if(arr[j]===m) return [i,j]; } }
+  return null;
+}
+function balRender(){
+  renderDots($('#bal-dots'), BAL_LEVELS.length, balCur, S.done.bal, openBal);
+  const pairs = { L: balPairIn(balL), R: balPairIn(balR) };
+  [['L',balL,'#box-L'],['R',balR,'#box-R']].forEach(([bk,arr,sel])=>{
+    const box=$(sel); box.innerHTML='';
+    arr.forEach((it,i)=>{
+      const s=balMkItem(it);
+      s.dataset.box=bk; s.dataset.i=i;
+      balDragItem(s);
+      box.appendChild(s);
+    });
+  });
+  const tray=$('#bal-tray'); tray.innerHTML='';
+  balT.forEach((it,i)=>{
+    const s=balMkItem(it); s.classList.add('tapme');
+    balTrayItem(s, i);
+    tray.appendChild(s);
+  });
+  // gentle pulse hint on an annihilable pair — only after 10 s
+  const anyPair = pairs.L || pairs.R;
+  if (anyPair){ if (balPairSince===null) balPairSince=performance.now(); }
+  else balPairSince=null;
+  if (balPulseTimer){ clearTimeout(balPulseTimer); balPulseTimer=null; }
+  if (anyPair){
+    const wait = Math.max(0, 10000 - (performance.now()-balPairSince));
+    balPulseTimer = setTimeout(()=>{
+      [['L','#box-L'],['R','#box-R']].forEach(([bk,sel])=>{
+        const p=pairs[bk]; if (!p) return;
+        const els=$$(sel+' .bitem');
+        p.forEach(k=>{ if (els[k]) els[k].classList.add('cancelpulse'); });
+      });
+    }, wait);
+  }
+}
+function balFlySpan(item, fromRect, toX, toY, scale){
+  const f=balMkItem(item); f.classList.add('fly');
+  f.style.transform=`translate(${fromRect.x}px,${fromRect.y}px)`;
+  document.body.appendChild(f);
+  requestAnimationFrame(()=>{ f.style.transform=`translate(${toX}px,${toY}px) scale(${scale||0.95})`; });
+  setTimeout(()=>f.remove(), 560);
+}
+function balTrayItem(el, idx){
+  el.addEventListener('pointerdown', e=>{
+    if (balLock) return;
+    e.preventDefault();
+    const sx=e.clientX, sy=e.clientY;
+    let moved=false;
+    el.setPointerCapture(e.pointerId);
+    startGhost(el.textContent, e.clientX, e.clientY);
+    if (el.dataset.item.endsWith('i')) ghost.classList.add('inv'); else ghost.classList.remove('inv');
+    ghost.style.opacity='0';
+    const mv=ev=>{
+      if (!moved && Math.hypot(ev.clientX-sx, ev.clientY-sy)>8){ moved=true; ghost.style.opacity='1'; sfx('pickup'); }
+      if (moved) moveGhost(ev.clientX, ev.clientY);
+    };
+    const up=ev=>{
+      el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up);
+      endGhost(); ghost.classList.remove('inv'); ghost.style.opacity='';
+      const inBox=sel=>{ const r=$(sel).getBoundingClientRect(); return ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom; };
+      // A tap keeps the old behavior. A drag only commits when dropped into either equation box.
+      if (!moved || inBox('#box-L') || inBox('#box-R')) balFly(idx);
+      else sfx('drop');
+    };
+    el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  });
+}
+
+function balFly(idx){
+  if (balLock) return; balLock=true; sfx('pickup');
+  const item=balT[idx];
+  const trayEls=$$('#bal-tray .bitem');
+  const src=trayEls[idx] ? trayEls[idx].getBoundingClientRect() : {x:innerWidth/2,y:innerHeight-80};
+  ['#box-L','#box-R'].forEach(sel=>{
+    const t=$(sel).getBoundingClientRect();
+    balFlySpan(item, src, t.x+t.width/2-22, t.y+t.height/2-22);
+  });
+  setTimeout(()=>{
+    balT.splice(idx,1); balL.push(item); balR.push(item);
+    balLock=false; sfx('drop'); balRender(); balCheck();
+  }, 520);
+}
+function balDragItem(el){
+  el.addEventListener('pointerdown', e=>{
+    if (balLock) return;
+    e.preventDefault();
+    const bk=el.dataset.box, idx=+el.dataset.i, item=el.dataset.item;
+    el.classList.add('dragging'); el.setPointerCapture(e.pointerId);
+    startGhost(el.textContent, e.clientX, e.clientY);
+    if (item.endsWith('i')) ghost.classList.add('inv'); else ghost.classList.remove('inv');
+    sfx('pickup');
+    const mv=ev=>moveGhost(ev.clientX, ev.clientY);
+    const up=ev=>{
+      el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up);
+      el.classList.remove('dragging'); endGhost(); ghost.classList.remove('inv');
+      // 1) dropped onto its anti-version inside the SAME box? -> annihilate both
+      const anti=BAL_PAIR[item];
+      if (anti){
+        const hit=document.elementFromPoint(ev.clientX, ev.clientY);
+        const target=hit && hit.closest ? hit.closest('.bitem') : null;
+        if (target && target!==el && target.dataset.box===bk && target.dataset.item===anti){
+          balAnnihilate(bk, idx, +target.dataset.i); return;
+        }
+      }
+      // 2) dropped OUTSIDE both boxes, and the same item exists in the other box -> remove from both (undo)
+      const inRect=(sel)=>{ const r=$(sel).getBoundingClientRect(); return ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom; };
+      if (!inRect('#box-L') && !inRect('#box-R') && item!==CHEST){ // chests are treasure — they never leave a box
+        const other = bk==='L'?balR:balL;
+        const oi = other.indexOf(item);
+        if (oi>=0){ balUndoBoth(bk, idx, oi, item); return; }
+      }
+      sfx('click'); balRender();
+    };
+    el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  });
+}
+function balUndoBoth(bk, idx, otherIdx, item){
+  balLock=true; sfx('pop');
+  const selfSel = bk==='L'?'#box-L':'#box-R', otherSel = bk==='L'?'#box-R':'#box-L';
+  const tray=$('#bal-tray').getBoundingClientRect();
+  const tx=tray.x+tray.width/2-22, ty=tray.y+tray.height/2-22;
+  const selfEl=$$(selfSel+' .bitem')[idx], otherEl=$$(otherSel+' .bitem')[otherIdx];
+  [selfEl, otherEl].forEach(elm=>{ if (elm){ balFlySpan(item, elm.getBoundingClientRect(), tx, ty, 0.9); elm.style.opacity=0; } });
+  setTimeout(()=>{
+    if (bk==='L'){ balL.splice(idx,1); balR.splice(otherIdx,1); }
+    else { balR.splice(idx,1); balL.splice(otherIdx,1); }
+    balT.push(item);
+    balLock=false; balRender(); balCheck();
+  }, 520);
+}
+function balAnnihilate(bk, i, j){
+  if (balLock) return; balLock=true;
+  sfx('pop');
+  const arr = bk==='L'?balL:balR;
+  const els=$$((bk==='L'?'#box-L':'#box-R')+' .bitem');
+  [i,j].forEach(k=>{ if(els[k]){ els[k].style.transition='transform .35s, opacity .35s'; els[k].style.transform='scale(0) rotate(180deg)'; els[k].style.opacity='0'; } });
+  setTimeout(()=>{
+    const keep = arr.filter((_,k)=>k!==i&&k!==j);
+    if (bk==='L') balL=keep; else balR=keep;
+    balLock=false; balRender(); balCheck();
+  }, 400);
+}
+function balCheck(){
+  const cL=balL.filter(x=>x===CHEST).length, cR=balR.filter(x=>x===CHEST).length;
+  if (cL+cR!==1) return;
+  const chestArr = cL===1?balL:balR, otherArr = cL===1?balR:balL;
+  if (chestArr.length!==1) return;            // chest must be alone in its box
+  if (balPairIn(otherArr)) return;            // the other side must be cleaned up first
+  balOpenChest(cL===1?'L':'R');
+}
+function balOpenChest(bk){
+  balLock=true;
+  const box=$(bk==='L'?'#box-L':'#box-R');
+  const other=$(bk==='L'?'#box-R':'#box-L');
+  const chestEl=box.querySelector('.bitem');
+  if (!chestEl){ balLock=false; return; }
+  chestEl.classList.add('shake');
+  sfx('boing');
+  setTimeout(async()=>{
+    chestEl.classList.remove('shake');
+    const r=chestEl.getBoundingClientRect();
+    const flyer=balMkItem(CHEST);
+    flyer.style.cssText=`position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;display:flex;align-items:center;justify-content:center;z-index:68;font-size:${Math.max(46,r.height)}px;pointer-events:none;transition:left .36s ease, top .36s ease, transform .36s ease, opacity .25s;`;
+    document.body.appendChild(flyer);
+    chestEl.style.visibility='hidden';
+    const targets=[...other.querySelectorAll('.bitem')];
+    sfx('yay');
+    for (let i=0;i<targets.length;i++){
+      const target=targets[i];
+      const tr=target.getBoundingClientRect();
+      flyer.style.left=(tr.left + (tr.width-r.width)/2)+'px';
+      flyer.style.top=(tr.top + (tr.height-r.height)/2)+'px';
+      flyer.style.transform=`scale(1.18) rotate(${i%2?10:-10}deg)`;
+      await new Promise(resolve=>setTimeout(resolve,380));
+      target.style.transition='transform .22s ease, opacity .22s ease';
+      target.style.transform='scale(0)';
+      target.style.opacity='0';
+      sfx('pop');
+      await new Promise(resolve=>setTimeout(resolve,230));
+    }
+    flyer.style.opacity='0';
+    flyer.style.transform='scale(.45)';
+    await new Promise(resolve=>setTimeout(resolve,270));
+    flyer.remove();
+    award('bal', balCur, ()=>{
+      if (balCur+1 < BAL_LEVELS.length) openBal(balCur+1); else goHome();
+    });
+  }, 550);
+}
+
+/* ================= CREATURE ================= */
+function P(shape,dims,color,x,y,rot){ return {shape,dims,color,x,y,rot:rot||0}; }
+const CRE_LEVELS = [
+  { name:'katt', eyes:[[25,29],[31,29]], parts:[
+      P('t',[4],'#f59e0b',22.5,22,-15), P('t',[4],'#f59e0b',33.5,22,15),
+      P('c',[8],'#f59e0b',28,30), P('r',[26,13],'#f59e0b',46,42),
+      P('r',[4,9],'#d97706',38,52), P('r',[4,9],'#d97706',54,52),
+      P('r',[13,4],'#f59e0b',62,34,-35) ]},
+  { name:'hest', eyes:[[70,16]], parts:[
+      P('r',[30,14],'#b45309',46,40), P('r',[8,16],'#b45309',62,29,25),
+      P('r',[13,7],'#b45309',69,17,15), P('t',[3],'#92400e',65.5,11.5),
+      P('r',[4,12],'#92400e',35,53), P('r',[4,12],'#92400e',43,53),
+      P('r',[4,12],'#92400e',51,53), P('r',[4,12],'#92400e',59,53),
+      P('r',[12,4],'#78350f',29,36,35) ]},
+  { name:'fisk', eyes:[[41,35]], parts:[
