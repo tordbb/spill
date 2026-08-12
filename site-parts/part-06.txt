@@ -1,0 +1,255 @@
+  document.body.appendChild(b);
+  requestAnimationFrame(()=>{ b.style.transform='translateY(-34px) rotate(25deg)'; b.style.opacity=0; });
+  setTimeout(()=>b.remove(), 650);
+  sfx('drop');
+}
+function patFail(caught){
+  patFails++;
+  cheer();
+  setTimeout(()=>{
+    $$('#pat-queue .qchip').forEach(c=>c.classList.remove('exec'));
+    patResetActors(true);
+    setTimeout(()=>{ patRun=false; }, 450);
+    if (patFails>=2) patShowTrail();
+  }, caught?300:900);
+}
+function patBFS(){
+  const rows=patGrid.length, cols=patGrid[0].length;
+  const prev={}, seen=new Set([patStart.join()]), q=[patStart];
+  while(q.length){
+    const cur=q.shift();
+    if (cur[0]===patFish[0]&&cur[1]===patFish[1]){
+      const cells=[]; let k=cur.join();
+      while(prev[k]){ cells.unshift(k.split(',').map(Number)); k=prev[k]; }
+      return cells;
+    }
+    for (const dk in DIRS){
+      const d=DIRS[dk], nr=cur[0]+d[0], nc=cur[1]+d[1];
+      if (nr<0||nc<0||nr>=rows||nc>=cols||patGrid[nr][nc]==='#') continue;
+      const key=nr+','+nc; if (seen.has(key)) continue; seen.add(key);
+      prev[key]=cur.join(); q.push([nr,nc]);
+    }
+  }
+  return [];
+}
+function patShowTrail(){
+  let cells;
+  if ((patLevel.robots||patLevel.dogs) && patLevel.sol) cells = patSimulate(patLevel.sol).catCells.slice(1);
+  else cells = patBFS();
+  if (!cells.length) return;
+  const g=$('#pat-grid');
+  const pawEls=[];
+  cells.forEach((rc,i)=>{
+    if (rc[0]===patFish[0]&&rc[1]===patFish[1]) return;
+    if (rc[0]===patStart[0]&&rc[1]===patStart[1]) return;
+    const p=document.createElement('div'); p.className='paw'; p.textContent='🐾';
+    p.style.left=(10+rc[1]*(patTs+4))+'px'; p.style.top=(10+rc[0]*(patTs+4))+'px';
+    p.style.opacity=0; p.style.transition='opacity .3s';
+    g.appendChild(p); pawEls.push(p);
+    setTimeout(()=>{ p.style.opacity=0.8; }, 300+i*220);
+  });
+  setTimeout(()=>{ pawEls.forEach(p=>p.remove()); }, 5600);
+}
+
+/* ================= WALKER ================= */
+const TOOL_EMO = { P:'🪵', M:'🍄', F:'🔄' };
+const WAL_LEVELS = [
+  { map:["..........","..........","..........","..........","..........","S........H","##########"], tools:{}, hints:[] },
+  { map:["..........","..........","..........","..........","..........","S........H","####.#####"], tools:{P:1}, hints:[['P',6,4]] },
+  { map:["..........","..........","..........","..........","..........","S........H","###.##.###"], tools:{P:2}, hints:[['P',6,3],['P',6,6]] },
+  { map:["..........","..........","..........",".........H","........##","S.........","##########"], tools:{M:1}, hints:[['M',5,7]] },
+  { map:["..........","..........","..........","..........","..........","H....S....","##########"], tools:{F:1}, hints:[['F',5,8]] },
+  { map:["..........","..........","..........","..........","..........","S.....#..H","###.######"], tools:{P:1}, hints:[['P',6,3]] },
+  { map:["..........","..........","..........","..........","..........","H...S.....","##.#######"], tools:{P:1,F:1}, hints:[['P',6,2],['F',5,7]] },
+  { map:["..........","..........","......H...","......##..","..........","S.........","###.######"], tools:{P:1,M:1}, hints:[['P',6,3],['M',5,5]] },
+  { map:["..........",".........H","........##","..........","....####..","S.........","##########"], tools:{M:2}, hints:[['M',5,3],['M',3,7]] },
+  { map:["..........","..........","H.........","##........","..........","S.........","####.#####"], tools:{P:1,M:1,F:1}, hints:[['P',6,4],['F',5,7],['M',5,1]] },
+  /* island-hopping levels: bounce up between floating islands, turn to avoid the edges */
+  { map:["..........","H.........","####......","..........","..........","....####..","..........","S.........","##########"], tools:{M:2,F:1}, hints:[['M',7,6],['F',4,7],['M',4,4]] },
+  { map:["..........",".........H","......####","..........","..........","..####....","..........","S.........","##########"], tools:{M:2}, hints:[['M',7,1],['M',4,5]] },
+  { map:["..........","........H.","........##","..........","......####","..####....","..........","S.........","#####....."], tools:{M:3,F:1}, hints:[['M',7,2],['M',4,5],['M',3,8],['F',1,9]] },
+];
+GAMES.wal.n = WAL_LEVELS.length;
+let walCur=0, walMap=null, walPlaced={}, walRun=false, walFails=0, walWs=44,
+    walStart=null, walHome=null, walPos=null, walDir=1, walTools=[];
+
+$('#card-wal').addEventListener('click', ()=>{ sfx('click'); openWal(Math.min(S.done.wal, WAL_LEVELS.length-1)); });
+function openWal(i){
+  walCur=i; walPlaced={}; walRun=false; walFails=0; walDir=1;
+  const lv=WAL_LEVELS[i];
+  walMap = lv.map.map(r=>r.split(''));
+  const rows=walMap.length, cols=walMap[0].length;
+  walMap.forEach((r,ri)=>r.forEach((c,ci)=>{ if(c==='S') walStart=[ri,ci]; if(c==='H') walHome=[ri,ci]; }));
+  walPos=[...walStart];
+  show('g-wal');
+  renderDots($('#wal-dots'), WAL_LEVELS.length, i, S.done.wal, openWal);
+  walWs = Math.max(30, Math.min(60, Math.floor(Math.min(innerWidth*0.92/cols, innerHeight*0.52/rows))));
+  const g=$('#wal-grid');
+  g.style.setProperty('--ws', walWs+'px');
+  g.style.width=cols*walWs+'px'; g.style.height=rows*walWs+'px';
+  walRenderGrid();
+  walTools=[];
+  for (const t in lv.tools) for (let k=0;k<lv.tools[t];k++) walTools.push(t);
+  walRenderTools();
+}
+function walTileAt(r,c,cls,txt){
+  const g=$('#wal-grid');
+  const t=document.createElement('div'); t.className='wtile '+(cls||'');
+  t.style.left=c*walWs+'px'; t.style.top=r*walWs+'px';
+  if (txt) t.textContent=txt;
+  g.appendChild(t); return t;
+}
+function walRenderGrid(){
+  const g=$('#wal-grid'); g.innerHTML='';
+  walMap.forEach((row,r)=>row.forEach((ch,c)=>{
+    if (ch==='#') walTileAt(r,c,'ground');
+    else if (ch==='H') walTileAt(r,c,'','🏠');
+    else if ((r*5+c*3)%17===2 && walMap[Math.min(r+1,walMap.length-1)][c]==='#') walTileAt(r,c,'','🌸');
+  }));
+  for (const key in walPlaced){
+    const [r,c]=key.split(',').map(Number);
+    const t=walTileAt(r,c,'placed',TOOL_EMO[walPlaced[key]]);
+    walPlacedDrag(t, key);
+  }
+  // hint ghosts
+  if (walFails>=2){
+    WAL_LEVELS[walCur].hints.forEach(([tool,r,c])=>{
+      if (walPlaced[r+','+c]===tool) return;
+      const t=walTileAt(r,c,'hintcell',''); t.dataset.hint=TOOL_EMO[tool];
+    });
+  }
+  const cr=document.createElement('div'); cr.id='wal-critter'; cr.textContent='🐹';
+  g.appendChild(cr);
+  walMoveCritter(walPos, false);
+}
+function walMoveCritter(pos, anim){
+  const cr=$('#wal-critter'); if(!cr) return;
+  if (!anim) cr.style.transition='none';
+  cr.style.transform=`translate(${pos[1]*walWs}px, ${pos[0]*walWs}px) scaleX(${walDir})`;
+  if (!anim){ void cr.offsetWidth; cr.style.transition=''; }
+}
+function walRenderTools(){
+  const tb=$('#wal-toolbox'); tb.innerHTML='';
+  walTools.forEach((t,i)=>{
+    const c=document.createElement('span'); c.className='wtool'; c.textContent=TOOL_EMO[t];
+    walToolDrag(c, t, i);
+    tb.appendChild(c);
+  });
+  if (Object.keys(WAL_LEVELS[walCur].tools).length){
+    const rst=document.createElement('button'); rst.className='icon-btn'; rst.textContent='↺';
+    rst.style.cssText='width:52px;height:52px;font-size:26px;';
+    rst.addEventListener('click', ()=>{
+      if (walRun) return; sfx('pop');
+      for (const k in walPlaced){ walTools.push(walPlaced[k]); delete walPlaced[k]; }
+      walRenderGrid(); walRenderTools();
+    });
+    tb.appendChild(rst);
+  }
+  const play=document.createElement('button'); play.className='icon-btn'; play.id='wal-play'; play.textContent='▶️';
+  play.style.background='linear-gradient(145deg,#66bb6a,#43a047)';
+  play.addEventListener('click', ()=>{ if (!walRun) walGo(); });
+  tb.appendChild(play);
+}
+let walGlowEl=null;
+function walCellFromEvent(e){
+  const r=$('#wal-grid').getBoundingClientRect();
+  if (e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) return null;
+  const c=Math.floor((e.clientX-r.left)/walWs), rr=Math.floor((e.clientY-r.top)/walWs);
+  if (rr<0||c<0||rr>=walMap.length||c>=walMap[0].length) return null;
+  return [rr,c];
+}
+function walCellFree(r,c){
+  const ch=walMap[r][c];
+  return ch!=='#' && ch!=='H' && !walPlaced[r+','+c] && !(r===walStart[0]&&c===walStart[1]);
+}
+function walToolDrag(el, tool, idx){
+  el.addEventListener('pointerdown', e=>{
+    if (walRun) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.style.opacity=0.3;
+    startGhost(TOOL_EMO[tool], e.clientX, e.clientY); sfx('pickup');
+    const mv=ev=>{
+      moveGhost(ev.clientX, ev.clientY);
+      const cell=walCellFromEvent(ev);
+      if (walGlowEl){ walGlowEl.remove(); walGlowEl=null; }
+      if (cell && walCellFree(cell[0],cell[1])) walGlowEl=walTileAt(cell[0],cell[1],'cellglow','');
+    };
+    const up=ev=>{
+      el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up);
+      endGhost(); el.style.opacity=1;
+      if (walGlowEl){ walGlowEl.remove(); walGlowEl=null; }
+      const cell=walCellFromEvent(ev);
+      if (cell && walCellFree(cell[0],cell[1])){
+        walPlaced[cell[0]+','+cell[1]]=tool;
+        walTools.splice(idx,1);
+        sfx('drop');
+        walRenderGrid(); walRenderTools();
+      } else sfx('click');
+    };
+    el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  });
+}
+/* placed pieces can be dragged to a new spot, dragged off the grid to return them,
+   or simply tapped to send them back to the toolbox */
+function walPlacedDrag(el, key){
+  el.addEventListener('pointerdown', e=>{
+    if (walRun) return;
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    const tool=walPlaced[key];
+    const sx=e.clientX, sy=e.clientY;
+    let moved=false;
+    const mv=ev=>{
+      if (!moved && Math.hypot(ev.clientX-sx, ev.clientY-sy)>8){
+        moved=true; el.style.opacity=0.25;
+        startGhost(TOOL_EMO[tool], ev.clientX, ev.clientY); sfx('pickup');
+      }
+      if (!moved) return;
+      moveGhost(ev.clientX, ev.clientY);
+      const cell=walCellFromEvent(ev);
+      if (walGlowEl){ walGlowEl.remove(); walGlowEl=null; }
+      if (cell && (walCellFree(cell[0],cell[1]) || cell.join(',')===key)) walGlowEl=walTileAt(cell[0],cell[1],'cellglow','');
+    };
+    const up=ev=>{
+      el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up);
+      if (walGlowEl){ walGlowEl.remove(); walGlowEl=null; }
+      endGhost(); el.style.opacity=1;
+      if (!moved){ // tap: back to toolbox
+        sfx('pop'); walTools.push(tool); delete walPlaced[key];
+      } else {
+        const cell=walCellFromEvent(ev);
+        if (cell && walCellFree(cell[0],cell[1])){ delete walPlaced[key]; walPlaced[cell[0]+','+cell[1]]=tool; sfx('drop'); }
+        else if (!cell){ walTools.push(tool); delete walPlaced[key]; sfx('pop'); }
+        else sfx('click');
+      }
+      walRenderGrid(); walRenderTools();
+    };
+    el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  });
+}
+function walSolid(r,c){
+  if (r<0||c<0||r>=walMap.length||c>=walMap[0].length) return false;
+  return walMap[r][c]==='#' || walPlaced[r+','+c]==='P';
+}
+function walJumpCritter(fromPos, peakRow, toPos, ms, done){
+  const cr=$('#wal-critter'); if (!cr){ done(); return; }
+  const sx=fromPos[1]*walWs, sy=fromPos[0]*walWs;
+  const mx=((fromPos[1]+toPos[1])/2)*walWs, my=peakRow*walWs;
+  const ex=toPos[1]*walWs, ey=toPos[0]*walWs;
+  const face=`scaleX(${walDir})`;
+  cr.classList.remove('fall');
+  cr.style.transition='none';
+  const frames=[
+    { transform:`translate(${sx}px, ${sy}px) ${face}`, offset:0 },
+    { transform:`translate(${mx}px, ${my}px) ${face}`, offset:.5 },
+    { transform:`translate(${ex}px, ${ey}px) ${face}`, offset:1 }
+  ];
+  if (cr.animate){
+    const a=cr.animate(frames,{duration:ms,easing:'linear',fill:'forwards'});
+    a.onfinish=()=>{
+      cr.style.transform=frames[2].transform;
+      a.cancel();
+      cr.style.transition='';
+      done();
+    };
+  } else {
