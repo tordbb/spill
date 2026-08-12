@@ -1,0 +1,238 @@
+  sfx('pop'); save(); citRenderTiles(); citRenderPeople(); citHud(); return true;
+}
+function citBuild(i){
+  if(i==null)return false;
+  if(citTool==='X')return citBulldoze(i);
+  if(citTool==='M')return citBuildFarm(i);
+  if(cit.g[i]!==0)return false;
+  const price=CITY_CFG.PRICE[citTool];
+  if(cit.money<price){ const m=$('#cit-money-wrap'); m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake'); sfx('hmm'); return false; }
+  cit.money-=price; cit.g[i]=citTool;
+  if(citTool==='S'){
+    cit.st[i]=cit.ns%CITY_CFG.SHOP_TYPES.length; cit.ns++; citMarkShopStocked(i);
+  }
+  sfx('drop'); save(); citRenderTiles(); citHud(); return true;
+}
+
+/* ---------- network/path finding ---------- */
+function citActive(){
+  const act=new Set(),q=[];
+  cit.g.forEach((t,i)=>{
+    if(citWalkableTile(t)){
+      const [r,c]=citRC(i);
+      if(r===0||c===0||r===CITY_CFG.ROWS-1||c===CITY_CFG.COLS-1){act.add(i);q.push(i);}
+    }
+  });
+  while(q.length){ citNb(q.pop()).forEach(j=>{ if(citWalkableTile(cit.g[j])&&!act.has(j)){act.add(j);q.push(j);} }); }
+  return act;
+}
+function citAdjRoads(i,act){
+  const direct=citNb(i).filter(j=>act.has(j)); if(direct.length)return direct;
+  const farm=citFarmByCell(i); if(farm!=null)return citFarmRoads(farm,act); return [];
+}
+function citConnected(i,act){ return act.has(i)||citAdjRoads(i,act).length>0; }
+function citRoute(a,b,act){
+  if(a===b)return[a];
+  const starts=act.has(a)?[a]:citAdjRoads(a,act), goals=new Set(act.has(b)?[b]:citAdjRoads(b,act));
+  if(!starts.length||!goals.size)return null;
+  const prev={},seen=new Set(starts),q=[...starts]; let found=null;
+  while(q.length){
+    const cur=q.shift(); if(goals.has(cur)){found=cur;break;}
+    citNb(cur).forEach(j=>{if(act.has(j)&&!seen.has(j)){seen.add(j);prev[j]=cur;q.push(j);}});
+  }
+  if(found==null)return null;
+  const path=[found]; let k=found; while(prev[k]!=null){k=prev[k];path.unshift(k);}
+  if(!act.has(a))path.unshift(a); if(!act.has(b))path.push(b); return path;
+}
+function citRoadPath(homeIdx,act){
+  const starts=citAdjRoads(homeIdx,act); if(!starts.length)return null;
+  const prev={},seen=new Set(starts),q=[...starts]; let edge=null;
+  while(q.length){
+    const cur=q.shift(),[r,c]=citRC(cur);
+    if(r===0||c===0||r===CITY_CFG.ROWS-1||c===CITY_CFG.COLS-1){edge=cur;break;}
+    citNb(cur).forEach(j=>{if(act.has(j)&&!seen.has(j)){seen.add(j);prev[j]=cur;q.push(j);}});
+  }
+  if(edge==null)return null;
+  const path=[edge]; let k=edge; while(prev[k]!=null){k=prev[k];path.push(k);} path.push(homeIdx); return path;
+}
+function citNearSchool(homeIdx,act){
+  let best=null,bd=Infinity;
+  cit.g.forEach((t,i)=>{
+    if(t!=='K'||!citConnected(i,act))return; const route=citRoute(homeIdx,i,act); if(!route)return;
+    const steps=route.length-1; if(steps<CITY_CFG.SCHOOL_MAX_STEPS&&steps<bd){bd=steps;best=i;}
+  }); return best;
+}
+function citStreetByHome(homeIdx,act){ const roads=citAdjRoads(homeIdx,act); return roads.length?roads[0]:null; }
+const citSleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function citWalkW(w,toIdx,act){
+  if(!w.el){w.at=toIdx;return true;} citMovingPose(w.el);
+  const from=w.at!=null?w.at:toIdx; if(from===toIdx)return true;
+  const path=citRoute(from,toIdx,act);
+  if(!path){
+    /* Never glide through buildings/grass as a fallback: all city travel must stay on the road network. */
+    w.el.style.transition=''; return false;
+  }
+  w.el.style.transition=`left ${CITY_CFG.WALK_STEP_MS+70}ms linear, top ${CITY_CFG.WALK_STEP_MS+70}ms linear`;
+  for(let k=1;k<path.length;k++){citPlacePerson(w.el,path[k],true);await citSleep(CITY_CFG.WALK_STEP_MS);}
+  w.el.style.transition=''; w.at=toIdx; return true;
+}
+async function citWalkPair(p,toIdx,act){
+  const kw={el:p.kidEl,at:p.kidAt};
+  await Promise.all([citWalkW(p,toIdx,act),(async()=>{await citSleep(CITY_CFG.KID_LAG_MS);await citWalkW(kw,toIdx,act);})()]);
+  p.kidAt=kw.at;
+}
+async function citHop(el,toIdx,ms){
+  if(!el)return; citMovingPose(el); el.style.transition=`left ${ms}ms ease, top ${ms}ms ease`;
+  const[x,y]=citTileXY(toIdx); el.style.left=x+'px';el.style.top=y+'px';await citSleep(ms+30);el.style.transition='';
+}
+function citTilesNear(centerIdx,values,radius){
+  const[cr,cc]=citRC(centerIdx),out=[]; cit.g.forEach((t,i)=>{
+    if(!values.includes(t))return; const[r,c]=citRC(i); if(Math.max(Math.abs(r-cr),Math.abs(c-cc))<=radius)out.push(i);
+  }); return out;
+}
+async function citIdleStreet(p,act){
+  const first=citStreetByHome(p.h,act); if(first==null)return;
+  await citWalkW(p,first,act); citSetThought(p.el,p.jobThought||'🏢'); let cur=p.at;
+  for(let n=0;n<3;n++){
+    const opts=citNb(cur).filter(i=>act.has(i)); if(!opts.length)break;
+    const next=opts[(n+p.id)%opts.length]; await citWalkW(p,next,act);cur=p.at;citSetThought(p.el,p.jobThought||'🏢');
+  }
+}
+
+/* ---------- income animation ---------- */
+async function citEarn(i,amount){
+  const g=$('#cit-grid'),[x,y]=citTileXY(i);
+  for(let k=0;k<amount;k++){
+    const el=g.querySelector(`.ct[data-i="${i}"]`); if(el){el.classList.remove('earn');void el.offsetWidth;el.classList.add('earn');}
+    const c=document.createElement('span');c.className='coinfx';c.textContent='🪙';
+    c.style.cssText=`left:${x}px;top:${y}px;width:${citTs}px;height:${citTs}px;font-size:${citTs*0.72}px;--coin-rise:${-citTs*1.2}px;--coin-ms:${CITY_CFG.COIN_ANIM_MS}ms;`;
+    g.appendChild(c);cit.money++;$('#cit-money').textContent=cit.money;tone(880+k*80,0,0.05,'square',0.05);
+    setTimeout(()=>c.remove(),CITY_CFG.COIN_ANIM_MS+80);await citSleep(CITY_CFG.COIN_MS);
+  }
+}
+async function citAll(list,fn){ await Promise.all(list.map((item,k)=>(async()=>{await citSleep(k*CITY_CFG.COMMUTE_STAGGER_MS);await fn(item);})())); }
+
+/* ---------- undo / clear / settings ---------- */
+$('#cit-undo').addEventListener('click',()=>{if(citLock||!citUndo.length)return;sfx('pop');citRestore(citUndo.pop());});
+$('#cit-clear').addEventListener('click',()=>{
+  if(citLock)return; const hasAnything=cit.g.some(Boolean)||cit.ppl.length||cit.money!==CITY_CFG.START_MONEY;if(!hasAnything)return;
+  const before=citSnapshot(); cit.g.fill(0);cit.ppl=[];cit.st={};cit.shopStock={};cit.farmDelivery={};cit.ns=0;cit.arr=0;cit.personSeq=0;cit.money=CITY_CFG.START_MONEY;
+  sfx('pop');citPushUndo(before);save();citRenderTiles();citRenderPeople();citHud();
+});
+function citSettingsRender(){
+  $$('#cit-size-options .cit-size-btn').forEach(b=>b.classList.toggle('sel',b.dataset.size===S.citySettings.size));
+  $$('#cit-income-settings .cit-setting-row').forEach(r=>{r.querySelector('.cit-setting-value').textContent=CITY_CFG[r.dataset.key];});
+}
+function citOpenSettings(){if(citLock)return;citSettingsRender();$('#cit-settings').classList.add('show');}
+function citCloseSettings(){$('#cit-settings').classList.remove('show');save();}
+$('#cit-settings-btn').addEventListener('click',()=>{sfx('click');citOpenSettings();});
+$('#cit-settings-close').addEventListener('click',()=>{sfx('click');citCloseSettings();});
+$('#cit-settings').addEventListener('pointerdown',e=>{if(e.target===$('#cit-settings'))citCloseSettings();});
+$$('#cit-size-options .cit-size-btn').forEach(b=>b.addEventListener('click',()=>{
+  if(citLock)return;const z=CITY_SIZES[b.dataset.size];if(!z)return;S.citySettings.size=b.dataset.size;
+  citResizeState(z.cols,z.rows);S.city=cit;save();citSettingsRender();citFitBoard();citRenderTiles();citRenderPeople();citHud();citUpdateUndoButton();
+}));
+$$('#cit-income-settings .cit-setting-row button').forEach(b=>b.addEventListener('click',()=>{
+  const r=b.closest('.cit-setting-row'),k=r.dataset.key,d=Number(b.dataset.d)||0;
+  CITY_CFG[k]=Math.max(0,Math.min(99,CITY_CFG[k]+d));S.citySettings[k]=CITY_CFG[k];r.querySelector('.cit-setting-value').textContent=CITY_CFG[k];save();sfx('click');
+}));
+
+/* ---------- needs / school ---------- */
+function citJobThought(p,act){
+  if(!citConnected(p.h,act))return'🛣️';
+  if(p.pref==='M')return'🚜';
+  if(p.pref==='S'){
+    const anyShop=cit.g.some(t=>t==='S');
+    if(anyShop && !cit.g.some((t,i)=>t==='S'&&citShopStocked(i))) return'🚜';
+    return'🛍️';
+  }
+  return'🏢';
+}
+function citNeedIcon(n,familyKid){
+  const a=familyKid?['🎠','💧','⛲','🌲','🌳']:['🪑','🟩','🌳']; return a[Math.abs(n)%a.length];
+}
+async function citPrepareChildren(act){
+  const families=cit.ppl.filter(p=>p.fam);
+  await citAll(families,async p=>{
+    if(!p.kidEl)citSpawnKid(p,p.h);p.school=citNearSchool(p.h,act);citClearThought(p.kidEl);
+    if(p.school==null){
+      const street=citStreetByHome(p.h,act);
+      if(street!=null && p.kidAt!==street){const kw={el:p.kidEl,at:p.kidAt};await citDirectStep(kw,street);p.kidAt=kw.at;}
+      citSetThought(p.kidEl,'🏫');
+    }
+  });
+}
+async function citCommuteToJob(p,act){
+  citClearThought(p.el);
+  if(p.fam&&p.school!=null){await citWalkPair(p,p.school,act);await citWalkW(p,p.dest,act);} else await citWalkW(p,p.dest,act);
+  if(p.kind==='O')citOfficePose(p.el,p.workSlot||0);
+}
+async function citReturnHome(p,act){
+  citClearThought(p.el);
+  if(p.fam&&p.school!=null){
+    if(p.at!==p.school)await citWalkW(p,p.school,act);await citWalkPair(p,p.h,act);
+  } else {
+    if(p.at!==p.h)await citWalkW(p,p.h,act);
+    if(p.fam&&p.kidAt!==p.h){citClearThought(p.kidEl);const kw={el:p.kidEl,at:p.kidAt};await citDirectStep(kw,p.h);p.kidAt=kw.at;}
+  }
+  citClearThought(p.el);if(p.kidEl)citClearThought(p.kidEl);citSetFace(p.el,p.face);citMergeFamily(p);
+}
+
+/* ---------- farms / boutique stock ---------- */
+function citFarmWorkersAvailable(act,reachable){
+  const farms=citFarmCenters().map(i=>({i,used:0}));
+  const workers=[],idle=[];
+  cit.ppl.filter(p=>p.pref==='M').forEach(p=>{
+    let f=null;
+    if(cit.g[p.h]==='M') f=farms.find(x=>x.i===p.h&&x.used<CITY_CFG.FARM_WORK_CAP);
+    if(!f) f=farms.find(x=>x.used<CITY_CFG.FARM_WORK_CAP&&reachable(p.h,x.i));
+    if(f){f.used++;p.kind='M';p.dest=f.i;workers.push(p);} else idle.push(p);
+  });
+  return {workers,idle,farms};
+}
+async function citFarmActivity(p,center,hops){
+  const cells=citFarmCells(center)||[]; if(!cells.length)return;
+  const targets=cells.filter(i=>i!==center);
+  for(let n=0;n<(hops||2)&&targets.length;n++){
+    const to=targets[(p.id+n*3+cit.day)%targets.length];await citHop(p.el,to,CITY_CFG.FARM_HOP_MS);p.at=to;
+  }
+  await citHop(p.el,center,CITY_CFG.FARM_HOP_MS);p.at=center;
+}
+function citShopDeliveryTarget(center,act,used){
+  const week=citWeekNum(),list=[];
+  cit.g.forEach((t,i)=>{
+    if(t!=='S'||used.has(i)||!citConnected(i,act)||!citRoute(center,i,act))return;
+    const last=Number(cit.shopStock[i]); if(last<week)list.push({i,last:Number.isFinite(last)?last:-999});
+  });
+  list.sort((a,b)=>a.last-b.last||a.i-b.i);return list.length?list[0].i:null;
+}
+async function citFarmDeliveries(farmWorkers,act){
+  const used=new Set(), week=citWeekNum();
+  for(const p of farmWorkers){
+    /* One farm makes at most one boutique delivery per week. */
+    if(citFarmDeliveredThisWeek(p.dest,week)) continue;
+    const target=citShopDeliveryTarget(p.dest,act,used);if(target==null)continue;used.add(target);
+    citClearThought(p.el); citSetFace(p.el,'🚙');
+    try {
+      const arrived=await citWalkW(p,target,act); if(!arrived)continue;
+      citMarkShopStocked(target,week); citMarkFarmDelivered(p.dest,week); citRenderTiles();
+      await citEarn(target,CITY_CFG.FARM_DELIVERY_INCOME);
+      await citWalkW(p,p.dest,act); await citFarmActivity(p,p.dest,1);
+    } finally {
+      /* A failed/aborted delivery can never leave a car/truck face stuck on a shop or road. */
+      citSetFace(p.el,p.face);
+    }
+  }
+}
+function citFarmerWorksWeekend(p){ return ((p.id+cit.day)%3)===0; }
+
+
+/* ---------- transient day-state lifecycle ---------- */
+function citBeginPersonDay(p,n){
+  citEnsurePersonMeta(p,n);
+  p.dest=null; p.kind=null; p.school=null; p.shop=null; p.spot=null; p.playStart=null;
+  p.workSlot=null; p.jobThought=null; p.dayOff=false;
+  citClearThought(p.el); if(p.kidEl)citClearThought(p.kidEl);
+  citSetFace(p.el,p.face);
+  if(p.at===p.h) citMergeFamily(p); else citMovingPose(p.el);
+}
