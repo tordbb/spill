@@ -1,0 +1,235 @@
+      P('c',[11],'#3b82f6',46,38), P('t',[7],'#60a5fa',61,38,-90),
+      P('t',[4],'#60a5fa',46,25,0), P('t',[4],'#60a5fa',46,51,180) ]},
+  { name:'hus', top:['💛',48,10], parts:[
+      P('r',[28,20],'#fbbf24',48,46), P('t',[15],'#ef4444',48,27),
+      P('r',[8,11],'#8d6e63',48,50), P('c',[3.5],'#7dd3fc',39,42), P('c',[3.5],'#7dd3fc',57,42) ]},
+  { name:'rakett', top:['🔥',48,58], parts:[
+      P('r',[12,26],'#cbd5e1',48,38), P('t',[7],'#ef4444',48,21),
+      P('t',[5],'#ef4444',41,52,-25), P('t',[5],'#ef4444',55,52,25),
+      P('c',[4],'#38bdf8',48,34) ]},
+  { name:'snømann', eyes:[[45.8,20],[50.2,20]], parts:[
+      P('c',[11],'#f8fafc',48,53), P('c',[8.5],'#f8fafc',48,36),
+      P('c',[6.5],'#f8fafc',48,22), P('t',[3],'#fb923c',53,22,90),
+      P('r',[11,4],'#334155',48,14.5) ]},
+];
+GAMES.cre.n = CRE_LEVELS.length;
+const CRE_NS='http://www.w3.org/2000/svg';
+let creCur=0, creParts=[], creFree=false, creFreeColor='#ef4444';
+
+function creKey(p){ return p.shape+'|'+p.dims.join(',')+'|'+p.color; }
+function svgEl(tag, attrs, parent){
+  const el=document.createElementNS(CRE_NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function shapeInto(g, p, fill){
+  const common={ fill: fill||p.color, stroke:'#00000026', 'stroke-width':0.6 };
+  if (p.shape==='c') svgEl('circle', Object.assign({r:p.dims[0]}, common), g);
+  else if (p.shape==='r') svgEl('rect', Object.assign({x:-p.dims[0]/2, y:-p.dims[1]/2, width:p.dims[0], height:p.dims[1], rx:1.6}, common), g);
+  else if (p.shape==='t'){ const s=p.dims[0];
+    svgEl('polygon', Object.assign({points:`0,${-s} ${s*0.87},${s*0.5} ${-s*0.87},${s*0.5}`}, common), g); }
+}
+function creTransform(g, x, y, rot){ g.setAttribute('transform', `translate(${x} ${y}) rotate(${rot})`); }
+
+$('#card-cre').addEventListener('click', ()=>{ sfx('click'); creFree=false; openCre(Math.min(S.done.cre, CRE_LEVELS.length-1)); });
+$('#cre-free').addEventListener('click', ()=>{ sfx('click'); creFree=!creFree; if (creFree) creOpenFree(); else openCre(creCur); });
+
+function creSvgPos(e){
+  const r=$('#cre-svg').getBoundingClientRect();
+  return [ (e.clientX-r.left)/r.width*100, (e.clientY-r.top)/r.height*100 ];
+}
+
+function openCre(i){
+  creCur=i; creFree=false;
+  show('g-cre');
+  renderDots($('#cre-dots'), CRE_LEVELS.length, i, S.done.cre, openCre);
+  $('#cre-tools').innerHTML='';
+  const svg=$('#cre-svg'); svg.innerHTML='';
+  const lv=CRE_LEVELS[i];
+  // shelf
+  svgEl('rect',{x:2,y:72,width:96,height:26,rx:8,fill:'#ffe9c7',stroke:'#e8c58f','stroke-width':1}, svg);
+  const slotG=svgEl('g',{}, svg), liveG=svgEl('g',{id:'cre-live'}, svg);
+  // `filled` = this part's SLOT is occupied; `placed` = this part's TRAY PIECE has been used.
+  // Kept separate: identical pieces (e.g. two legs) may fill each other's slots.
+  creParts = lv.parts.map((p,idx)=>({ def:p, idx, placed:false, filled:false }));
+  // slots
+  creParts.forEach(cp=>{
+    const g=svgEl('g',{}, slotG); shapeInto(g, cp.def, '#9fb4c4'); g.setAttribute('class','slot');
+    g.setAttribute('opacity','0.5');
+    creTransform(g, cp.def.x, cp.def.y, cp.def.rot);
+    cp.slotEl=g;
+  });
+  // tray parts (shuffled deterministically)
+  const order=[...creParts].sort((a,b)=>((a.idx*7+3)%11)-((b.idx*7+3)%11));
+  const n=order.length;
+  order.forEach((cp,i2)=>{
+    const tx = n>1 ? 12 + i2*(76/(n-1)) : 50, ty = 82 + (i2%2)*9;
+    cp.hx=tx; cp.hy=ty; cp.x=tx; cp.y=ty;
+    const g=svgEl('g',{'class':'cpart'}, liveG); shapeInto(g, cp.def);
+    creTransform(g, tx, ty, cp.def.rot);
+    cp.el=g;
+    creAttachDrag(cp, lv);
+  });
+}
+function creAttachDrag(cp, lv){
+  cp.el.addEventListener('pointerdown', e=>{
+    if (cp.placed && !creFree) return;
+    e.preventDefault();
+    cp.el.parentNode.appendChild(cp.el); // to front (before capture: re-inserting cancels capture)
+    cp.el.setPointerCapture(e.pointerId);
+    const [sx,sy]=creSvgPos(e); const ox=cp.x-sx, oy=cp.y-sy;
+    let moved=false;
+    sfx('pickup');
+    if (!creFree){
+      creParts.forEach(o=>{ if (!o.filled && creKey(o.def)===creKey(cp.def)) o.slotEl.classList.add('glow'); });
+    }
+    const mv=ev=>{ const [x,y]=creSvgPos(ev); cp.x=x+ox; cp.y=y+oy; moved=true;
+      creTransform(cp.el, cp.x, cp.y, cp.rot!=null?cp.rot:cp.def.rot); };
+    const up=ev=>{
+      cp.el.removeEventListener('pointermove',mv); cp.el.removeEventListener('pointerup',up); cp.el.removeEventListener('pointercancel',up);
+      $$('.slot').forEach(s=>s.classList.remove('glow'));
+      if (creFree){ creFreeDrop(cp, moved); return; }
+      // find nearest matching free slot
+      let best=null, bd=11;
+      creParts.forEach(o=>{ if (!o.filled && creKey(o.def)===creKey(cp.def)){
+        const d=Math.hypot(o.def.x-cp.x, o.def.y-cp.y); if (d<bd){ bd=d; best=o; } } });
+      if (best){
+        best.filled=true; cp.placed=true;
+        cp.x=best.def.x; cp.y=best.def.y;
+        creTransform(cp.el, cp.x, cp.y, best.def.rot);
+        creRestack(cp, best.idx);
+        best.slotEl.remove();
+        sfx('snap');
+        creCheckDone(lv);
+      } else {
+        cp.x=cp.hx; cp.y=cp.hy;
+        creTransform(cp.el, cp.x, cp.y, cp.def.rot);
+        if (moved) sfx('drop');
+      }
+    };
+    cp.el.addEventListener('pointermove',mv); cp.el.addEventListener('pointerup',up); cp.el.addEventListener('pointercancel',up);
+  });
+}
+function creRestack(cp, slotIdx){
+  // keep authored part order (background parts first) among placed pieces
+  cp.el.dataset.z = slotIdx;
+  const live=$('#cre-live');
+  const after=[...live.children].find(ch => ch!==cp.el && ch.dataset.z!==undefined && +ch.dataset.z > slotIdx);
+  if (after) live.insertBefore(cp.el, after);
+}
+function creCheckDone(lv){
+  const filled = creParts.filter(cp=>cp.filled).length;
+  if (filled < creParts.length) return;
+  // alive!
+  const svg=$('#cre-svg'), live=$('#cre-live');
+  if (lv.eyes) lv.eyes.forEach(([x,y])=>{
+    svgEl('circle',{cx:x,cy:y,r:1.9,fill:'#fff',stroke:'#0002','stroke-width':0.3}, live);
+    svgEl('circle',{cx:x,cy:y+0.3,r:1,fill:'#1e293b'}, live);
+  });
+  if (lv.top){ const t=svgEl('text',{x:lv.top[1],y:lv.top[2],'font-size':10,'text-anchor':'middle'}, live); t.textContent=lv.top[0]; }
+  live.classList.add('alive');
+  setTimeout(()=>{
+    award('cre', creCur, ()=>{
+      if (creCur+1 < CRE_LEVELS.length) openCre(creCur+1); else goHome();
+    });
+  }, 1300);
+}
+/* ---- free play ---- */
+const CRE_FREECOLORS=['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#f8fafc','#334155'];
+function creOpenFree(){
+  show('g-cre');
+  $('#cre-dots').innerHTML='';
+  const svg=$('#cre-svg'); svg.innerHTML='';
+  svgEl('g',{id:'cre-live'}, svg);
+  creParts=[];
+  const tools=$('#cre-tools'); tools.innerHTML='';
+  CRE_FREECOLORS.forEach(c=>{
+    const b=document.createElement('button');
+    b.style.cssText=`width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 0 #0002;background:${c};cursor:pointer;`;
+    b.addEventListener('click',()=>{ sfx('click'); creFreeColor=c; $$('#cre-tools button').forEach(x=>x.style.outline=''); b.style.outline='4px solid #42a5f5'; });
+    tools.appendChild(b);
+  });
+  [['c',[7]],['r',[16,8]],['t',[8]]].forEach(([sh,dims])=>{
+    const b=document.createElement('button');
+    b.className='icon-btn'; b.style.width='52px'; b.style.height='52px'; b.style.fontSize='26px';
+    b.textContent = sh==='c'?'⚫':sh==='r'?'▬':'▲';
+    b.addEventListener('click',()=>{
+      sfx('pop');
+      const def=P(sh,dims,creFreeColor, 25+((creParts.length*17)%50), 20+((creParts.length*13)%40), 0);
+      const cp={def, idx:creParts.length, placed:false, rot:0, x:def.x, y:def.y, hx:def.x, hy:def.y};
+      const g=svgEl('g',{'class':'cpart'}, $('#cre-live')); shapeInto(g, def);
+      creTransform(g, def.x, def.y, 0);
+      cp.el=g; creParts.push(cp); creAttachDrag(cp, null);
+    });
+    tools.appendChild(b);
+  });
+  const rot=document.createElement('button'); rot.className='icon-btn'; rot.textContent='🔄';
+  rot.style.width='52px'; rot.style.height='52px'; rot.style.fontSize='26px';
+  rot.addEventListener('click',()=>{ sfx('click'); const cp=creParts[creParts.length-1]; if(cp){ cp.rot=((cp.rot||0)+45)%360; creTransform(cp.el,cp.x,cp.y,cp.rot); } });
+  tools.appendChild(rot);
+  const tr=document.createElement('button'); tr.className='icon-btn'; tr.id='cre-trash'; tr.textContent='🗑️';
+  tr.style.width='52px'; tr.style.height='52px'; tr.style.fontSize='26px';
+  tools.appendChild(tr);
+}
+function creFreeDrop(cp, moved){
+  // dropped over trash?
+  const tr=$('#cre-trash');
+  if (tr){
+    const r=tr.getBoundingClientRect();
+    const svgR=$('#cre-svg').getBoundingClientRect();
+    const px=svgR.left + cp.x/100*svgR.width, py=svgR.top + cp.y/100*svgR.height;
+    if (cp.y>101 || (px>=r.left-10&&px<=r.right+10&&py>=r.top-10&&py<=r.bottom+10)){
+      cp.el.remove(); creParts=creParts.filter(o=>o!==cp); sfx('pop'); return;
+    }
+  }
+  if (!moved){ cp.rot=((cp.rot||0)+45)%360; creTransform(cp.el,cp.x,cp.y,cp.rot); sfx('click'); }
+  else sfx('drop');
+}
+/* ================= PATH (cat, robots 🤖, chaser dogs 🐶 & bones 🦴) ================= */
+/* Robots patrol fixed lines and shove whatever they crash into (the cat can shove them too).
+   Dogs always walk toward the cat; touching means the dog chases the cat home (level reset).
+   A bone 🦴 used while a dog stands right next to the cat sends it away, carrying the bone. */
+const PAT_LEVELS = [
+  { g:["S..F"] },
+  { g:["S...","...F"] },
+  { g:["S.#","..#","..F"] },
+  { g:["......","S....F","......","......"], robots:[{r:3,c:2,axis:'V',d:-1}], sol:['R','R','R','R','R','D'] },
+  { g:["S...F",".....",".....","....."], dogs:[{r:1,c:2}], sol:['R','B','R','R','R'] },
+  { g:["S.#..","..#..","..#..","....F"] },
+  { g:["S....F","......"], dogs:[{r:0,c:3}], sol:['R','B','R','R','R','R'] },
+  { g:["S....",".....","....F","....."], robots:[{r:1,c:2,axis:'V',d:-1},{r:2,c:1,axis:'H',d:-1}], sol:['R','R','R','R','D','D'] },
+  { g:[".....",".....","S...F",".....","....."], dogs:[{r:0,c:2},{r:4,c:2}], sol:['R','B','B','R','R','R'] },
+  { g:["S..#.",".#.#.",".#.#.",".#...","...#F"] },
+  { g:["S.#.#.",".....F"], robots:[{r:1,c:4,axis:'H',d:-1}], sol:['R','W','W','W','D','R','R','R'] },
+  { g:["S.....","..#...","......","...#..","....F."], robots:[{r:2,c:5,axis:'H',d:-1}], dogs:[{r:4,c:0}], sol:['R','R','B','R','R','D','D','D','D'] },
+];
+GAMES.pat.n = PAT_LEVELS.length;
+const DIRS = { U:[-1,0], D:[1,0], L:[0,-1], R:[0,1] };
+const DIR_EMO = { U:'⬆️', D:'⬇️', L:'⬅️', R:'➡️', W:'😴', B:'🦴' };
+let patCur=0, patQ=[], patRun=false, patFails=0, patStart=null, patFish=null,
+    patGrid=null, patLevel=null, patTs=48, patRobotEls=[], patDogEls=[];
+
+$('#card-pat').addEventListener('click', ()=>{ sfx('click'); openPat(Math.min(S.done.pat, PAT_LEVELS.length-1)); });
+function openPat(i){
+  patCur=i; patQ=[]; patRun=false; patFails=0;
+  patLevel = PAT_LEVELS[i];
+  patGrid = patLevel.g.map(r=>r.split(''));
+  const rows=patGrid.length, cols=patGrid[0].length;
+  patGrid.forEach((r,ri)=>r.forEach((c,ci)=>{ if(c==='S'){patStart=[ri,ci];} if(c==='F'){patFish=[ri,ci];} }));
+  show('g-pat');
+  renderDots($('#pat-dots'), PAT_LEVELS.length, i, S.done.pat, openPat);
+  const g=$('#pat-grid'); g.innerHTML='';
+  patTs = Math.max(34, Math.min(76, Math.floor(Math.min(innerWidth*0.86, innerHeight*0.46) / Math.max(cols,rows)) - 4));
+  g.style.setProperty('--ts', patTs+'px');
+  g.style.gridTemplateColumns = `repeat(${cols}, var(--ts))`;
+  patGrid.forEach((r,ri)=>r.forEach((c,ci)=>{
+    const t=document.createElement('div'); t.className='ptile';
+    if (c==='#'){ t.classList.add('wall'); t.textContent='🌳'; }
+    else if (c==='F') t.textContent='🐟';
+    else if ((ri*7+ci*3)%11===4) t.textContent='🌼';
+    g.appendChild(t);
+  }));
+  const cat=document.createElement('div'); cat.id='pat-cat'; cat.textContent='🐱';
+  g.appendChild(cat);
+  patRobotEls=[]; patDogEls=[];
