@@ -1,0 +1,147 @@
+  .ct.road { background:#8a8a8a; box-shadow:inset 0 0 0 1px #737373; } /* plain asphalt, rotation symmetric */
+  .ct.sand { background:#c9b183; box-shadow:inset 0 0 0 1px #b39b6e;
+    background-image:radial-gradient(#00000014 18%, transparent 19%); background-size:38% 38%; } /* park walking path */
+  .ct.house { background:#ffe0b2; border-radius:3px; }
+  .ct.office { background:#bbdefb; border-radius:3px; }
+  .ct.school { background:#ffcdd2; border-radius:3px; }
+  .ct.park { background:#81c784; border-radius:3px; }
+  .ct.shop { background:#f8bbd0; border-radius:3px; }
+  /* An unstocked boutique is visually subdued, but never gets a static tractor/status emoji. */
+  .ct.shop.unstocked { filter:saturate(.38) brightness(.92); opacity:.72; }
+  .ct.farmplot { background:#d9c66a; border-radius:2px; box-shadow:inset 0 0 0 1px #947a35aa; }
+  .ct.farmcenter { background:#c49a57; border-radius:3px; box-shadow:inset 0 0 0 1px #76562aaa; }
+  .ct.deco { background:#c8e6c9; border-radius:3px; }
+  .ct.grass { background:#b5e08a; border-radius:2px; } /* light bright grass, clearly lighter than ground */
+  .ct.bench { background:#d7ccc8; border-radius:3px; }
+  .ct.water { background:linear-gradient(#64b5f6,#42a5f5); box-shadow:inset 0 0 0 1px #1e88e5aa; }
+  .ct.earn { animation:bldgpulse .6s ease; z-index:4; }
+  @keyframes bldgpulse { 0%,100% { transform:scale(1); } 35% { transform:scale(1.42) translateY(-12%); } 65% { transform:scale(1.12); } }
+  .citizen.kid { z-index:6; }
+  .citizen { position:absolute; left:0; top:0; z-index:5; display:block;
+    padding:0; line-height:1; white-space:nowrap; text-align:center; overflow:visible;
+    transition:left .8s linear, top .8s linear; pointer-events:none; filter:drop-shadow(0 1px 1px #0004); }
+  .cit-face { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); line-height:1; }
+  .citizen.home-parent .cit-face { left:5%; top:4%; transform:none; }
+  .citizen.home-kid .cit-face { left:auto; right:5%; top:4%; transform:none; }
+  .citizen.office-slot-0 .cit-face { left:4%; top:4%; transform:none; }
+  .citizen.office-slot-1 .cit-face { left:auto; right:4%; top:4%; transform:none; }
+  .citizen.office-slot-2 .cit-face { left:4%; top:auto; bottom:4%; transform:none; }
+  .citizen.office-slot-3 .cit-face { left:auto; right:4%; top:auto; bottom:4%; transform:none; }
+  /* Thought bubbles are anchored from their LOWER-LEFT corner at the centre of the tile. */
+  .cit-thought { position:absolute; left:50%; bottom:50%; top:auto; transform:none; transform-origin:left bottom; z-index:12;
+    width:78%; height:78%; min-width:22px; min-height:22px; border-radius:50%; background:#fff;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px #0005; animation:popin .28s; }
+  .cit-thought::before, .cit-thought::after { content:''; position:absolute; border-radius:50%; background:#fff; box-shadow:0 1px 2px #0003; }
+  .cit-thought::before { width:22%; height:22%; left:2%; bottom:-18%; }
+  .cit-thought::after { width:12%; height:12%; left:-8%; bottom:-34%; }
+  /* Emoji glyphs often contain their own transparent padding, so the symbol deliberately fills most of the bubble. */
+  .cit-thought-icon { font-size:158%; line-height:1; transform:scale(1.02); }
+  .cit-thought.school .cit-thought-icon { font-size:220%; transform:scale(1.08); }
+  .cit-thought.farm .cit-thought-icon { font-size:180%; transform:scale(1.05); }
+  .cit-thought.house .cit-thought-icon, .cit-thought.office .cit-thought-icon, .cit-thought.shopneed .cit-thought-icon { font-size:185%; }
+  .coinfx { position:absolute; z-index:8; pointer-events:none; display:flex; align-items:center; justify-content:center;
+    transform-origin:50% 70%; animation:citCoinPop var(--coin-ms) cubic-bezier(.25,.8,.3,1) forwards; }
+  @keyframes citCoinPop {
+    0%   { transform:translateY(18%) scale(.3); opacity:0; }
+    16%  { transform:translateY(-38%) scale(1.05); opacity:1; }
+    48%  { transform:translateY(var(--coin-rise)) scale(1.16); opacity:1; }
+    78%  { transform:translateY(-18%) scale(.9); opacity:1; }
+    100% { transform:translateY(22%) scale(.25); opacity:0; }
+  }
+  #cit-tools { display:flex; flex-direction:column; gap:7px; background:#ffffffaa; padding:8px; border-radius:18px;
+    flex:0 0 auto; max-height:calc(100% - 8px); overflow-y:auto; }
+  .cit-tool-group { display:grid; grid-template-columns:repeat(2,52px); gap:8px; padding:0 2px 8px; border-bottom:2px solid #ffffffaa; }
+  .cit-tool-group:last-child { border-bottom:0; padding-bottom:0; }
+  .cit-tool-group-icon { grid-column:1/-1; height:21px; display:flex; align-items:center; justify-content:center; font-size:18px; opacity:.78; pointer-events:none; }
+  .cbtn { position:relative; border:none; background:#fff; border-radius:12px; width:52px; height:52px; font-size:26px;
+    box-shadow:0 3px 0 #00000018; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .cbtn.sel { outline:4px solid #42a5f5; }
+  .cbtn .price { position:absolute; bottom:-6px; right:-6px; background:#ffd54a; border-radius:10px; font-size:11px;
+    padding:1px 4px; font-weight:bold; box-shadow:0 2px 0 #00000018; }
+  #cit-right { display:flex; flex:0 0 auto; flex-direction:column; align-items:center; gap:10px; background:#ffffffaa; padding:8px; border-radius:18px; max-height:calc(100% - 8px); }
+  #cit-right #cit-week { flex-direction:column; }
+  #cit-pop-wrap { font-size:20px; }
+  #cit-edit-actions { display:flex; gap:5px; align-items:center; justify-content:center; }
+  #cit-edit-actions .icon-btn { width:44px; height:44px; border-radius:14px; font-size:23px; }
+  #cit-undo:disabled { opacity:.32; filter:grayscale(1); }
+  #cit-settings { display:none; position:absolute; inset:0; z-index:44; background:#0007; align-items:center; justify-content:center; padding:10px; }
+  #cit-settings.show { display:flex; }
+  #cit-settings-card { width:min(640px,92%); max-height:94%; overflow:auto; background:#fffffff2; border-radius:24px; padding:14px; box-shadow:0 10px 35px #0004; }
+  #cit-size-options { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .cit-size-btn { border:0; border-radius:16px; background:#e9f6ff; min-height:74px; font-size:22px; font-weight:800; box-shadow:0 4px 0 #0002; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; }
+  .cit-size-btn.sel { outline:4px solid #42a5f5; background:#fff; }
+  .cit-mini-grid { width:42px; height:28px; border:2px solid #497; border-radius:4px; background-color:#9dcc7d; }
+  .cit-mini-grid.sm { background-image:linear-gradient(#0002 1px,transparent 1px),linear-gradient(90deg,#0002 1px,transparent 1px); background-size:8px 8px; }
+  .cit-mini-grid.md { background-image:linear-gradient(#0002 1px,transparent 1px),linear-gradient(90deg,#0002 1px,transparent 1px); background-size:5px 5px; }
+  .cit-mini-grid.lg { background-image:linear-gradient(#0002 1px,transparent 1px),linear-gradient(90deg,#0002 1px,transparent 1px); background-size:3px 3px; }
+  #cit-income-settings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .cit-setting-row { display:grid; grid-template-columns:minmax(68px,1fr) 40px 38px 40px; gap:5px; align-items:center; background:#eef5ef; border-radius:13px; padding:5px 7px; }
+  .cit-setting-icon { font-size:23px; text-align:center; white-space:nowrap; }
+  .cit-setting-row button { border:0; border-radius:10px; height:36px; font-size:19px; background:#fff; box-shadow:0 3px 0 #0002; }
+  .cit-setting-value { text-align:center; font-size:21px; }
+  #cit-settings-close { display:block; margin:9px auto 0; width:62px; height:46px; border:0; border-radius:14px; background:#c8e6c9; font-size:27px; box-shadow:0 4px 0 #0002; }
+  .roadswatch { width:30px; height:16px; background:#8a8a8a; border-radius:3px; position:relative; }
+  .roadswatch::after { content:''; position:absolute; left:20%; top:44%; width:60%; height:2px; background:#f5f5f5; border-radius:2px; }
+  .waterswatch { width:30px; height:16px; background:linear-gradient(#64b5f6,#42a5f5); border-radius:3px; }
+  .sandswatch { width:30px; height:16px; background:#c9b183; border-radius:3px; }
+  .grassswatch { width:30px; height:16px; background:#b5e08a; border-radius:3px; }
+  #cit-fade { position:fixed; inset:0; background:#0a1244; opacity:0; pointer-events:none; transition:opacity .9s;
+    z-index:45; display:flex; align-items:center; justify-content:center; font-size:100px; }
+  #cit-fade.on { opacity:.92; }
+  .tbubble { position:absolute; left:60%; bottom:85%; z-index:9; pointer-events:none; line-height:1; animation:popin .4s; }
+  #card-cit { background:linear-gradient(145deg,#f48fb1,#ec407a); }
+  #pat-pal { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; align-items:center; width:100%; max-width:100vw; padding:0 6px; }
+  .palbtn { flex:0 0 66px; border:none; font-size:38px; width:66px; height:66px; border-radius:18px; background:#fff; box-shadow:0 5px 0 #00000020; cursor:pointer; }
+  .palbtn:active { transform:scale(.92); }
+  #pat-play { background:linear-gradient(145deg,#66bb6a,#43a047); font-size:34px; }
+  #pat-undo { background:#ffe0b2; }
+
+  /* =================== WALKER =================== */
+  #wal-grid { position:relative; border-radius:20px; overflow:hidden; box-shadow:0 6px 0 #00000018;
+    background:linear-gradient(#bfe7ff,#e3f6ff); touch-action:pinch-zoom; }
+  .wtile { position:absolute; width:var(--ws); height:var(--ws); display:flex; align-items:center; justify-content:center;
+    font-size:calc(var(--ws) * .8); }
+  .wtile.ground { background:#8d6e63; box-shadow:inset 0 6px 0 #66bb6a, inset 0 -4px 0 #5d4037; border-radius:4px; }
+  .wtile.placed { font-size:calc(var(--ws) * .9); cursor:pointer; }
+  .wtile.hintcell { border-radius:8px; }
+  .wtile.hintcell::after { content:attr(data-hint); opacity:.4; animation:pulse 1s infinite; }
+  #wal-critter { position:absolute; width:var(--ws); height:var(--ws); display:flex; align-items:center; justify-content:center;
+    font-size:calc(var(--ws) * .85); z-index:6; transition:transform .3s linear; }
+  #wal-critter.fall { transition-timing-function:ease-in; }
+  #wal-toolbox { display:flex; gap:10px; align-items:center; margin-top:10px; min-height:70px;
+    background:#ffffffaa; border-radius:18px; padding:6px 16px; }
+  .wtool { font-size:44px; cursor:grab; transition:transform .12s; }
+  .wtool:active { transform:scale(1.15); }
+  #wal-play { margin-left:10px; }
+  .cellglow { background:#ffffff66; border-radius:8px; }
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<div class="screen active" id="home">
+  <div class="top-bar">
+    <button class="icon-btn" id="btn-mute">🔊</button>
+    <button class="icon-btn" id="btn-book">📖<span id="book-count">0</span></button>
+  </div>
+  <h1>🌟 Lekeverkstedet 🌟</h1>
+  <div class="menu-grid">
+    <button class="menu-card" id="card-bal">⚖️<span class="mini">🍎🟰🍎</span><span class="prog"></span></button>
+    <button class="menu-card" id="card-cre">🧩<span class="mini">🐱➜🐴</span><span class="prog"></span></button>
+    <button class="menu-card" id="card-pat">🐱<span class="mini">➡️⬇️➡️🐟</span><span class="prog"></span></button>
+    <button class="menu-card" id="card-wal">🐹<span class="mini">🪵🍄🏠</span><span class="prog"></span></button>
+    <button class="menu-card" id="card-cit">🏙️<span class="mini">🪙🏠🏢🌳</span></button>
+  </div>
+</div>
+
+<!-- ============ STICKER BOOK ============ -->
+<div class="screen" id="book">
+  <div class="top-bar"><button class="icon-btn nav-home">🏡</button><div></div></div>
+  <div class="stage-wrap" style="justify-content:flex-start; overflow-y:auto;">
+    <div style="font-size:44px; margin-bottom:10px;">📖✨</div>
+    <div id="book-grid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; max-width:520px;"></div>
+  </div>
+</div>
+
+<!-- ============ BALANCE (DragonBox style) ============ -->
+<div class="screen" id="g-bal">
