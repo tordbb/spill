@@ -27,7 +27,7 @@ jobs:
       - name: Build single-file site
         run: |
           mkdir -p dist
-          cat site-parts/part-*.txt > dist/index.html
+          cat site-data/part-*.txt | base64 -d | gzip -d > dist/index.html
           touch dist/.nojekyll
 
       - name: Configure Pages
