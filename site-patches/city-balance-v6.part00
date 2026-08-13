@@ -1,0 +1,84 @@
+--- a/index.html
++++ b/index.html
+@@ -235,6 +235,11 @@
+   .ct.shop.unstocked { filter:saturate(.38) brightness(.92); opacity:.72; }
+   .ct.farmplot { background:#d9c66a; border-radius:2px; box-shadow:inset 0 0 0 1px #947a35aa; }
+   .ct.farmcenter { background:#c49a57; border-radius:3px; box-shadow:inset 0 0 0 1px #76562aaa; }
++  .farm-decor-symbol { display:inline-block; transform:scaleX(.5); transform-origin:center; }
++  .bench-mark, .benchswatch { position:relative; display:inline-block; width:82%; height:46%; min-width:14px; min-height:8px; }
++  .benchswatch { width:30px; height:16px; min-width:30px; min-height:16px; }
++  .bench-mark::before, .benchswatch::before { content:''; position:absolute; left:6%; right:6%; top:13%; height:27%; background:#8d6e63; border-radius:999px; box-shadow:0 .22em 0 #a1887f; }
++  .bench-mark::after, .benchswatch::after { content:''; position:absolute; left:18%; right:18%; bottom:0; height:24%; border-left:.12em solid #5d4037; border-right:.12em solid #5d4037; }
+   .ct.deco { background:#c8e6c9; border-radius:3px; }
+   .ct.grass { background:#b5e08a; border-radius:2px; } /* light bright grass, clearly lighter than ground */
+   .ct.bench { background:#d7ccc8; border-radius:3px; }
+@@ -256,6 +261,7 @@
+   .citizen.school-slot-1 .cit-face { left:auto; right:4%; top:4%; transform:none; }
+   .citizen.school-slot-2 .cit-face { left:4%; top:auto; bottom:4%; transform:none; }
+   .citizen.school-slot-3 .cit-face { left:auto; right:4%; top:auto; bottom:4%; transform:none; }
++  .citizen.school-worker .cit-face { left:50%; top:50%; right:auto; bottom:auto; transform:translate(-50%,-50%); }
+   /* Thought bubbles are anchored from their LOWER-LEFT corner at the centre of the tile. */
+   .cit-thought { position:absolute; left:50%; bottom:50%; top:auto; transform:none; transform-origin:left bottom; z-index:12;
+     width:78%; height:78%; min-width:22px; min-height:22px; border-radius:50%; background:#fff;
+@@ -1795,6 +1801,11 @@
+   RELAX_CAP: 1,
+   PLAY_CAP: 2,
+   FARM_WORK_CAP: 1,
++  SCHOOL_WORK_CAP: 1,
++
++  /* ---- supply balance ---- */
++  SHOP_STOCK_WEEKS: 2,
++  FARM_DELIVERIES_PER_WEEK: 2,
+ 
+   /* ---- population ---- */
+   NEWCOMERS_PER_NIGHT: 2,
+@@ -1802,7 +1813,7 @@
+   SCHOOL_CAP: 4,
+ 
+   /* ---- weekend behavior ---- */
+-  PLAY_TILES: ['T','W','G','F','P'],
++  PLAY_TILES: ['T','W','G','F','P','E'],
+   RELAX_TILES: ['B','E'],
+   PLAY_RADIUS: 4,
+   PLAY_HOPS: 6,
+@@ -1856,7 +1867,7 @@
+ function citStarterState(){
+   const cols=CITY_CFG.COLS, rows=CITY_CFG.ROWS;
+   const state={ money:CITY_CFG.START_MONEY, day:7, cols, rows,
+-    g:Array(cols*rows).fill(0), ppl:[], st:{}, shopStock:{}, farmDelivery:{}, ns:1, arr:0, personSeq:0 };
++    g:Array(cols*rows).fill(0), ppl:[], st:{}, shopStock:{}, farmDelivery:{}, ns:1, arr:0, personSeq:0, jobBalanceVersion:2 };
+   const idx=(r,c)=>r*cols+c, put=(r,c,t)=>{ if(r>=0&&c>=0&&r<rows&&c<cols)state.g[idx(r,c)]=t; };
+   /* A compact, free starter block: road to the edge + one basic service of each kind. */
+   const roadR=Math.min(5,rows-4);
+@@ -1949,10 +1960,15 @@
+   if (cit.personSeq==null) cit.personSeq=0;
+   citCleanPartialFarms();
+   let maxId=-1;
++  const rebalancePrefs=(cit.jobBalanceVersion||0)<2;
+   (cit.ppl||[]).forEach((p,n)=>{
+     citEnsurePersonMeta(p,n);
++    /* One-time migration from the old 1/3–1/3–1/3 preference model.
++       Farm residents stay farmers; house residents get the new stable weighted preference. */
++    if(rebalancePrefs && cit.g[p.h]!=='M') p.pref=citPreferenceForId(p.id);
+     if (p.id>maxId) maxId=p.id;
+   });
++  cit.jobBalanceVersion=2;
+   cit.personSeq=Math.max(cit.personSeq,maxId+1);
+   const w=citWeekNum();
+   cit.g.forEach((t,i)=>{
+@@ -2078,7 +2094,7 @@
+   return b;
+ }
+ function citShopStockWeek(i){ const v=Number(cit.shopStock&&cit.shopStock[i]); return Number.isFinite(v)?v:-Infinity; }
+-function citShopStocked(i){ return cit.g[i]==='S' && citShopStockWeek(i)>=citWeekNum(); }
++function citShopStocked(i){ return cit.g[i]==='S' && citShopStockWeek(i)>=citWeekNum()-(CITY_CFG.SHOP_STOCK_WEEKS-1); }
+ function citMarkShopStocked(i,week=citWeekNum()){ if(cit.g[i]==='S') cit.shopStock[i]=week; }
+ function citFarmDeliveredThisWeek(i,week=citWeekNum()){ return Number(cit.farmDelivery&&cit.farmDelivery[i])>=week; }
+ function citMarkFarmDelivered(i,week=citWeekNum()){ if(cit.g[i]==='M') cit.farmDelivery[i]=week; }
+@@ -2094,7 +2110,9 @@
+     if (t==='S'){
+       d.textContent=CITY_CFG.SHOP_TYPES[(cit.st[i]||0)%CITY_CFG.SHOP_TYPES.length];
+       if(!citShopStocked(i)) d.classList.add('unstocked');
+-    } else if(t==='M'||t==='Q') d.textContent=citFarmEmoji(i);
++    } else if(t==='M') d.textContent=citFarmEmoji(i);
++    else if(t==='Q'){ const s=document.createElement('span'); 
