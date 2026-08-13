@@ -1,0 +1,79 @@
+s.className='farm-decor-symbol'; s.textContent=citFarmEmoji(i); d.appendChild(s); }
++    else if(t==='B'){ const s=document.createElement('span'); s.className='bench-mark'; d.appendChild(s); }
+     else if (CIT_EMO[t]) d.textContent=CIT_EMO[t];
+     g.appendChild(d);
+   });
+@@ -2118,7 +2136,7 @@
+   if(el.classList.contains('citizen')) citNoteNeed(icon);
+ }
+ function citClearThought(el){ citSetThought(el,null); }
+-function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3','school-slot-0','school-slot-1','school-slot-2','school-slot-3'); }
++function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3','school-slot-0','school-slot-1','school-slot-2','school-slot-3','school-worker'); }
+ function citHomePose(el, side){
+   if(!el)return; citMovingPose(el);
+   if(side==='parent') el.classList.add('home-parent');
+@@ -2126,6 +2144,7 @@
+ }
+ function citOfficePose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('office-slot-'+(slot%4)); }
+ function citSchoolPose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('school-slot-'+(slot%4)); }
++function citSchoolWorkerPose(el){ if(!el)return; citMovingPose(el); el.classList.add('school-worker'); }
+ function citRenderPeople(){
+   $('#cit-grid').querySelectorAll('.citizen').forEach(e=>e.remove());
+   cit.ppl.forEach((p,n)=>{
+@@ -2165,12 +2184,20 @@
+ }
+ 
+ /* ---------- citizen metadata / preferences ---------- */
+-const CIT_JOB_PREFS=['O','M','S'];
+-function citRandomPreference(){ return CIT_JOB_PREFS[Math.floor(Math.random()*CIT_JOB_PREFS.length)]; }
++/* Game-balance weights, not real-world employment statistics.
++   School 12% gives about one teacher per four children with FAMILY_EVERY=2.
++   A farm can support about four boutiques (2 deliveries/week × 2 weeks of stock),
++   matching the 13:50 farmer:shop-worker preference ratio. Office receives the remainder. */
++const CIT_JOB_WEIGHTS=[['O',25],['K',12],['S',50],['M',13]];
++function citPreferenceAt(percent){
++  let x=((percent%100)+100)%100, sum=0;
++  for(const [k,w] of CIT_JOB_WEIGHTS){sum+=w;if(x<sum)return k;}
++  return 'O';
++}
++function citRandomPreference(){ return citPreferenceAt(Math.floor(Math.random()*100)); }
+ function citPreferenceForId(id){
+-  /* Stable fallback only for legacy people that have no stored preference. */
+   const n=Math.abs(((Number(id)||0)*1103515245+12345)>>>0);
+-  return CIT_JOB_PREFS[n%CIT_JOB_PREFS.length];
++  return citPreferenceAt(n%100);
+ }
+ function citOffDaysForId(id){
+   let a=(id*3+1)%5, b=(id*7+3)%5; if(a===b) b=(b+2)%5; return [a,b].sort();
+@@ -2230,7 +2257,7 @@
+     {cls:'edit',items:[['X','🧹',''],['UNDO','↶','']]},
+     {items:[['R','<span class="roadswatch"></span>','Vei'],['A','<span class="sandswatch"></span>','sti']]},
+     {items:[['H','🏠','hus'],['O','🏢','kontor'],['S','🛍️','butikk'],['M','🛖','gård'],['K','🏫','skole']]},
+-    {items:[['E','<span class="grassswatch"></span>','Park'],['B','🪑','benk'],['P','🌳','tre'],['G','🎠','karusell'],['F','⛲','fontene'],['W','<span class="waterswatch"></span>','basseng'],['T','🌲','tre']]}
++    {items:[['E','<span class="grassswatch"></span>','gress'],['B','<span class="benchswatch"></span>','benk'],['P','🌳','løvtre'],['G','🎠','karusell'],['F','⛲','fontene'],['W','<span class="waterswatch"></span>','basseng'],['T','🌲','bartre']]}
+   ];
+   groups.forEach(groupDef=>{
+     const group=document.createElement('div'); group.className='cit-tool-group'+(groupDef.cls?' '+groupDef.cls:'');
+@@ -2380,9 +2407,9 @@
+   if(edge==null)return null;
+   const path=[edge]; let k=edge; while(prev[k]!=null){k=prev[k];path.push(k);} path.push(homeIdx); return path;
+ }
+-function citSchoolAssignments(families,act){
++function citSchoolAssignments(families,act,openSchools){
+   const schools=[];
+-  cit.g.forEach((t,i)=>{ if(t==='K'&&citConnected(i,act)) schools.push({i,used:0}); });
++  cit.g.forEach((t,i)=>{ if(t==='K'&&citConnected(i,act)&&(!openSchools||openSchools.has(i))) schools.push({i,used:0}); });
+   const out=new Map();
+   [...families].sort((a,b)=>(a.id||0)-(b.id||0)).forEach(p=>{
+     let best=null,bestSteps=Infinity;
+@@ -2486,14 +2513,30 @@
+   if(!citConnected(p.h,act))return'🛣️';
+   if(cit.g[p.h]==='M')return null;
+   if(p.pref==='M')return'🛖';
++  if(p.pref==='K')return'🏫';
+   if(p.pref==='S')return'🛍️';
+   return'🏢';
+ }
+ function citNeedIcon(n,familyKid){
+-  const a=familyKid?['🎠','💧','⛲','🌲','🌳']:['🪑','🟩','🌳']; return a[Math.abs(n)%a.length];
++  const a=familyKid?['🎠','💧','⛲','🟩','🌲','🌳']:['🪑','🟩']; return a[M
