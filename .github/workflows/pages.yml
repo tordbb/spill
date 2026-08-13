@@ -31,6 +31,9 @@ jobs:
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
           patch --batch --forward -d dist -p1 < site-patches/city-school-v3.patch
           patch --batch --forward -d dist -p1 < site-patches/city-farm-thought-v4.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-levels-v5.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-hint-ui-v5.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-hint-js-v5.patch
           touch dist/.nojekyll
 
       - name: Configure Pages
