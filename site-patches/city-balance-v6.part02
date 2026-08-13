@@ -1,0 +1,91 @@
+ath.abs(n)%a.length];
++}
++function citAssignSchoolWorkers(act,reachable){
++  const schools=[];cit.g.forEach((t,i)=>{if(t==='K'&&citConnected(i,act))schools.push({i,used:0});});
++  const workers=[],idle=[];
++  [...cit.ppl].filter(p=>p.pref==='K').sort((a,b)=>(a.id||0)-(b.id||0)).forEach(p=>{
++    let best=null,bestSteps=Infinity;
++    schools.forEach(s=>{
++      if(s.used>=CITY_CFG.SCHOOL_WORK_CAP)return;
++      const route=citRoute(p.h,s.i,act);if(!route)return;
++      const steps=route.length-1;
++      if(steps<bestSteps||(steps===bestSteps&&(!best||s.i<best.i))){best=s;bestSteps=steps;}
++    });
++    if(best){best.used++;p.kind='K';p.dest=best.i;workers.push(p);}else idle.push(p);
++  });
++  return {workers,idle,open:new Set(workers.map(p=>p.dest))};
+ }
+-async function citPrepareChildren(act){
+-  const families=cit.ppl.filter(p=>p.fam), assignments=citSchoolAssignments(families,act);
++async function citPrepareChildren(act,openSchools){
++  const families=cit.ppl.filter(p=>p.fam), assignments=citSchoolAssignments(families,act,openSchools);
+   await citAll(families,async p=>{
+     if(!p.kidEl)citSpawnKid(p,p.h);
+     const a=assignments.get(p); p.school=a?a.i:null; p.schoolSlot=a?a.slot:null; citClearThought(p.kidEl);
+@@ -2508,6 +2551,7 @@
+   citClearThought(p.el);
+   if(p.fam&&p.school!=null){await citWalkPair(p,p.school,act);await citWalkW(p,p.dest,act);} else await citWalkW(p,p.dest,act);
+   if(p.kind==='O')citOfficePose(p.el,p.workSlot||0);
++  if(p.kind==='K')citSchoolWorkerPose(p.el);
+ }
+ async function citReturnHome(p,act){
+   citClearThought(p.el);
+@@ -2552,26 +2596,29 @@
+   const week=citWeekNum(),list=[];
+   cit.g.forEach((t,i)=>{
+     if(t!=='S'||used.has(i)||!citConnected(i,act)||!citRoute(center,i,act))return;
+-    const last=Number(cit.shopStock[i]); if(last<week)list.push({i,last:Number.isFinite(last)?last:-999});
++    const last=Number(cit.shopStock[i]); if(!citShopStocked(i))list.push({i,last:Number.isFinite(last)?last:-999});
+   });
+   list.sort((a,b)=>a.last-b.last||a.i-b.i);return list.length?list[0].i:null;
+ }
+ async function citFarmDeliveries(farmWorkers,act){
+   const used=new Set(), week=citWeekNum();
+   for(const p of farmWorkers){
+-    /* One farm makes at most one boutique delivery per week. */
+     if(citFarmDeliveredThisWeek(p.dest,week)) continue;
+-    const target=citShopDeliveryTarget(p.dest,act,used);if(target==null)continue;used.add(target);
+-    citClearThought(p.el); citSetFace(p.el,'🚙');
+-    try {
+-      const arrived=await citWalkW(p,target,act); if(!arrived)continue;
+-      citMarkShopStocked(target,week); citMarkFarmDelivered(p.dest,week); citRenderTiles();
+-      await citEarn(target,CITY_CFG.FARM_DELIVERY_INCOME);
+-      await citWalkW(p,p.dest,act); await citFarmActivity(p,p.dest,1);
+-    } finally {
+-      /* A failed/aborted delivery can never leave a car/truck face stuck on a shop or road. */
+-      citSetFace(p.el,p.face);
++    for(let run=0;run<CITY_CFG.FARM_DELIVERIES_PER_WEEK;run++){
++      const target=citShopDeliveryTarget(p.dest,act,used);if(target==null)break;used.add(target);
++      citClearThought(p.el); citSetFace(p.el,'🚙');
++      try {
++        const arrived=await citWalkW(p,target,act); if(!arrived)continue;
++        citMarkShopStocked(target,week); citRenderTiles();
++        await citEarn(target,CITY_CFG.FARM_DELIVERY_INCOME);
++        await citWalkW(p,p.dest,act); await citFarmActivity(p,p.dest,1);
++      } finally {
++        citSetFace(p.el,p.face);
++      }
+     }
++    /* Demand cannot change again within the same simulated week, so the farm is done
++       after making up to its quota of deliveries. */
++    citMarkFarmDelivered(p.dest,week);
+   }
+ }
+ function citFarmerWorksWeekend(p){ return ((p.id+cit.day)%3)===0; }
+@@ -2642,7 +2689,10 @@
+ async function citWeekday(act,reachable){
+   const dow=citDayOfWeek();
+   cit.ppl.forEach((p,n)=>citBeginPersonDay(p,n));
+-  await citPrepareChildren(act);
++
++  /* A school is open only when one teacher has been assigned to it that day. */
++  const schoolSet=citAssignSchoolWorkers(act,reachable),schoolWorkers=schoolSet.workers,teacherIdle=schoolSet.idle;
++  await citPrepareChildren(act,schoolSet.open);
+ 
+   /* Farmers are assigned first so they can refill boutiques before boutique workers arrive. */
+   const farmSet=citFarmWorkersAvailable(act,reachable),farmWorkers=farmSet.workers,farmIdle=farmSet.idle;
+@@ -2652,10 +2702,10 @@
+ 
+   const offices=[];cit.g.forEach((t,i)=>{if(t==='O'&&citConnected(i,act))offices.push({i,cap:CITY_CFG.OFFICE_CAP,used:0});});
+   const shopJobs=[];cit.g.forEach((t,i)=>{if(t==='S'&&citConnected(i,act)&&citShopStocked(i))shopJobs.push({i,cap:CITY_CFG.SHOP_WORK_CAP});});
+-  const officeWorkers=[],shopWorkers=[],idleAdults=[...farmIdl
