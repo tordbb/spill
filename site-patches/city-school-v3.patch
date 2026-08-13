@@ -1,0 +1,252 @@
+--- a/index.html
++++ b/index.html
+@@ -248,6 +248,10 @@
+   .citizen.office-slot-1 .cit-face { left:auto; right:4%; top:4%; transform:none; }
+   .citizen.office-slot-2 .cit-face { left:4%; top:auto; bottom:4%; transform:none; }
+   .citizen.office-slot-3 .cit-face { left:auto; right:4%; top:auto; bottom:4%; transform:none; }
++  .citizen.school-slot-0 .cit-face { left:4%; top:4%; transform:none; }
++  .citizen.school-slot-1 .cit-face { left:auto; right:4%; top:4%; transform:none; }
++  .citizen.school-slot-2 .cit-face { left:4%; top:auto; bottom:4%; transform:none; }
++  .citizen.school-slot-3 .cit-face { left:auto; right:4%; top:auto; bottom:4%; transform:none; }
+   /* Thought bubbles are anchored from their LOWER-LEFT corner at the centre of the tile. */
+   .cit-thought { position:absolute; left:50%; bottom:50%; top:auto; transform:none; transform-origin:left bottom; z-index:12;
+     width:78%; height:78%; min-width:22px; min-height:22px; border-radius:50%; background:#fff;
+@@ -525,7 +529,7 @@
+         <div class="cit-setting-row" data-key="OFFICE_INCOME"><span class="cit-setting-icon">🏢🧑🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">3</b><button data-d="1">➕</button></div>
+         <div class="cit-setting-row" data-key="SHOPWORK_INCOME"><span class="cit-setting-icon">🛍️🧑🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
+         <div class="cit-setting-row" data-key="VISIT_INCOME"><span class="cit-setting-icon">🛍️👥🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
+-        <div class="cit-setting-row" data-key="FARM_DELIVERY_INCOME"><span class="cit-setting-icon">🚜➡️🛍️🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
++        <div class="cit-setting-row" data-key="FARM_DELIVERY_INCOME"><span class="cit-setting-icon">🛖➡️🛍️🪙</span><button data-d="-1">➖</button><b class="cit-setting-value">1</b><button data-d="1">➕</button></div>
+       </div>
+       <button id="cit-settings-close">✅</button>
+     </div>
+@@ -1783,7 +1787,7 @@
+   /* ---- population ---- */
+   NEWCOMERS_PER_NIGHT: 2,
+   FAMILY_EVERY: 2,
+-  SCHOOL_MAX_STEPS: 10,
++  SCHOOL_CAP: 4,
+ 
+   /* ---- weekend behavior ---- */
+   PLAY_TILES: ['T','W','G','F','P'],
+@@ -1831,7 +1835,7 @@
+ }
+ citLoadSettings();
+ 
+-const CIT_EMO={ H:'🏠', O:'🏢', K:'🏫', P:'🌳', G:'🎠', F:'⛲', T:'🌲', B:'🪑', M:'🚜' };
++const CIT_EMO={ H:'🏠', O:'🏢', K:'🏫', P:'🌳', G:'🎠', F:'⛲', T:'🌲', B:'🪑', M:'🛖' };
+ const CIT_CLS={ R:'road', A:'sand', H:'house', O:'office', S:'shop', K:'school', P:'park',
+                 W:'water', G:'deco', F:'deco', T:'deco', B:'bench', E:'grass', M:'farmcenter', Q:'farmplot' };
+ let cit=null, citTool='R', citLock=false, citTs=18, citPaint=false, citUndo=[], citEditBefore=null, citEditChanged=false, citHelpMode='default', citNeedIcons=new Set();
+@@ -2046,7 +2050,7 @@
+ /* ---------- rendering / visible status ---------- */
+ function citThoughtClass(icon){
+   if(icon==='🏫')return'school';
+-  if(icon==='🚜')return'farm';
++  if(icon==='🛖')return'farm';
+   if(icon==='🏠')return'house';
+   if(icon==='🏢')return'office';
+   if(icon==='🛍️')return'shopneed';
+@@ -2102,13 +2106,14 @@
+   if(el.classList.contains('citizen')) citNoteNeed(icon);
+ }
+ function citClearThought(el){ citSetThought(el,null); }
+-function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3'); }
++function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3','school-slot-0','school-slot-1','school-slot-2','school-slot-3'); }
+ function citHomePose(el, side){
+   if(!el)return; citMovingPose(el);
+   if(side==='parent') el.classList.add('home-parent');
+   if(side==='kid') el.classList.add('home-kid');
+ }
+ function citOfficePose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('office-slot-'+(slot%4)); }
++function citSchoolPose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('school-slot-'+(slot%4)); }
+ function citRenderPeople(){
+   $('#cit-grid').querySelectorAll('.citizen').forEach(e=>e.remove());
+   cit.ppl.forEach((p,n)=>{
+@@ -2182,11 +2187,13 @@
+   const main=$('#cit-help-main'), tip=$('#cit-help-tip'); if(!main||!tip)return;
+   main.textContent='Bygg, trykk 🌙, og byen får en ny dag';
+   if(citHelpMode==='undo'){ tip.textContent='Tips: Angre med ↶'; tip.style.display=''; return; }
++  if(citHelpMode==='road'){ tip.textContent='Tips: alt må ha vei for å besøkes'; tip.style.display=''; return; }
+   if(citHelpMode==='needs' && citNeedIcons.size){ tip.textContent='Tips: Bygg det de tenker på: '+[...citNeedIcons].join(''); tip.style.display=''; return; }
+   tip.textContent=''; tip.style.display='none';
+ }
+ function citResetHelp(){ citHelpMode='default'; citNeedIcons.clear(); citRenderHelp(); }
+ function citShowUndoHelp(){ citHelpMode='undo'; citNeedIcons.clear(); citRenderHelp(); }
++function citShowRoadHelp(){ citHelpMode='road'; citNeedIcons.clear(); citRenderHelp(); }
+ function citNoteNeed(icon){
+   if(!icon)return; citHelpMode='needs'; citNeedIcons.add(icon); citRenderHelp();
+ }
+@@ -2273,12 +2280,19 @@
+   }
+   return best;
+ }
++function citMaybeShowRoadHelp(i){
++  if(i==null)return;
++  const t=cit.g[i]; if(!t||t==='R'||t==='A')return;
++  const anchor=(t==='M'||t==='Q')?citFarmByCell(i):i;
++  const act=citActive();
++  if(anchor!=null && !citConnected(anchor,act)) citShowRoadHelp();
++}
+ function citBuildFarm(clicked){
+   const center=citNearestFarmCenter(clicked);
+   if(center==null){ sfx('hmm'); return false; }
+   const cells=citFarmCells(center), price=CITY_CFG.PRICE.M;
+   if(cit.money<price){ const m=$('#cit-money-wrap'); m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake'); sfx('hmm'); return false; }
+-  cit.money-=price; cells.forEach(i=>cit.g[i]='Q'); cit.g[center]='M'; cit.farmDelivery[center]=citWeekNum()-1; sfx('drop'); save(); citRenderTiles(); citHud(); return true;
++  cit.money-=price; cells.forEach(i=>cit.g[i]='Q'); cit.g[center]='M'; cit.farmDelivery[center]=citWeekNum()-1; sfx('drop'); save(); citRenderTiles(); citHud(); citMaybeShowRoadHelp(center); return true;
+ }
+ function citBulldoze(i){
+   const t=cit.g[i]; if(!t)return false;
+@@ -2307,7 +2321,7 @@
+   if(citTool==='S'){
+     cit.st[i]=cit.ns%CITY_CFG.SHOP_TYPES.length; cit.ns++; citMarkShopStocked(i);
+   }
+-  sfx('drop'); save(); citRenderTiles(); citHud(); return true;
++  sfx('drop'); save(); citRenderTiles(); citHud(); citMaybeShowRoadHelp(i); return true;
+ }
+ 
+ /* ---------- network/path finding ---------- */
+@@ -2351,12 +2365,21 @@
+   if(edge==null)return null;
+   const path=[edge]; let k=edge; while(prev[k]!=null){k=prev[k];path.push(k);} path.push(homeIdx); return path;
+ }
+-function citNearSchool(homeIdx,act){
+-  let best=null,bd=Infinity;
+-  cit.g.forEach((t,i)=>{
+-    if(t!=='K'||!citConnected(i,act))return; const route=citRoute(homeIdx,i,act); if(!route)return;
+-    const steps=route.length-1; if(steps<CITY_CFG.SCHOOL_MAX_STEPS&&steps<bd){bd=steps;best=i;}
+-  }); return best;
++function citSchoolAssignments(families,act){
++  const schools=[];
++  cit.g.forEach((t,i)=>{ if(t==='K'&&citConnected(i,act)) schools.push({i,used:0}); });
++  const out=new Map();
++  [...families].sort((a,b)=>(a.id||0)-(b.id||0)).forEach(p=>{
++    let best=null,bestSteps=Infinity;
++    schools.forEach(s=>{
++      if(s.used>=CITY_CFG.SCHOOL_CAP)return;
++      const route=citRoute(p.h,s.i,act); if(!route)return;
++      const steps=route.length-1;
++      if(steps<bestSteps || (steps===bestSteps && (!best || s.i<best.i))){best=s;bestSteps=steps;}
++    });
++    if(best){ const slot=best.used++; out.set(p,{i:best.i,slot}); }
++  });
++  return out;
+ }
+ function citStreetByHome(homeIdx,act){ const roads=citAdjRoads(homeIdx,act); return roads.length?roads[0]:null; }
+ const citSleep=ms=>new Promise(r=>setTimeout(r,ms));
+@@ -2376,6 +2399,7 @@
+   const kw={el:p.kidEl,at:p.kidAt};
+   await Promise.all([citWalkW(p,toIdx,act),(async()=>{await citSleep(CITY_CFG.KID_LAG_MS);await citWalkW(kw,toIdx,act);})()]);
+   p.kidAt=kw.at;
++  if(toIdx===p.school && p.schoolSlot!=null) citSchoolPose(p.kidEl,p.schoolSlot);
+ }
+ async function citHop(el,toIdx,ms){
+   if(!el)return; citMovingPose(el); el.style.transition=`left ${ms}ms ease, top ${ms}ms ease`;
+@@ -2387,6 +2411,8 @@
+   }); return out;
+ }
+ async function citIdleStreet(p,act){
++  /* A farmer who lives on a functioning farm already has a workplace and never roams asking for another farm. */
++  if(p.pref==='M'&&cit.g[p.h]==='M')return;
+   const first=citStreetByHome(p.h,act); if(first==null)return;
+   await citWalkW(p,first,act); citSetThought(p.el,p.jobThought||'🏢'); let cur=p.at;
+   for(let n=0;n<3;n++){
+@@ -2443,10 +2469,10 @@
+ /* ---------- needs / school ---------- */
+ function citJobThought(p,act){
+   if(!citConnected(p.h,act))return'🛣️';
+-  if(p.pref==='M')return'🚜';
++  if(p.pref==='M')return cit.g[p.h]==='M'?null:'🛖';
+   if(p.pref==='S'){
+     const anyShop=cit.g.some(t=>t==='S');
+-    if(anyShop && !cit.g.some((t,i)=>t==='S'&&citShopStocked(i))) return'🚜';
++    if(anyShop && !cit.g.some((t,i)=>t==='S'&&citShopStocked(i))) return'🛖';
+     return'🛍️';
+   }
+   return'🏢';
+@@ -2455,9 +2481,10 @@
+   const a=familyKid?['🎠','💧','⛲','🌲','🌳']:['🪑','🟩','🌳']; return a[Math.abs(n)%a.length];
+ }
+ async function citPrepareChildren(act){
+-  const families=cit.ppl.filter(p=>p.fam);
++  const families=cit.ppl.filter(p=>p.fam), assignments=citSchoolAssignments(families,act);
+   await citAll(families,async p=>{
+-    if(!p.kidEl)citSpawnKid(p,p.h);p.school=citNearSchool(p.h,act);citClearThought(p.kidEl);
++    if(!p.kidEl)citSpawnKid(p,p.h);
++    const a=assignments.get(p); p.school=a?a.i:null; p.schoolSlot=a?a.slot:null; citClearThought(p.kidEl);
+     if(p.school==null){
+       const street=citStreetByHome(p.h,act);
+       if(street!=null && p.kidAt!==street){const kw={el:p.kidEl,at:p.kidAt};await citDirectStep(kw,street);p.kidAt=kw.at;}
+@@ -2482,17 +2509,25 @@
+ }
+ 
+ /* ---------- farms / boutique stock ---------- */
+-function citFarmWorkersAvailable(act,reachable){
+-  const farms=citFarmCenters().map(i=>({i,used:0}));
+-  const workers=[],idle=[];
+-  cit.ppl.filter(p=>p.pref==='M').forEach(p=>{
+-    let f=null;
+-    if(cit.g[p.h]==='M') f=farms.find(x=>x.i===p.h&&x.used<CITY_CFG.FARM_WORK_CAP);
+-    if(!f) f=farms.find(x=>x.used<CITY_CFG.FARM_WORK_CAP&&reachable(p.h,x.i));
+-    if(f){f.used++;p.kind='M';p.dest=f.i;workers.push(p);} else idle.push(p);
++function citAssignFarmCandidates(candidates,reachable){
++  const farms=citFarmCenters().map(i=>({i,used:0})),workers=[],idle=[],assigned=new Set();
++  const assign=(p,f)=>{f.used++;p.kind='M';p.dest=f.i;workers.push(p);assigned.add(p);};
++  /* Farm residents always keep the job on their own farm before outside farmers compete for it. */
++  candidates.forEach(p=>{
++    if(cit.g[p.h]!=='M')return;
++    const f=farms.find(x=>x.i===p.h&&x.used<CITY_CFG.FARM_WORK_CAP);
++    if(f)assign(p,f);
++  });
++  candidates.forEach(p=>{
++    if(assigned.has(p))return;
++    const f=farms.find(x=>x.used<CITY_CFG.FARM_WORK_CAP&&reachable(p.h,x.i));
++    if(f)assign(p,f); else idle.push(p);
+   });
+   return {workers,idle,farms};
+ }
++function citFarmWorkersAvailable(act,reachable){
++  return citAssignFarmCandidates(cit.ppl.filter(p=>p.pref==='M'),reachable);
++}
+ async function citFarmActivity(p,center,hops){
+   const cells=citFarmCells(center)||[]; if(!cells.length)return;
+   const targets=cells.filter(i=>i!==center);
+@@ -2534,14 +2569,14 @@
+ function citBeginPersonDay(p,n){
+   citEnsurePersonMeta(p,n);
+   p.dest=null; p.kind=null; p.school=null; p.shop=null; p.spot=null; p.playStart=null;
+-  p.workSlot=null; p.jobThought=null; p.dayOff=false;
++  p.workSlot=null; p.schoolSlot=null; p.jobThought=null; p.dayOff=false;
+   citClearThought(p.el); if(p.kidEl)citClearThought(p.kidEl);
+   citSetFace(p.el,p.face);
+   if(p.at===p.h) citMergeFamily(p); else citMovingPose(p.el);
+ }
+ function citFinishPersonDay(p){
+   p.dest=null; p.kind=null; p.school=null; p.shop=null; p.spot=null; p.playStart=null;
+-  p.workSlot=null; p.jobThought=null; p.dayOff=false;
++  p.workSlot=null; p.schoolSlot=null; p.jobThought=null; p.dayOff=false;
+   citClearThought(p.el); if(p.kidEl)citClearThought(p.kidEl);
+   citSetFace(p.el,p.face); citMergeFamily(p);
+ }
+@@ -2668,7 +2703,8 @@
+   cit.ppl.forEach((p,n)=>citBeginPersonDay(p,n));
+ 
+   const shopJobs=[];cit.g.forEach((t,i)=>{if(t==='S'&&citConnected(i,act)&&citShopStocked(i))shopJobs.push({i,cap:CITY_CFG.SHOP_WORK_CAP});});
+-  const farms=citFarmCenters().map(i=>({i,used:0}));
++  const weekendFarmSet=citAssignFarmCandidates(cit.ppl.filter(p=>p.pref==='M'&&citFarmerWorksWeekend(p)),reachable);
++  const weekendFarmWorkers=new Set(weekendFarmSet.workers);
+   const weekendWorkers=[],leisure=[];
+ 
+   cit.ppl.forEach(p=>{
+@@ -2677,8 +2713,8 @@
+       if(sh){sh.cap--;p.kind='S';p.dest=sh.i;weekendWorkers.push(p);}else{p.jobThought=citJobThought(p,act);leisure.push(p);}return;
+     }
+     if(p.pref==='M'&&citFarmerWorksWeekend(p)){
+-      let f=null;if(cit.g[p.h]==='M')f=farms.find(x=>x.i===p.h&&x.used<1);if(!f)f=farms.find(x=>x.used<1&&reachable(p.h,x.i));
+-      if(f){f.used++;p.kind='M';p.dest=f.i;weekendWorkers.push(p);return;}
++      if(weekendFarmWorkers.has(p)){weekendWorkers.push(p);return;}
++      leisure.push(p);return;
+     }
+     leisure.push(p);
+   });
