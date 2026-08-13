@@ -1,0 +1,40 @@
+--- a/index.html
++++ b/index.html
+@@ -181,14 +181,18 @@
+     text-shadow:0 2px 2px #0004; }
+   .sdk-cell .sdk-animal { filter:drop-shadow(0 2px 2px #0004); animation:sdkpop .32s cubic-bezier(.2,1.5,.4,1); }
+   .sdk-cell.sdk-wrong { animation:shk .45s; }
+-  .sdk-cell.sdk-hint { animation:sdkhint 1s ease-in-out infinite; z-index:2; }
++  .sdk-hint-x { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
++    color:#fff; font-family:system-ui,sans-serif; font-size:1.35em; line-height:1; font-weight:950;
++    text-shadow:0 2px 2px #0004; pointer-events:none; animation:sdkxhint .62s ease-in-out infinite; z-index:4; }
+   @keyframes sdkpop { from{transform:scale(.15) rotate(-15deg)} to{transform:scale(1)} }
+-  @keyframes sdkhint { 0%,100%{outline:0 solid #fff0} 50%{outline:5px solid #fff; box-shadow:0 0 0 8px #ffd54a88} }
++  @keyframes sdkxhint { 0%,100%{opacity:.16;transform:scale(.82)} 50%{opacity:1;transform:scale(1.08)} }
+   #sdk-modes { display:flex; align-items:center; justify-content:center; gap:10px; min-height:52px; flex-wrap:nowrap; }
+   .sdk-mode { width:72px; height:48px; border:0; border-radius:16px; background:#8b939b; color:#fff; font-size:27px;
+     box-shadow:0 4px 0 #00000028; cursor:pointer; }
+   .sdk-mode.sel { outline:4px solid #42a5f5; background:#69737c; color:#fff; transform:translateY(-1px); }
++  .sdk-mode:disabled { opacity:.34; box-shadow:none; cursor:default; transform:none; outline:0; }
+   #sdk-mode-x { font-family:system-ui,sans-serif; font-weight:950; font-size:34px; line-height:1; }
++  #sdk-hint-btn { font-family:system-ui,sans-serif; font-weight:950; font-size:30px; line-height:1; }
+   @media (max-height:430px) {
+     #g-sdk .stage-wrap { padding-top:95px; gap:4px; }
+     #sdk-count { min-height:38px; padding:1px 9px; font-size:15px; border-radius:10px; }
+@@ -478,7 +482,7 @@
+   <div class="game-help" id="sdk-help">
+     <span>Finn ett dyr i hver farge, rad og kolonne</span>
+     <span>Dyr kan ikke stå ved siden av hverandre</span>
+-    <span>× stryk • 🐾 finn</span>
++    <span>× stryk • 🐾 finn • ? hjelp</span>
+   </div>
+   <div class="top-bar"><button class="icon-btn nav-home">🏡</button><div class="dots" id="sdk-dots"></div><button class="icon-btn" id="sdk-reset">↺</button></div>
+   <div class="stage-wrap">
+@@ -487,6 +491,7 @@
+       <div id="sdk-count"><span id="sdk-count-animal">🦝</span><b id="sdk-found-count">0 / 6</b></div>
+       <button class="sdk-mode sel" id="sdk-mode-x" aria-label="Stryk ut">×</button>
+       <button class="sdk-mode" id="sdk-mode-animal" aria-label="Finn dyr">🐾</button>
++      <button class="sdk-mode" id="sdk-hint-btn" aria-label="Vis ett kryss">?</button>
+     </div>
+   </div>
+ </div>
