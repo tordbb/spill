@@ -1,0 +1,110 @@
+--- a/index.html
++++ b/index.html
+@@ -1692,61 +1692,65 @@
+   const idx=letter.charCodeAt(0)-65,pal=SDK_LEVELS[sdkCur].palette;
+   return pal[idx%pal.length];
+ }
+-function sdkScheduleHint(){
+-  if(sdkHintTimer)clearTimeout(sdkHintTimer);
+-  sdkHintTimer=setTimeout(()=>{
+-    const lv=SDK_LEVELS[sdkCur],candidates=[];
+-    if(!sdkFound.size){
+-      const counts={};
+-      for(let r=0;r<6;r++)for(let c=0;c<6;c++)counts[lv.regions[r][c]]=(counts[lv.regions[r][c]]||0)+1;
+-      for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(counts[lv.regions[r][c]]===1)candidates.push([r,c]);
+-    }else{
+-      for(let r=0;r<6;r++){
+-        const open=[];for(let c=0;c<6;c++){const k=sdkKey(r,c);if(!sdkX.has(k)&&!sdkFound.has(k))open.push([r,c]);}
+-        if(open.length===1&&sdkIsSolution(...open[0]))candidates.push(open[0]);
+-      }
+-      for(let c=0;c<6;c++){
+-        const open=[];for(let r=0;r<6;r++){const k=sdkKey(r,c);if(!sdkX.has(k)&&!sdkFound.has(k))open.push([r,c]);}
+-        if(open.length===1&&sdkIsSolution(...open[0]))candidates.push(open[0]);
+-      }
+-      for(const letter of 'ABCDEF'){
+-        const open=[];for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(lv.regions[r][c]===letter){const k=sdkKey(r,c);if(!sdkX.has(k)&&!sdkFound.has(k))open.push([r,c]);}
+-        if(open.length===1&&sdkIsSolution(...open[0]))candidates.push(open[0]);
+-      }
+-    }
+-    if(candidates.length){
+-      const [r,c]=candidates[0],el=$(`#sdk-board .sdk-cell[data-r="${r}"][data-c="${c}"]`);
+-      if(el)el.classList.add('sdk-hint');
+-    }
+-  },8000);
++function sdkClearHint(){
++  if(sdkHintTimer){clearTimeout(sdkHintTimer);sdkHintTimer=null;}
++  $$('#sdk-board .sdk-hint-x').forEach(el=>el.remove());
++}
++function sdkAllCorrectXsMarked(){
++  const lv=SDK_LEVELS[sdkCur];
++  for(let r=0;r<6;r++)for(let c=0;c<6;c++)if(lv.solution[r]!==c&&!sdkX.has(sdkKey(r,c)))return false;
++  return true;
++}
++function sdkNextHintX(){
++  const lv=SDK_LEVELS[sdkCur];
++  /* Deterministic order keeps repeated help predictable. The hint only reveals
++     a cell that is truly empty and that the player has not marked yet. */
++  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
++    const k=sdkKey(r,c);
++    if(lv.solution[r]!==c&&!sdkX.has(k)&&!sdkFound.has(k))return [r,c];
++  }
++  return null;
++}
++function sdkShowOneHint(){
++  sdkClearHint();
++  const pos=sdkNextHintX();
++  if(!pos){sdkRenderModes();return;}
++  const [r,c]=pos,cell=$(`#sdk-board .sdk-cell[data-r="${r}"][data-c="${c}"]`);
++  if(!cell)return;
++  const x=document.createElement('span');x.className='sdk-hint-x';x.textContent='×';cell.appendChild(x);
++  sfx('click');
++  sdkHintTimer=setTimeout(()=>{if(x.isConnected)x.remove();sdkHintTimer=null;},5000);
+ }
+ function openSdk(i){
+-  sdkCur=i;sdkMode='x';sdkX=new Set();sdkFound=new Set();
++  sdkClearHint();sdkCur=i;sdkMode='x';sdkX=new Set();sdkFound=new Set();
+   show('g-sdk');sdkRender();
+ }
+ $('#card-sdk').addEventListener('click',()=>{sfx('click');openSdk(Math.min(S.done.sdk,SDK_LEVELS.length-1));});
+ $('#sdk-reset').addEventListener('click',()=>{sfx('pop');openSdk(sdkCur);});
+-$('#sdk-mode-x').addEventListener('click',()=>{sdkMode='x';sfx('click');sdkRenderModes();});
+-$('#sdk-mode-animal').addEventListener('click',()=>{sdkMode='animal';sfx('click');sdkRenderModes();});
++$('#sdk-mode-x').addEventListener('click',()=>{sdkClearHint();sdkMode='x';sfx('click');sdkRenderModes();});
++$('#sdk-mode-animal').addEventListener('click',()=>{sdkClearHint();sdkMode='animal';sfx('click');sdkRenderModes();});
++$('#sdk-hint-btn').addEventListener('click',()=>{if(!$('#sdk-hint-btn').disabled)sdkShowOneHint();});
+ function sdkRenderModes(){
+   $('#sdk-mode-x').classList.toggle('sel',sdkMode==='x');
+   $('#sdk-mode-animal').classList.toggle('sel',sdkMode==='animal');
++  $('#sdk-hint-btn').disabled=sdkAllCorrectXsMarked();
+ }
+ function sdkCellClick(r,c,el){
+-  const k=sdkKey(r,c);el.classList.remove('sdk-hint');
++  sdkClearHint();
++  const k=sdkKey(r,c);
+   if(sdkFound.has(k))return;
+   if(sdkMode==='x'){
+-    /* X marks are the child's own notes. They may be right or wrong and are always toggleable. */
+     if(sdkX.has(k))sdkX.delete(k);else sdkX.add(k);
+     sfx('click');sdkRender();return;
+   }
+   if(!sdkIsSolution(r,c)){
+-    el.classList.remove('sdk-wrong');void el.offsetWidth;el.classList.add('sdk-wrong');sfx('hmm');sdkScheduleHint();return;
++    el.classList.remove('sdk-wrong');void el.offsetWidth;el.classList.add('sdk-wrong');sfx('hmm');return;
+   }
+   sdkX.delete(k);sdkFound.add(k);sfx('snap');sdkRender();
+   if(sdkFound.size===6)setTimeout(()=>award('sdk',sdkCur,()=>{if(sdkCur+1<SDK_LEVELS.length)openSdk(sdkCur+1);else goHome();}),420);
+ }
+ function sdkRender(){
++  sdkClearHint();
+   renderDots($('#sdk-dots'),SDK_LEVELS.length,sdkCur,S.done.sdk,openSdk);
+   const lv=SDK_LEVELS[sdkCur],board=$('#sdk-board');board.innerHTML='';
+   $('#sdk-count-animal').textContent=lv.animal;$('#sdk-found-count').textContent=sdkFound.size+' / 6';
+@@ -1757,7 +1761,7 @@
+     else if(sdkX.has(k)){const x=document.createElement('span');x.className='sdk-x';x.textContent='×';b.appendChild(x);}
+     b.addEventListener('click',()=>sdkCellClick(r,c,b));board.appendChild(b);
+   }
+-  sdkRenderModes();sdkScheduleHint();
++  sdkRenderModes();
+ }
+ 
+ /* ================= CITY (turn-based top-down city builder) ================= */
