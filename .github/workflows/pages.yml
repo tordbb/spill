@@ -38,6 +38,8 @@ jobs:
           patch --batch --forward -d dist -p1 < /tmp/city-balance-v6.patch
           base64 -d site-patches/city-balance-v7.patch.gz.b64 | gzip -dc > /tmp/city-balance-v7.patch
           patch --batch --forward -d dist -p1 < /tmp/city-balance-v7.patch
+          base64 -d site-patches/city-balance-v8.patch.gz.b64 | gzip -dc > /tmp/city-balance-v8.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v8.patch
           touch dist/.nojekyll
 
       - name: Configure Pages
