@@ -1,0 +1,28 @@
+--- a/index.html
++++ b/index.html
+@@ -1642,14 +1642,17 @@
+    ❌ toggles notes only on empty cells. 🐾 checks an animal candidate.
+    Correct animals become permanent. X marks are manual notes and may intentionally be wrong. */
+ const SDK_LEVELS=[
+-  {regions:['DBBAAC','DBBBBC','DDFCCC','DDFFFF','DDFEFF','DFFFFF'],solution:[4,2,5,0,3,1]},
+-  {regions:['AABBBB','ABBBBB','ACCBFF','ACEEFD','ACEEFF','AEEFFF'],solution:[0,3,1,5,2,4]},
+-  {regions:['BBBBBA','BBCCCC','DDCCCC','DDECFF','EEECCF','EEEFFF'],solution:[5,1,3,0,2,4]},
+-  {regions:['AAAAAA','BBBBAA','BBCBDD','BBEDDD','EEEEDD','FFFEDD'],solution:[4,0,2,5,3,1]},
+-  {regions:['AAABBB','CCABBB','CBBBBD','CFFDDD','CFFFDE','CCFFFF'],solution:[1,4,0,3,5,2]},
+-  {regions:['AAAACC','AAABDC','DDDDDC','DDDFFC','EEFFCC','EEEFFF'],solution:[1,3,5,2,0,4]},
+-  {regions:['BBBCCA','BCBCCD','BCCCCD','EECDDD','EEEFFD','FFFFDD'],solution:[5,0,2,4,1,3]},
+-  {regions:['AAAACC','DAABCC','DDACCC','DFFFEC','FFEEEE','FFFFEE'],solution:[1,3,5,0,4,2]}
++  /* Generated solution-first, then region-grown and filtered by a human-style
++     deduction engine.  Difficulty rises from singles to line/crowding locks
++     and finally small two-unit locks; no level needs guessing. */
++  {regions:['ACCBBB','CCCBBB','CCCCBD','EECDDD','FEEEDD','FFEEED'],solution:[0,4,2,5,3,1],grade:0},
++  {regions:['CCAAAA','CCABBB','CCCBBB','ECCDDD','EECEDD','FEEEED'],solution:[2,4,1,5,3,0],grade:0},
++  {regions:['AAAACC','AABACC','DDFFCC','DDFCCE','DDFCCE','DDFFEE'],solution:[0,2,4,1,5,3],grade:1},
++  {regions:['AAABBB','FACCBB','FACCEE','FDCCEE','FFCCEE','FFCCCE'],solution:[2,5,3,1,4,0],grade:1},
++  {regions:['BBBAAA','BBBAAC','BBBAAC','EEEDCC','EEEFFC','EEFFFF'],solution:[4,1,5,3,0,2],grade:1},
++  {regions:['BBAADD','BBBADD','BAAADC','EEEDDD','EEEEFF','EFFFFF'],solution:[2,0,5,3,1,4],grade:2},
++  {regions:['AAABBD','AAABBD','CBBBDD','EEEEDF','EEEEFF','EEFFFF'],solution:[1,3,0,4,2,5],grade:2},
++  {regions:['BBBCAC','BBBCCC','BDDCCC','BDDEEE','FDFFEE','FFFFEE'],solution:[4,0,3,1,5,2],grade:2}
+ ].map((lv,i)=>Object.assign({},lv,{animal:['🦝','🐼','🐰','🐸','🦊','🐵','🐧','🐨'][i],palette:[
+   ['#8f6ad8','#f5cf2f','#a8e58c','#e97ade','#5dc0e5','#c94f88'],
+   ['#65c6b5','#ffd166','#8bcf72','#ef8eb8','#7aa5e6','#b56bd8'],
