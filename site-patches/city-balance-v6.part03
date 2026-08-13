@@ -64,12 +64,3 @@ e],dayOff=[];
  }
  
  async function citWeekend(act,reachable){
-@@ -2748,7 +2805,7 @@
-   const adultSpots=[],playSpots=[];
-   cit.g.forEach((t,i)=>{
-     if(!citConnected(i,act))return;
--    if(t==='B'||t==='E')adultSpots.push({i,cap:CITY_CFG.RELAX_CAP});else if(t==='P')adultSpots.push({i,cap:CITY_CFG.PARK_CAP});
-+    if(t==='B'||t==='E')adultSpots.push({i,cap:CITY_CFG.RELAX_CAP});
-     if(CITY_CFG.PLAY_TILES.includes(t))playSpots.push({i,cap:(t==='P'?CITY_CFG.PARK_CAP:CITY_CFG.PLAY_CAP});
-   });
-   const adultTrips=[],kidTrips=[];
