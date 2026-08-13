@@ -1,0 +1,52 @@
+--- a/index.html
++++ b/index.html
+@@ -2167,8 +2167,11 @@
+   if(p.id==null) p.id=cit.personSeq++;
+   if(!p.pref) p.pref=citPreferenceForId(p.id);
+   if(!Array.isArray(p.offDays)||p.offDays.length!==2) p.offDays=citOffDaysForId(p.id);
+-  if(!p.homeKind) p.homeKind=(cit.g[p.h]==='M'?'M':'H');
+-  if(p.homeKind==='M') p.farmHome=p.h; else p.farmHome=null;
++  if(cit.g[p.h]==='M'){
++    p.homeKind='M'; p.farmHome=p.h; p.pref='M';
++  } else {
++    p.homeKind='H'; p.farmHome=null;
++  }
+ }
+ function citNewcomerTemplate(){
+   const seq=cit.arr||0, id=cit.personSeq||0;
+@@ -2411,8 +2414,8 @@
+   }); return out;
+ }
+ async function citIdleStreet(p,act){
+-  /* A farmer who lives on a functioning farm already has a workplace and never roams asking for another farm. */
+-  if(p.pref==='M'&&cit.g[p.h]==='M')return;
++  /* A farm resident already has both a home and a workplace on that farm. */
++  if(cit.g[p.h]==='M')return;
+   const first=citStreetByHome(p.h,act); if(first==null)return;
+   await citWalkW(p,first,act); citSetThought(p.el,p.jobThought||'🏢'); let cur=p.at;
+   for(let n=0;n<3;n++){
+@@ -2469,12 +2472,9 @@
+ /* ---------- needs / school ---------- */
+ function citJobThought(p,act){
+   if(!citConnected(p.h,act))return'🛣️';
+-  if(p.pref==='M')return cit.g[p.h]==='M'?null:'🛖';
+-  if(p.pref==='S'){
+-    const anyShop=cit.g.some(t=>t==='S');
+-    if(anyShop && !cit.g.some((t,i)=>t==='S'&&citShopStocked(i))) return'🛖';
+-    return'🛍️';
+-  }
++  if(cit.g[p.h]==='M')return null;
++  if(p.pref==='M')return'🛖';
++  if(p.pref==='S')return'🛍️';
+   return'🏢';
+ }
+ function citNeedIcon(n,familyKid){
+@@ -2526,7 +2526,7 @@
+   return {workers,idle,farms};
+ }
+ function citFarmWorkersAvailable(act,reachable){
+-  return citAssignFarmCandidates(cit.ppl.filter(p=>p.pref==='M'),reachable);
++  return citAssignFarmCandidates(cit.ppl.filter(p=>p.pref==='M'||cit.g[p.h]==='M'),reachable);
+ }
+ async function citFarmActivity(p,center,hops){
+   const cells=citFarmCells(center)||[]; if(!cells.length)return;
