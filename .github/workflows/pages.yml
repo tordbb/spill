@@ -29,6 +29,7 @@ jobs:
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-school-v3.patch
           touch dist/.nojekyll
 
       - name: Configure Pages
