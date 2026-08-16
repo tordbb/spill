@@ -1,0 +1,11 @@
+--- a/index.html
++++ b/index.html
+@@ -1856,7 +1856,7 @@
+ 
+   /* ---- buses ---- */
+   BUS_CAPACITY: 10,
+-  BUS_SPEED_MULT: 8,
++  BUS_SPEED_MULT: 2,
+   BUS_STOP_MS: 230,
+   BUS_DEPART_INTERVAL_STEPS: 8,
+   BUS_NEAR_STOPS: 3,
