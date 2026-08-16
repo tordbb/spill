@@ -44,6 +44,7 @@ jobs:
           patch --batch --forward -d dist -p1 < /tmp/city-camera-v9.patch
           cat site-patches/city-buses-v10.part* | base64 -d | gzip -dc > /tmp/city-buses-v10.patch
           patch --batch --forward -d dist -p1 < /tmp/city-buses-v10.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-speed-v11.patch
           touch dist/.nojekyll
 
       - name: Configure Pages
