@@ -1,0 +1,145 @@
+--- a/index.html
++++ b/index.html
+@@ -259,6 +259,7 @@
+   .cit-bus-drag-preview { position:absolute; z-index:8; pointer-events:none; border-radius:50%; box-sizing:border-box; border:3px dashed var(--bus-color); background:#ffffff80; opacity:.9; }
+   .cit-bus-vehicle { position:absolute; z-index:7; pointer-events:none; display:flex; align-items:center; justify-content:center; transition-property:left,top; transition-timing-function:linear; filter:drop-shadow(0 1px 2px #0007); }
+   .cit-bus-glyph { display:block; line-height:1; font-size:82%; transform-origin:center; transition:transform .08s linear; }
++  .cit-bus-rider { position:absolute; z-index:2; left:50%; top:-7%; transform:translateX(-50%); display:none; line-height:1; font-size:46%; filter:drop-shadow(0 1px 1px #0007); }
+   .ct.earn { animation:bldgpulse .6s ease; z-index:4; }
+   @keyframes bldgpulse { 0%,100% { transform:scale(1); } 35% { transform:scale(1.42) translateY(-12%); } 65% { transform:scale(1.12); } }
+   .citizen.kid { z-index:6; }
+@@ -1855,7 +1856,7 @@
+   BUS_CAPACITY: 10,
+   BUS_SPEED_MULT: 2,
+   BUS_STOP_MS: 230,
+-  BUS_DEPART_INTERVAL_STEPS: 8,
++  BUS_DEPART_INTERVAL_STEPS: 10,
+   BUS_NEAR_STOPS: 3,
+   BUS_MIN_SAVING_STEPS: 0,
+   BUS_MAX_TIME_RATIO: 1,
+@@ -2544,11 +2545,15 @@
+     citApplyCamera();
+   };
+   v.addEventListener('pointerdown',e=>{
+-    if(citLock)return;
+     e.preventDefault();
+     try{v.setPointerCapture(e.pointerId);}catch(_){}
+     pointers.set(e.pointerId,localOf(e));
+     if(mode==='camera'){ if(pointers.size>=2)beginCamera(); return; }
++    /* During the animated day, the map keeps the exact same camera gesture as construction:
++       one finger does nothing; two fingers pan/pinch. A gesture that starts while locked stays
++       camera-only until every finger is lifted, even if the animation ends meanwhile. */
++    if(mode==='camerawait'){ if(pointers.size>=2){mode='camera';beginCamera();} return; }
++    if(citLock){ mode='camerawait'; if(pointers.size>=2){mode='camera';beginCamera();} return; }
+     if(mode==='edit'){
+       /* A second finger changes the whole gesture into camera mode. Revert every provisional build
+          from the first finger before moving/zooming, so an attempted pinch can never buy/delete tiles. */
+@@ -2586,6 +2591,11 @@
+       else camStart=null;
+       return;
+     }
++    if(mode==='camerawait'){
++      if(!pointers.size){mode='idle';camStart=null;}
++      else if(pointers.size>=2){mode='camera';beginCamera();}
++      return;
++    }
+     if(mode==='edit'&&citTool==='BUS'&&!cancelled){
+       const hit=citBusStopAt(busStartCell);
+       if(hit){citBusSelectedLine=hit.line.id;if(busDragging){if(citBusMoveStop(busStartCell,endCell))citEditChanged=true;}else{citRenderHelp();citRenderBusNetwork();}}
+@@ -2765,16 +2775,16 @@
+ 
+ /* ---------- live bus service ---------- */
+ function citBusVehicleEl(model,direction,startIdx){
+-  const g=$('#cit-grid'),el=document.createElement('div'),body=document.createElement('span');
+-  el.className='cit-bus-vehicle';body.className='cit-bus-glyph';body.textContent='🚌';el.appendChild(body);el.style.cssText=`width:${citTs}px;height:${citTs}px;font-size:${citTs}px;`;
+-  g.appendChild(el);const[x,y]=citTileXY(startIdx);el.style.left=x+'px';el.style.top=y+'px';return{el,body,model,direction,passengers:[]};
++  const g=$('#cit-grid'),el=document.createElement('div'),body=document.createElement('span'),rider=document.createElement('span');
++  el.className='cit-bus-vehicle';body.className='cit-bus-glyph';body.textContent='🚌';rider.className='cit-bus-rider';rider.textContent='🙂';el.append(body,rider);el.style.cssText=`width:${citTs}px;height:${citTs}px;font-size:${citTs}px;`;
++  g.appendChild(el);const[x,y]=citTileXY(startIdx);el.style.left=x+'px';el.style.top=y+'px';return{el,body,rider,model,direction,passengers:[],pathIndex:direction>0?0:model.path.length-1,atStop:false};
+ }
+ function citBusOrient(v,from,to){
+   if(from==null||to==null)return;const[a,b]=citRC(from),[c,d]=citRC(to),dr=c-a,dc=d-b;
+   /* Keep the bus roof visually upright: horizontal travel flips left/right; vertical travel uses one sideways orientation for both directions. */
+   v.body.style.transform=dr!==0?'rotate(90deg)':(dc<0?'scaleX(-1)':'scaleX(1)');
+ }
+-function citBusUpdateCap(v){}
++function citBusUpdateCap(v){if(v&&v.rider)v.rider.style.display=v.passengers.length?'block':'none';}
+ function citBusFallbackRequest(req){
+   if(req.done)return;req.done=true;if(citTransitSession)citTransitSession.waiters.delete(req);if(req.w&&req.w.el)req.w.el.style.visibility='';req.resolve('walk');
+ }
+@@ -2782,37 +2792,62 @@
+   const session=citTransitSession;if(!session||session.cancelled)return;const stop=v.model.path[pathIndex];
+   const leaving=v.passengers.filter(req=>req.exitPathIndex===pathIndex);for(const req of leaving){v.passengers.splice(v.passengers.indexOf(req),1);req.done=true;if(req.w&&req.w.el){req.w.el.style.visibility='';citPlacePerson(req.w.el,stop,false);}req.w.at=stop;req.resolve('rode');}
+   const waiting=[...session.waiters].filter(req=>!req.done&&req.lineId===v.model.id&&req.direction===v.direction&&req.boardPathIndex===pathIndex);
+-  for(const req of waiting){if(v.passengers.length<CITY_CFG.BUS_CAPACITY){session.waiters.delete(req);v.passengers.push(req);if(req.w&&req.w.el)req.w.el.style.visibility='hidden';req.w.at=stop;}else{req.fullMisses=(req.fullMisses||0)+1;if(req.fullMisses>=CITY_CFG.BUS_FULL_MISSES_BEFORE_WALK)citBusFallbackRequest(req);}}
++  for(const req of waiting){if(v.passengers.length<CITY_CFG.BUS_CAPACITY){session.waiters.delete(req);v.passengers.push(req);if(req.w&&req.w.el)req.w.el.style.visibility='hidden';req.w.at=stop;}else if(req.lastFullVehicle!==v){req.lastFullVehicle=v;req.fullMisses=(req.fullMisses||0)+1;if(req.fullMisses>=CITY_CFG.BUS_FULL_MISSES_BEFORE_WALK)citBusFallbackRequest(req);}}
+   citBusUpdateCap(v);
+ }
++function citBusCanReachWaiting(v,req){
++  if(!v||!req||v.model.id!==req.lineId||v.direction!==req.direction)return false;
++  if(req.boardPathIndex===v.pathIndex)return !!v.atStop;
++  return v.direction>0?req.boardPathIndex>v.pathIndex:req.boardPathIndex<v.pathIndex;
++}
++function citBusDispatchState(session,model,direction){
++  const key=model.id+'|'+direction;let state=session.dispatch.get(key);
++  if(!state){state={lastDepartureAt:-Infinity,timer:null};session.dispatch.set(key,state);}return state;
++}
++function citBusDemand(model,direction,session){
++  if(!session||session.cancelled)return;
++  let waiting=[...session.waiters].filter(req=>!req.done&&req.lineId===model.id&&req.direction===direction);
++  if(!waiting.length)return;
++  /* If a passenger reaches a stop while a suitable bus is still dwelling there, let them board it. */
++  for(const v of session.vehicles){
++    if(v.model.id!==model.id||v.direction!==direction||!v.atStop)continue;
++    if(waiting.some(req=>req.boardPathIndex===v.pathIndex))citBusServiceStop(v,v.pathIndex);
++  }
++  waiting=[...session.waiters].filter(req=>!req.done&&req.lineId===model.id&&req.direction===direction);
++  if(!waiting.length)return;
++  const vehicles=[...session.vehicles].filter(v=>v.model.id===model.id&&v.direction===direction);
++  if(waiting.every(req=>vehicles.some(v=>citBusCanReachWaiting(v,req))))return;
++  const state=citBusDispatchState(session,model,direction),interval=CITY_CFG.BUS_DEPART_INTERVAL_STEPS*CITY_CFG.WALK_STEP_MS,now=performance.now(),delay=Math.max(0,state.lastDepartureAt+interval-now);
++  if(delay<=1){
++    if(state.timer){clearTimeout(state.timer);state.timer=null;}
++    state.lastDepartureAt=now;citRunBusVehicle(model,direction,session).catch(()=>{});return;
++  }
++  if(!state.timer)state.timer=setTimeout(()=>{state.timer=null;citBusDemand(model,direction,session);},delay);
++}
+ async function citRunBusVehicle(model,direction,session){
+   const path=model.path;if(!path||path.length<2||session.cancelled)return;let k=direction>0?0:path.length-1,end=direction>0?path.length-1:0;const v=citBusVehicleEl(model,direction,path[k]);session.vehicles.add(v);
+   try{
+-    citBusServiceStop(v,k);await citSleep(CITY_CFG.BUS_STOP_MS);
+-    while(k!==end&&!session.cancelled){const nk=k+direction;citBusOrient(v,path[k],path[nk]);v.el.style.transitionDuration=Math.max(12,Math.round(CITY_CFG.WALK_STEP_MS/CITY_CFG.BUS_SPEED_MULT))+'ms';const[x,y]=citTileXY(path[nk]);v.el.style.left=x+'px';v.el.style.top=y+'px';await citSleep(Math.max(12,Math.round(CITY_CFG.WALK_STEP_MS/CITY_CFG.BUS_SPEED_MULT)));k=nk;
+-      if(model.stops.includes(path[k])){citBusServiceStop(v,k);await citSleep(CITY_CFG.BUS_STOP_MS);}
++    v.pathIndex=k;v.atStop=true;citBusServiceStop(v,k);await citSleep(CITY_CFG.BUS_STOP_MS);v.atStop=false;
++    while(k!==end&&!session.cancelled){const nk=k+direction;citBusOrient(v,path[k],path[nk]);v.el.style.transitionDuration=Math.max(12,Math.round(CITY_CFG.WALK_STEP_MS/CITY_CFG.BUS_SPEED_MULT))+'ms';const[x,y]=citTileXY(path[nk]);v.el.style.left=x+'px';v.el.style.top=y+'px';await citSleep(Math.max(12,Math.round(CITY_CFG.WALK_STEP_MS/CITY_CFG.BUS_SPEED_MULT)));k=nk;v.pathIndex=k;
++      if(model.stops.includes(path[k])){v.atStop=true;citBusServiceStop(v,k);await citSleep(CITY_CFG.BUS_STOP_MS);v.atStop=false;citBusDemand(model,direction,session);}
+     }
+     for(const req of [...v.passengers]){if(!req.done){req.done=true;if(req.w&&req.w.el){req.w.el.style.visibility='';citPlacePerson(req.w.el,path[k],false);}req.w.at=path[k];req.resolve('walk');}}
+-  } finally {session.vehicles.delete(v);v.el.remove();}
+-}
+-async function citBusScheduler(model,direction,session){
+-  const interval=CITY_CFG.BUS_DEPART_INTERVAL_STEPS*CITY_CFG.WALK_STEP_MS;
+-  while(!session.cancelled){citRunBusVehicle(model,direction,session).catch(()=>{});await citSleep(interval);}
++  } finally {session.vehicles.delete(v);v.el.remove();citBusDemand(model,direction,session);}
+ }
+ function citStartBusTraffic(act){
+   citStopBusTraffic();
+   /* A new day is a fresh transport round. Rebuild passenger distance/plan caches even when no stop was edited, because homes, workplaces or roads may have changed during building. */
+   citTransitCache=null;
+-  const cache=citBusPrepareTransitCache(act),session={cancelled:false,waiters:new Set(),vehicles:new Set()};citTransitSession=session;
+-  for(const m of cache.models){citBusScheduler(m,1,session);citBusScheduler(m,-1,session);}return session;
++  const cache=citBusPrepareTransitCache(act),session={cancelled:false,waiters:new Set(),vehicles:new Set(),dispatch:new Map()};citTransitSession=session;
++  return session;
+ }
+ function citStopBusTraffic(){
+-  const session=citTransitSession;if(!session)return;session.cancelled=true;for(const req of [...session.waiters]){if(!req.done){req.done=true;if(req.w&&req.w.el)req.w.el.style.visibility='';req.resolve('cancelled');}}session.waiters.clear();
++  const session=citTransitSession;if(!session)return;session.cancelled=true;for(const state of session.dispatch?session.dispatch.values():[])if(state.timer)clearTimeout(state.timer);for(const req of [...session.waiters]){if(!req.done){req.done=true;if(req.w&&req.w.el)req.w.el.style.visibility='';req.resolve('cancelled');}}session.waiters.clear();
+   for(const v of session.vehicles){for(const req of [...v.passengers]){if(!req.done){req.done=true;if(req.w&&req.w.el)req.w.el.style.visibility='';req.resolve('cancelled');}}v.el.remove();}session.vehicles.clear();if(citTransitSession===session)citTransitSession=null;
+ }
+ function citWaitForBus(w,plan,act){
+   const session=citTransitSession;if(!session||session.cancelled)return Promise.resolve('cancelled');
+-  return new Promise(resolve=>{session.waiters.add({w,resolve,lineId:plan.lineId,direction:plan.direction,boardPathIndex:plan.boardPathIndex,exitPathIndex:plan.exitPathIndex,fullMisses:0,done:false});});
++  return new Promise(resolve=>{const req={w,resolve,lineId:plan.lineId,direction:plan.direction,boardPathIndex:plan.boardPathIndex,exitPathIndex:plan.exitPathIndex,fullMisses:0,done:false};session.waiters.add(req);const model=citBusLineModel(citBusLineById(plan.lineId));if(model&&model.active)citBusDemand(model,plan.direction,session);});
+ }
+ 
+ async function citWalkOnlyW(w,toIdx,act){
