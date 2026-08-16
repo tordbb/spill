@@ -1,0 +1,59 @@
+--- a/index.html
++++ b/index.html
+@@ -258,10 +258,7 @@
+   .cit-bus-stop .cit-bus-warning { position:absolute; right:-22%; top:-28%; font-size:54%; filter:none; }
+   .cit-bus-drag-preview { position:absolute; z-index:8; pointer-events:none; border-radius:50%; box-sizing:border-box; border:3px dashed var(--bus-color); background:#ffffff80; opacity:.9; }
+   .cit-bus-vehicle { position:absolute; z-index:7; pointer-events:none; display:flex; align-items:center; justify-content:center; transition-property:left,top; transition-timing-function:linear; filter:drop-shadow(0 1px 2px #0007); }
+-  .cit-bus-body { position:relative; width:54%; height:86%; border-radius:20% 20% 15% 15%; background:var(--bus-color); border:1px solid #343434aa; transform-origin:center; transition:transform .08s linear; box-shadow:inset 0 -.12em 0 #0002; }
+-  .cit-bus-body::before { content:''; position:absolute; left:16%; right:16%; top:7%; height:18%; border-radius:30%; background:#d8eff8; border:1px solid #46606b88; }
+-  .cit-bus-body::after { content:''; position:absolute; left:20%; right:20%; bottom:8%; height:9%; border-radius:20%; background:#ffffffaa; }
+-  .cit-bus-cap { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:#3e3e3e; background:#ffffffc7; border-radius:999px; padding:.08em .2em; font-size:25%; font-weight:950; white-space:nowrap; }
++  .cit-bus-glyph { display:block; line-height:1; font-size:82%; transform-origin:center; transition:transform .08s linear; }
+   .ct.earn { animation:bldgpulse .6s ease; z-index:4; }
+   @keyframes bldgpulse { 0%,100% { transform:scale(1); } 35% { transform:scale(1.42) translateY(-12%); } 65% { transform:scale(1.12); } }
+   .citizen.kid { z-index:6; }
+@@ -1860,8 +1857,8 @@
+   BUS_STOP_MS: 230,
+   BUS_DEPART_INTERVAL_STEPS: 8,
+   BUS_NEAR_STOPS: 3,
+-  BUS_MIN_SAVING_STEPS: 3,
+-  BUS_MAX_TIME_RATIO: 0.75,
++  BUS_MIN_SAVING_STEPS: 0,
++  BUS_MAX_TIME_RATIO: 1,
+   BUS_FULL_MISSES_BEFORE_WALK: 2,
+ 
+   /* ---- looks ---- */
+@@ -2768,14 +2765,16 @@
+ 
+ /* ---------- live bus service ---------- */
+ function citBusVehicleEl(model,direction,startIdx){
+-  const g=$('#cit-grid'),el=document.createElement('div'),body=document.createElement('div'),cap=document.createElement('span');
+-  el.className='cit-bus-vehicle';body.className='cit-bus-body';cap.className='cit-bus-cap';body.appendChild(cap);el.appendChild(body);el.style.cssText=`width:${citTs}px;height:${citTs}px;--bus-color:${citBusColor(model.id)};`;
+-  g.appendChild(el);const[x,y]=citTileXY(startIdx);el.style.left=x+'px';el.style.top=y+'px';cap.textContent='0/'+CITY_CFG.BUS_CAPACITY;return{el,body,cap,model,direction,passengers:[]};
++  const g=$('#cit-grid'),el=document.createElement('div'),body=document.createElement('span');
++  el.className='cit-bus-vehicle';body.className='cit-bus-glyph';body.textContent='🚌';el.appendChild(body);el.style.cssText=`width:${citTs}px;height:${citTs}px;font-size:${citTs}px;`;
++  g.appendChild(el);const[x,y]=citTileXY(startIdx);el.style.left=x+'px';el.style.top=y+'px';return{el,body,model,direction,passengers:[]};
+ }
+ function citBusOrient(v,from,to){
+-  if(from==null||to==null)return;const[a,b]=citRC(from),[c,d]=citRC(to),dr=c-a,dc=d-b;let deg=0;if(dr>0)deg=180;else if(dc>0)deg=90;else if(dc<0)deg=-90;v.body.style.transform=`rotate(${deg}deg)`;
++  if(from==null||to==null)return;const[a,b]=citRC(from),[c,d]=citRC(to),dr=c-a,dc=d-b;
++  /* Keep the bus roof visually upright: horizontal travel flips left/right; vertical travel uses one sideways orientation for both directions. */
++  v.body.style.transform=dr!==0?'rotate(90deg)':(dc<0?'scaleX(-1)':'scaleX(1)');
+ }
+-function citBusUpdateCap(v){if(v.cap)v.cap.textContent=v.passengers.length+'/'+CITY_CFG.BUS_CAPACITY;}
++function citBusUpdateCap(v){}
+ function citBusFallbackRequest(req){
+   if(req.done)return;req.done=true;if(citTransitSession)citTransitSession.waiters.delete(req);if(req.w&&req.w.el)req.w.el.style.visibility='';req.resolve('walk');
+ }
+@@ -2801,7 +2800,10 @@
+   while(!session.cancelled){citRunBusVehicle(model,direction,session).catch(()=>{});await citSleep(interval);}
+ }
+ function citStartBusTraffic(act){
+-  citStopBusTraffic();const cache=citBusPrepareTransitCache(act),session={cancelled:false,waiters:new Set(),vehicles:new Set()};citTransitSession=session;
++  citStopBusTraffic();
++  /* A new day is a fresh transport round. Rebuild passenger distance/plan caches even when no stop was edited, because homes, workplaces or roads may have changed during building. */
++  citTransitCache=null;
++  const cache=citBusPrepareTransitCache(act),session={cancelled:false,waiters:new Set(),vehicles:new Set()};citTransitSession=session;
+   for(const m of cache.models){citBusScheduler(m,1,session);citBusScheduler(m,-1,session);}return session;
+ }
+ function citStopBusTraffic(){
