@@ -1,0 +1,164 @@
+--- a/index.html
++++ b/index.html
+@@ -277,7 +277,6 @@
+   .citizen.school-slot-1 .cit-face { left:auto; right:4%; top:4%; transform:none; }
+   .citizen.school-slot-2 .cit-face { left:4%; top:auto; bottom:4%; transform:none; }
+   .citizen.school-slot-3 .cit-face { left:auto; right:4%; top:auto; bottom:4%; transform:none; }
+-  .citizen.school-worker .cit-face { left:50%; top:50%; right:auto; bottom:auto; transform:translate(-50%,-50%); }
+   .citizen.leisure-slot-0 .cit-face { left:4%; top:4%; transform:none; }
+   .citizen.leisure-slot-1 .cit-face { left:auto; right:4%; top:4%; transform:none; }
+   .citizen.leisure-slot-2 .cit-face { left:4%; top:auto; bottom:4%; transform:none; }
+@@ -1823,7 +1822,6 @@
+   RELAX_CAP: 4,
+   PLAY_CAP: 2,
+   FARM_WORK_CAP: 1,
+-  SCHOOL_WORK_CAP: 1,
+ 
+   /* ---- supply balance ---- */
+   SHOP_STOCK_SALES: 6,
+@@ -2038,7 +2036,7 @@
+   citCleanPartialFarms();
+   let maxId=-1;
+   (cit.ppl||[]).forEach((p,n)=>{
+-    /* Once a resident has entered the city, their profession is permanent. */
++    /* Professions are permanent except old teacher saves, which migrate once because teaching was removed. */
+     citEnsurePersonMeta(p,n);
+     if (p.id>maxId) maxId=p.id;
+   });
+@@ -2230,7 +2228,7 @@
+   if(el.classList.contains('citizen')) citNoteNeed(icon);
+ }
+ function citClearThought(el){ citSetThought(el,null); }
+-function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3','school-slot-0','school-slot-1','school-slot-2','school-slot-3','school-worker','leisure-slot-0','leisure-slot-1','leisure-slot-2','leisure-slot-3'); }
++function citMovingPose(el){ if(el) el.classList.remove('home-parent','home-kid','office-slot-0','office-slot-1','office-slot-2','office-slot-3','school-slot-0','school-slot-1','school-slot-2','school-slot-3','leisure-slot-0','leisure-slot-1','leisure-slot-2','leisure-slot-3'); }
+ function citHomePose(el, side){
+   if(!el)return; citMovingPose(el);
+   if(side==='parent') el.classList.add('home-parent');
+@@ -2238,7 +2236,6 @@
+ }
+ function citOfficePose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('office-slot-'+(slot%4)); }
+ function citSchoolPose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('school-slot-'+(slot%4)); }
+-function citSchoolWorkerPose(el){ if(!el)return; citMovingPose(el); el.classList.add('school-worker'); }
+ function citLeisurePose(el,slot){ if(!el)return; citMovingPose(el); el.classList.add('leisure-slot-'+((slot||0)%4)); }
+ function citRenderPeople(){
+   $('#cit-grid').querySelectorAll('.citizen').forEach(e=>e.remove());
+@@ -2280,10 +2277,10 @@
+ 
+ /* ---------- citizen metadata / preferences ---------- */
+ /* Newcomer mix, chosen for city-game balance rather than real-world statistics.
+-   Every block of 8 arrivals contains exactly 4 office workers, 2 boutique workers,
+-   1 teacher and 1 farmer: 50% / 25% / 12.5% / 12.5%. Existing residents never
+-   change profession; only newcomers use this deck. */
+-const CIT_JOB_DECK=['O','S','O','K','O','M','S','O'];
++   Teachers are no longer a profession. The former non-teacher shares are
++   rebalanced proportionally: every block of 7 arrivals contains exactly
++   4 office workers, 2 boutique workers and 1 farmer (4:2:1). */
++const CIT_JOB_DECK=['O','S','O','M','O','S','O'];
+ function citPreferenceForId(id){
+   id=Math.max(0,Number(id)||0);
+   const block=Math.floor(id/CIT_JOB_DECK.length), within=id%CIT_JOB_DECK.length;
+@@ -2295,7 +2292,7 @@
+ }
+ function citEnsurePersonMeta(p,n){
+   if(p.id==null) p.id=cit.personSeq++;
+-  if(!p.pref) p.pref=citPreferenceForId(p.id);
++  if(!p.pref||p.pref==='K') p.pref=citPreferenceForId(p.id);
+   if(!Array.isArray(p.offDays)||p.offDays.length!==2) p.offDays=citOffDaysForId(p.id);
+   /* Home can change because of old saves/resizing; profession never does. */
+   if(cit.g[p.h]==='M'){ p.homeKind='M'; p.farmHome=p.h; }
+@@ -2754,9 +2751,9 @@
+   if(edge==null)return null;
+   const path=[edge]; let k=edge; while(prev[k]!=null){k=prev[k];path.push(k);} path.push(homeIdx); return path;
+ }
+-function citSchoolAssignments(families,act,openSchools){
++function citSchoolAssignments(families,act){
+   const schools=[];
+-  cit.g.forEach((t,i)=>{ if(t==='K'&&citConnected(i,act)&&(!openSchools||openSchools.has(i))) schools.push({i,used:0}); });
++  cit.g.forEach((t,i)=>{ if(t==='K'&&citConnected(i,act)) schools.push({i,used:0}); });
+   const out=new Map();
+   [...families].sort((a,b)=>(a.id||0)-(b.id||0)).forEach(p=>{
+     let best=null,bestSteps=Infinity;
+@@ -2956,30 +2953,14 @@
+ function citJobThought(p,act){
+   if(!citConnected(p.h,act))return'🛣️';
+   if(p.pref==='M')return'🛖';
+-  if(p.pref==='K')return'🏫';
+   if(p.pref==='S')return'🛍️';
+   return'🏢';
+ }
+ function citNeedIcon(n,familyKid){
+   const a=familyKid?['🎠','💧','⛲','🟩','🌲','🌳']:['🪑','🟩']; return a[Math.abs(n)%a.length];
+ }
+-function citAssignSchoolWorkers(act,reachable){
+-  const schools=[];cit.g.forEach((t,i)=>{if(t==='K'&&citConnected(i,act))schools.push({i,used:0});});
+-  const workers=[],idle=[];
+-  [...cit.ppl].filter(p=>p.pref==='K').sort((a,b)=>(a.id||0)-(b.id||0)).forEach(p=>{
+-    let best=null,bestSteps=Infinity;
+-    schools.forEach(s=>{
+-      if(s.used>=CITY_CFG.SCHOOL_WORK_CAP)return;
+-      const route=citRoute(p.h,s.i,act);if(!route)return;
+-      const steps=route.length-1;
+-      if(steps<bestSteps||(steps===bestSteps&&(!best||s.i<best.i))){best=s;bestSteps=steps;}
+-    });
+-    if(best){best.used++;p.kind='K';p.dest=best.i;workers.push(p);}else idle.push(p);
+-  });
+-  return {workers,idle,open:new Set(workers.map(p=>p.dest))};
+-}
+-async function citPrepareChildren(act,openSchools){
+-  const families=cit.ppl.filter(p=>p.fam), assignments=citSchoolAssignments(families,act,openSchools);
++async function citPrepareChildren(act){
++  const families=cit.ppl.filter(p=>p.fam), assignments=citSchoolAssignments(families,act);
+   await citAll(families,async p=>{
+     if(!p.kidEl)citSpawnKid(p,p.h);
+     const a=assignments.get(p); p.school=a?a.i:null; p.schoolSlot=a?a.slot:null; citClearThought(p.kidEl);
+@@ -2994,7 +2975,6 @@
+   citClearThought(p.el);
+   if(p.fam&&p.school!=null){await citWalkPair(p,p.school,act);await citWalkW(p,p.dest,act);} else await citWalkW(p,p.dest,act);
+   if(p.kind==='O')citOfficePose(p.el,p.workSlot||0);
+-  if(p.kind==='K')citSchoolWorkerPose(p.el);
+ }
+ async function citReturnHome(p,act){
+   citClearThought(p.el);
+@@ -3132,9 +3112,8 @@
+   const dow=citDayOfWeek();
+   cit.ppl.forEach((p,n)=>citBeginPersonDay(p,n));
+ 
+-  /* A school is open only when one teacher has been assigned to it that day. */
+-  const schoolSet=citAssignSchoolWorkers(act,reachable),schoolWorkers=schoolSet.workers,teacherIdle=schoolSet.idle;
+-  await citPrepareChildren(act,schoolSet.open);
++  /* Schools are always available when connected; no teacher staffing is required. */
++  await citPrepareChildren(act);
+ 
+   /* Farmers are assigned first so they can refill boutiques before boutique workers arrive. */
+   const farmSet=citFarmWorkersAvailable(act,reachable),farmWorkers=farmSet.workers,farmIdle=farmSet.idle;
+@@ -3144,10 +3123,10 @@
+ 
+   const offices=[];cit.g.forEach((t,i)=>{if(t==='O'&&citConnected(i,act))offices.push({i,cap:CITY_CFG.OFFICE_CAP,used:0});});
+   const shopJobs=[];cit.g.forEach((t,i)=>{if(t==='S'&&citConnected(i,act)&&citShopStocked(i))shopJobs.push({i,cap:CITY_CFG.SHOP_WORK_CAP});});
+-  const officeWorkers=[],shopWorkers=[],idleAdults=[...farmIdle,...teacherIdle],dayOff=[];
++  const officeWorkers=[],shopWorkers=[],idleAdults=[...farmIdle],dayOff=[];
+ 
+   cit.ppl.forEach(p=>{
+-    if(p.pref==='M'||p.pref==='K')return;
++    if(p.pref==='M')return;
+     if(p.pref==='S'&&!p.fam&&p.offDays.includes(dow)){p.dayOff=true;dayOff.push(p);return;}
+     if(p.pref==='O'){
+       const of=offices.find(x=>x.cap>0&&reachable(p.h,x.i));
+@@ -3159,7 +3138,7 @@
+     idleAdults.push(p);
+   });
+ 
+-  const commuters=[...schoolWorkers,...officeWorkers,...shopWorkers];if(commuters.length)sfx('step');
++  const commuters=[...officeWorkers,...shopWorkers];if(commuters.length)sfx('step');
+   await citAll(commuters,p=>citCommuteToJob(p,act));
+ 
+   /* Idle parents still take a child to school, then visibly roam and show the missing need. */
+@@ -3180,7 +3159,7 @@
+   const shoppers=[];officeWorkers.forEach(p=>{const sh=shopSlots.find(x=>x.cap>0&&reachable(p.at,x.i));if(sh){sh.cap--;p.shop=sh.i;shoppers.push(p);}});
+   if(shoppers.length){sfx('step');await citAll(shoppers,p=>citWalkW(p,p.shop,act));for(const p of shoppers){await citEarn(p.shop,CITY_CFG.VISIT_INCOME);citConsumeShopGoods(p.shop);}citRenderTiles();}
+ 
+-  const worked=[...farmWorkers,...schoolWorkers,...officeWorkers,...shopWorkers];if(worked.length)sfx('step');
++  const worked=[...farmWorkers,...officeWorkers,...shopWorkers];if(worked.length)sfx('step');
+   await citAll(worked,p=>citReturnHome(p,act));
+   await citAll(dayOff.filter(p=>p.at!==p.h),p=>citReturnHome(p,act));
+ 
