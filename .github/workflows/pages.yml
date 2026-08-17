@@ -47,6 +47,7 @@ jobs:
           patch --batch --forward -d dist -p1 < site-patches/city-bus-speed-v11.patch
           patch --batch --forward -d dist -p1 < site-patches/city-bus-riders-v12.patch
           patch --batch --forward -d dist -p1 < site-patches/city-bus-demand-v13.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-no-teachers-v14.patch
           touch dist/.nojekyll
 
       - name: Configure Pages
