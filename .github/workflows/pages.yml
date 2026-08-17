@@ -48,6 +48,8 @@ jobs:
           patch --batch --forward -d dist -p1 < site-patches/city-bus-riders-v12.patch
           patch --batch --forward -d dist -p1 < site-patches/city-bus-demand-v13.patch
           patch --batch --forward -d dist -p1 < site-patches/city-no-teachers-v14.patch
+          base64 -d site-patches/city-lines-v15.patch.gz.b64 | gzip -dc > /tmp/city-lines-v15.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-lines-v15.patch
           touch dist/.nojekyll
 
       - name: Configure Pages
