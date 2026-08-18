@@ -1,0 +1,63 @@
+--- a/index.html
++++ b/index.html
+@@ -2476,4 +2476,11 @@
+   p.setAttribute('class','cit-bus-route-line');p.setAttribute('stroke',color);p.setAttribute('stroke-width',Math.max(2,citTs*.18));
+   p.setAttribute('points',path.map(i=>{const[x,y]=citTileXY(i);return `${x+citTs/2},${y+citTs/2}`;}).join(' '));layer.appendChild(p);
++}
++function citBusCurrentEndpoints(line){
++  const stops=(line&&line.stops||[]).filter(i=>cit.g[i]==='R');
++  if(stops.length<=1)return new Set(stops);
++  const live=citBusConnectedModel(stops),order=live&&live.order;
++  if(!order||order.length<2)return new Set();
++  return new Set([order[0],order[order.length-1]]);
+ }
+ function citRenderBusNetwork(){
+@@ -2484,5 +2491,5 @@
+     const comps=model.active?[model]:(model.components||[]);for(const m of comps)citBusRenderPolyline(svg,m.path,citBusColor(selected.id));g.appendChild(svg);
+   }
+-  for(const line of cit.busLines||[]){const m=citBusLineModel(line),ends=m?m.endpoints:new Set();for(const stop of line.stops||[]){
++  for(const line of cit.busLines||[]){const m=citBusLineModel(line),ends=citBusCurrentEndpoints(line);for(const stop of line.stops||[]){
+     const [x,y]=citTileXY(stop),d=document.createElement('div'),isEnd=ends.has(stop)||line.stops.length===1;d.className='cit-bus-stop '+(isEnd?'end':'mid');d.dataset.line=line.id;d.dataset.i=stop;
+     d.style.cssText=`left:${x}px;top:${y}px;width:${citTs}px;height:${citTs}px;font-size:${citTs}px;--bus-color:${citBusColor(line.id)};`;
+@@ -2893,3 +2900,3 @@
+ }
+-async function citAll(list,fn){ await Promise.all(list.map((item,k)=>(async()=>{await citSleep(k*CITY_CFG.COMMUTE_STAGGER_MS);await fn(item);})())); }
++async function citAll(list,fn){ await Promise.all(list.map((item,k)=>(async()=>{const delay=item&&item.kind==='M'?0:k*CITY_CFG.COMMUTE_STAGGER_MS;await citSleep(delay);await fn(item);})())); }
+ 
+@@ -3014,19 +3021,32 @@
++}
++async function citFarmDriveW(w,toIdx,act){
++  if(!w.el){w.at=toIdx;return true;}citMovingPose(w.el);
++  const from=w.at!=null?w.at:toIdx;if(from===toIdx)return true;
++  const path=citRoute(from,toIdx,act);
++  if(!path){w.el.style.transition='';return false;}
++  const stepMs=Math.max(12,Math.round(CITY_CFG.WALK_STEP_MS/CITY_CFG.BUS_SPEED_MULT));
++  for(let k=1;k<path.length;k++){
++    const moveMs=citAnimMs(stepMs);
++    w.el.style.transition=`left ${moveMs}ms linear, top ${moveMs}ms linear`;
++    citPlacePerson(w.el,path[k],true);await citSleep(stepMs);
++  }
++  w.el.style.transition='';w.at=toIdx;return true;
+ }
+ async function citFarmDeliveries(farmWorkers,act){
+   /* Farms make small, frequent deliveries so city growth stays gradual. */
+   const used=new Set();
+-  for(const p of farmWorkers){
++  await Promise.all(farmWorkers.map(async p=>{
+     for(let run=0;run<CITY_CFG.FARM_DELIVERIES_PER_DAY;run++){
+       const target=citShopDeliveryTarget(p.dest,act,used);if(target==null)break;used.add(target);
+       citClearThought(p.el); citSetFace(p.el,'🚙');
+       try {
+-        const arrived=await citWalkW(p,target,act,{noBus:true}); if(!arrived)continue;
++        const arrived=await citFarmDriveW(p,target,act); if(!arrived)continue;
+         citMarkShopStocked(target); citRenderTiles();
+-        await citWalkW(p,p.dest,act,{noBus:true}); await citFarmActivity(p,p.dest,1);
++        await citFarmDriveW(p,p.dest,act); await citFarmActivity(p,p.dest,1);
+       } finally {
+         citSetFace(p.el,p.face);
+       }
+     }
+-  }
++  }));
+ }
+ function citFarmerWorksWeekend(p){ return ((p.id+cit.day)%3)===0; }
