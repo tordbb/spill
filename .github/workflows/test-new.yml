@@ -57,6 +57,21 @@ jobs:
           grep -q 'v18-needs-icons' dist/index.html
           grep -q 'v18-needs-icons' dist/new/index.html
           grep -q 'citFarmDriveW' dist/index.html
-          ! grep -q "const V18_KEY = 'lekeverksted-new-v18'.*Keep /new isolated" dist/index.html || true
           echo "root build: $(wc -c < dist/index.html) bytes"
           echo "parallel build: $(wc -c < dist/new/index.html) bytes"
+
+      - name: Verify promoted root is live
+        run: |
+          set -euxo pipefail
+          url='https://tordbb.github.io/spill/'
+          for attempt in $(seq 1 24); do
+            code=$(curl -L -sS -o /tmp/live-root.html -w '%{http_code}' "$url" || true)
+            echo "attempt=$attempt status=$code bytes=$(wc -c < /tmp/live-root.html 2>/dev/null || echo 0)"
+            if [ "$code" = '200' ] && grep -q 'city-functional-v18-script' /tmp/live-root.html && grep -q 'v18-needs-icons' /tmp/live-root.html; then
+              echo 'LIVE ROOT V18 VERIFIED'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Live root v18 verification failed'
+          exit 1
