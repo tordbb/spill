@@ -13,8 +13,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Check v19 JavaScript
-        run: node --check site-overlays/city-visual-v19.js
+      - name: Check visual JavaScript
+        run: |
+          node --check site-overlays/city-visual-v19.js
+          node --check site-overlays/city-visual-v20.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
@@ -47,27 +49,25 @@ jobs:
           patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
 
           cp dist/index.html /tmp/city-v17.html
-
-          # Stable normal game: functional v18, existing normal save.
           python site-overlays/inject-v18.py dist/index.html root
-
-          # Experimental game: separate save + visual v19.
           mkdir -p dist/new
           cp /tmp/city-v17.html dist/new/index.html
           python site-overlays/inject-v18.py dist/new/index.html parallel
           python site-overlays/inject-v19.py dist/new/index.html
+          python site-overlays/inject-v20.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
           grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/index.html
           grep -q 'city-visual-v19-script' dist/new/index.html
-          grep -q 'v19-tool-drawer' dist/new/index.html
-          grep -q 'v19-stop' dist/new/index.html
-          if grep -q 'city-visual-v19-script' dist/index.html; then
-            echo 'ERROR: v19 leaked into normal root build'
+          grep -q 'city-visual-v20-script' dist/new/index.html
+          grep -q 'V20_CATEGORIES' dist/new/index.html
+          grep -q 'v20-shared-icon' dist/new/index.html
+          grep -q 'citFarmDriveW' dist/index.html
+          if grep -q 'city-visual-v19-script\|city-visual-v20-script' dist/index.html; then
+            echo 'ERROR: experimental visuals leaked into stable root build'
             exit 1
           fi
-          grep -q 'citFarmDriveW' dist/index.html
           echo "stable root: $(wc -c < dist/index.html) bytes"
           echo "visual /new: $(wc -c < dist/new/index.html) bytes"
