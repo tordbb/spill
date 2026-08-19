@@ -230,7 +230,7 @@
     let sawOn=fade.classList.contains('on'),done=false;
     const obs=new MutationObserver(()=>{
       if(fade.classList.contains('on'))sawOn=true;
-      else if(sawOn&&!done){done=true;setTimeout(()=>{if(citLock)v18SetPhase('sim');},650);obs.disconnect();}
+      else if(sawOn&&!done){done=true;setTimeout(()=>{if(citLock)v18SetPhase('sim');},720);obs.disconnect();}
     });
     obs.observe(fade,{attributes:true,attributeFilter:['class']});
     return obs;
