@@ -13,7 +13,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Build and verify root plus parallel copy
+      - name: Check v19 JavaScript
+        run: node --check site-overlays/city-visual-v19.js
+      - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
           mkdir -p dist
@@ -45,18 +47,27 @@ jobs:
           patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
 
           cp dist/index.html /tmp/city-v17.html
+
+          # Stable normal game: functional v18, existing normal save.
           python site-overlays/inject-v18.py dist/index.html root
+
+          # Experimental game: separate save + visual v19.
           mkdir -p dist/new
           cp /tmp/city-v17.html dist/new/index.html
           python site-overlays/inject-v18.py dist/new/index.html parallel
+          python site-overlays/inject-v19.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
           grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/index.html
-          grep -q 'v18-needs-icons' dist/index.html
-          grep -q 'v18-needs-icons' dist/new/index.html
+          grep -q 'city-visual-v19-script' dist/new/index.html
+          grep -q 'v19-tool-drawer' dist/new/index.html
+          grep -q 'v19-stop' dist/new/index.html
+          if grep -q 'city-visual-v19-script' dist/index.html; then
+            echo 'ERROR: v19 leaked into normal root build'
+            exit 1
+          fi
           grep -q 'citFarmDriveW' dist/index.html
-          ! grep -q "const V18_KEY = 'lekeverksted-new-v18'.*Keep /new isolated" dist/index.html || true
-          echo "root build: $(wc -c < dist/index.html) bytes"
-          echo "parallel build: $(wc -c < dist/new/index.html) bytes"
+          echo "stable root: $(wc -c < dist/index.html) bytes"
+          echo "visual /new: $(wc -c < dist/new/index.html) bytes"
