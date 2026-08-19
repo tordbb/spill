@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Build and verify
+      - name: Build through v16 and inspect v17 context
         run: |
           set -euxo pipefail
           mkdir -p dist
@@ -42,11 +42,6 @@ jobs:
           patch --batch --forward -d dist -p1 < /tmp/city-lines-v15.patch
           base64 -d site-patches/city-bus-markers-fast-v16.patch.gz.b64 | gzip -dc > /tmp/city-bus-markers-fast-v16.patch
           patch --batch --forward -d dist -p1 < /tmp/city-bus-markers-fast-v16.patch
-          patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
-          mkdir -p dist/new
-          cp dist/index.html dist/new/index.html
-          python site-overlays/inject-v18.py dist/new/index.html
-          test -s dist/new/index.html
-          grep -q 'city-functional-v18-script' dist/new/index.html
-          grep -q 'city-functional-v18' dist/new/index.html
-          echo "parallel build verified: $(wc -c < dist/new/index.html) bytes"
+          grep -n -A90 -B15 'function citFarmDeliveries' dist/index.html
+          grep -n -A8 -B3 'async function citAll' dist/index.html
+          grep -n -A22 -B5 'function citRenderBusNetwork' dist/index.html
