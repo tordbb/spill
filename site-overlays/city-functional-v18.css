@@ -1,0 +1,30 @@
+/* Functional v18 overlay for /new only. The visual refresh comes later. */
+#cit-help-main { min-height:34px; display:flex; align-items:center; justify-content:center; }
+.v18-needs-icons { display:flex; align-items:center; justify-content:center; gap:7px; min-height:32px; padding:2px 7px; }
+.v18-need-icon { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:9px; background:#ffffffd9; box-shadow:0 2px 0 #0001; font-size:21px; line-height:1; }
+.v18-needs-ok { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:#c8e6c9; font-weight:900; font-size:20px; }
+#cit-help-tip { font-size:13px; }
+
+#cit-pop-wrap.v18-stats-button { border:0; cursor:pointer; background:#fff; width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 3px 0 #0002; margin:0; }
+#cit-v18-stats { display:none; position:absolute; inset:0; z-index:48; background:#0007; align-items:center; justify-content:center; padding:10px; }
+#cit-v18-stats.show { display:flex; }
+.v18-stats-card { width:min(520px,88%); background:#fffffff6; border-radius:22px; padding:15px; box-shadow:0 10px 35px #0004; }
+.v18-stats-title { font-size:25px; font-weight:850; text-align:center; margin-bottom:10px; }
+.v18-stats-rows { display:flex; flex-direction:column; gap:8px; }
+.v18-stat-row { display:grid; grid-template-columns:34px minmax(100px,1fr) 54px 66px; align-items:center; gap:6px; background:#eef5ef; border-radius:13px; padding:7px 9px; position:relative; overflow:hidden; }
+.v18-stat-icon { font-size:24px; z-index:1; }
+.v18-stat-label { font-size:15px; font-weight:700; z-index:1; }
+.v18-stat-num { font-size:15px; font-weight:850; text-align:right; z-index:1; }
+.v18-stat-free { font-size:12px; text-align:right; z-index:1; opacity:.72; }
+.v18-stat-bar { grid-column:2/5; height:5px; border-radius:4px; background:#0001; overflow:hidden; }
+.v18-stat-bar i { display:block; height:100%; background:#81c784; border-radius:4px; }
+.v18-stats-close { display:block; margin:11px auto 0; width:58px; height:42px; border:0; border-radius:13px; background:#c8e6c9; font-size:24px; box-shadow:0 3px 0 #0002; }
+
+/* Fast-forward is a temporary simulation control, never a permanent build control. */
+#g-cit:not(.v18-sim) #cit-fast { display:none !important; }
+#g-cit.v18-sim #cit-fast { display:flex !important; width:52px; height:52px; min-width:52px; border-radius:14px; font-size:25px; align-items:center; justify-content:center; margin:auto; }
+#g-cit.v18-sim #cit-tools > :not(#cit-fast) { display:none !important; }
+#g-cit.v18-dim #cit-tools > * { visibility:hidden !important; }
+#g-cit.v18-dim #cit-edit-actions, #g-cit.v18-sim #cit-edit-actions { visibility:hidden; }
+#g-cit.v18-dim #cit-night, #g-cit.v18-sim #cit-night,
+#g-cit.v18-dim .v18-stats-button, #g-cit.v18-sim .v18-stats-button { opacity:.35; pointer-events:none; }
