@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Build single-file site
+      - name: Build stable root and visual parallel city
         run: |
           set -euxo pipefail
           mkdir -p dist
@@ -55,21 +55,26 @@ jobs:
           patch --batch --forward -d dist -p1 < /tmp/city-bus-markers-fast-v16.patch
           patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
 
-          # Preserve the visually old v17 build so /new can remain an isolated test copy.
           cp dist/index.html /tmp/city-v17.html
 
-          # Functional v18 is now the normal game and keeps the normal save storage.
+          # Stable normal game: functional v18 and the normal existing save.
           python site-overlays/inject-v18.py dist/index.html root
 
-          # /new keeps a separate save so experiments there cannot change the normal city.
+          # Experimental /new: isolated save plus the visual v19 remake.
           mkdir -p dist/new
           cp /tmp/city-v17.html dist/new/index.html
           python site-overlays/inject-v18.py dist/new/index.html parallel
+          python site-overlays/inject-v19.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
           grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/index.html
+          grep -q 'city-visual-v19-script' dist/new/index.html
+          if grep -q 'city-visual-v19-script' dist/index.html; then
+            echo 'ERROR: visual v19 must not be published at the normal URL'
+            exit 1
+          fi
           touch dist/.nojekyll
 
       - name: Configure Pages
