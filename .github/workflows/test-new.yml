@@ -1,0 +1,55 @@
+name: Verify parallel city build
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Build and verify
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
+          patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-school-v3.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-farm-thought-v4.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-levels-v5.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-hint-ui-v5.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-hint-js-v5.patch
+          cat site-patches/city-balance-v6.part* > /tmp/city-balance-v6.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v6.patch
+          base64 -d site-patches/city-balance-v7.patch.gz.b64 | gzip -dc > /tmp/city-balance-v7.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v7.patch
+          base64 -d site-patches/city-balance-v8.patch.gz.b64 | gzip -dc > /tmp/city-balance-v8.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v8.patch
+          cat site-patches/city-camera-v9.part* | base64 -d | gzip -dc > /tmp/city-camera-v9.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-camera-v9.patch
+          cat site-patches/city-buses-v10.part* | base64 -d | gzip -dc > /tmp/city-buses-v10.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-buses-v10.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-speed-v11.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-riders-v12.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-demand-v13.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-no-teachers-v14.patch
+          base64 -d site-patches/city-lines-v15.patch.gz.b64 | gzip -dc > /tmp/city-lines-v15.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-lines-v15.patch
+          base64 -d site-patches/city-bus-markers-fast-v16.patch.gz.b64 | gzip -dc > /tmp/city-bus-markers-fast-v16.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-bus-markers-fast-v16.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
+          mkdir -p dist/new
+          cp dist/index.html dist/new/index.html
+          python site-overlays/inject-v18.py dist/new/index.html
+          test -s dist/index.html
+          test -s dist/new/index.html
+          grep -q 'city-functional-v18-script' dist/new/index.html
+          grep -q 'v18-needs-icons' dist/new/index.html
+          grep -q 'citFarmDriveW' dist/index.html
+          echo "root build: $(wc -c < dist/index.html) bytes"
+          echo "parallel build: $(wc -c < dist/new/index.html) bytes"

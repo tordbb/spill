@@ -24,8 +24,9 @@
 -async function citAll(list,fn){ await Promise.all(list.map((item,k)=>(async()=>{await citSleep(k*CITY_CFG.COMMUTE_STAGGER_MS);await fn(item);})())); }
 +async function citAll(list,fn){ await Promise.all(list.map((item,k)=>(async()=>{const delay=item&&item.kind==='M'?0:k*CITY_CFG.COMMUTE_STAGGER_MS;await citSleep(delay);await fn(item);})())); }
  
-@@ -3014,19 +3021,32 @@
-+}
+@@ -3040,22 +3047,35 @@
+   list.sort((a,b)=>a.goods-b.goods||a.i-b.i);return list.length?list[0].i:null;
+ }
 +async function citFarmDriveW(w,toIdx,act){
 +  if(!w.el){w.at=toIdx;return true;}citMovingPose(w.el);
 +  const from=w.at!=null?w.at:toIdx;if(from===toIdx)return true;
@@ -38,9 +39,11 @@
 +    citPlacePerson(w.el,path[k],true);await citSleep(stepMs);
 +  }
 +  w.el.style.transition='';w.at=toIdx;return true;
- }
++}
  async function citFarmDeliveries(farmWorkers,act){
-   /* Farms make small, frequent deliveries so city growth stays gradual. */
+   /* Farms make small, frequent deliveries instead of one huge weekly refill.
+      At the current 12.5% farmer / 25% boutique mix, one farmer can normally
+      keep roughly two boutiques supplied without creating huge stockpiles. */
    const used=new Set();
 -  for(const p of farmWorkers){
 +  await Promise.all(farmWorkers.map(async p=>{
