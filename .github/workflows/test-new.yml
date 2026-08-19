@@ -53,3 +53,19 @@ jobs:
           grep -q 'citFarmDriveW' dist/index.html
           echo "root build: $(wc -c < dist/index.html) bytes"
           echo "parallel build: $(wc -c < dist/new/index.html) bytes"
+      - name: Visit deployed parallel URL
+        run: |
+          set -euxo pipefail
+          url='https://tordbb.github.io/spill/new/'
+          for attempt in $(seq 1 12); do
+            code=$(curl -L -sS -o /tmp/live-new.html -w '%{http_code}' "$url" || true)
+            echo "attempt=$attempt status=$code bytes=$(wc -c < /tmp/live-new.html 2>/dev/null || echo 0)"
+            if [ "$code" = '200' ] && grep -q 'city-functional-v18-script' /tmp/live-new.html; then
+              echo 'LIVE /new VERIFIED'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'LIVE /new verification failed'
+          head -c 300 /tmp/live-new.html || true
+          exit 1
