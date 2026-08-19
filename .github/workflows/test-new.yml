@@ -1,4 +1,4 @@
-name: Verify parallel city build
+name: Verify city builds
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Build and verify
+      - name: Build and verify root plus parallel copy
         run: |
           set -euxo pipefail
           mkdir -p dist
@@ -43,13 +43,20 @@ jobs:
           base64 -d site-patches/city-bus-markers-fast-v16.patch.gz.b64 | gzip -dc > /tmp/city-bus-markers-fast-v16.patch
           patch --batch --forward -d dist -p1 < /tmp/city-bus-markers-fast-v16.patch
           patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
+
+          cp dist/index.html /tmp/city-v17.html
+          python site-overlays/inject-v18.py dist/index.html root
           mkdir -p dist/new
-          cp dist/index.html dist/new/index.html
-          python site-overlays/inject-v18.py dist/new/index.html
+          cp /tmp/city-v17.html dist/new/index.html
+          python site-overlays/inject-v18.py dist/new/index.html parallel
+
           test -s dist/index.html
           test -s dist/new/index.html
+          grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/index.html
+          grep -q 'v18-needs-icons' dist/index.html
           grep -q 'v18-needs-icons' dist/new/index.html
           grep -q 'citFarmDriveW' dist/index.html
+          ! grep -q "const V18_KEY = 'lekeverksted-new-v18'.*Keep /new isolated" dist/index.html || true
           echo "root build: $(wc -c < dist/index.html) bytes"
           echo "parallel build: $(wc -c < dist/new/index.html) bytes"

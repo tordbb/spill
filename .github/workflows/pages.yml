@@ -26,6 +26,7 @@ jobs:
 
       - name: Build single-file site
         run: |
+          set -euxo pipefail
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
@@ -54,11 +55,21 @@ jobs:
           patch --batch --forward -d dist -p1 < /tmp/city-bus-markers-fast-v16.patch
           patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
 
-          # Keep the existing site unchanged, and publish the functional v18 city as /new/.
-          mkdir -p dist/new
-          cp dist/index.html dist/new/index.html
-          python site-overlays/inject-v18.py dist/new/index.html
+          # Preserve the visually old v17 build so /new can remain an isolated test copy.
+          cp dist/index.html /tmp/city-v17.html
 
+          # Functional v18 is now the normal game and keeps the normal save storage.
+          python site-overlays/inject-v18.py dist/index.html root
+
+          # /new keeps a separate save so experiments there cannot change the normal city.
+          mkdir -p dist/new
+          cp /tmp/city-v17.html dist/new/index.html
+          python site-overlays/inject-v18.py dist/new/index.html parallel
+
+          test -s dist/index.html
+          test -s dist/new/index.html
+          grep -q 'city-functional-v18-script' dist/index.html
+          grep -q 'city-functional-v18-script' dist/new/index.html
           touch dist/.nojekyll
 
       - name: Configure Pages
