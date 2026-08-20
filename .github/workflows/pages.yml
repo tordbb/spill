@@ -59,6 +59,7 @@ jobs:
 
           # Stable normal game: functional v18 and the normal existing save.
           python site-overlays/inject-v18.py dist/index.html root
+          python site-overlays/inject-cave-v2.py dist/index.html home
 
           # Experimental /new: isolated save plus visual v19 and its v20 correction pass.
           mkdir -p dist/new
@@ -70,6 +71,7 @@ jobs:
           # Standalone Cave Flight mini-game.
           mkdir -p dist/cave
           cp cave/index.html dist/cave/index.html
+          python site-overlays/inject-cave-v2.py dist/cave/index.html game
 
           test -s dist/index.html
           test -s dist/new/index.html
@@ -78,7 +80,11 @@ jobs:
           grep -q 'city-functional-v18-script' dist/new/index.html
           grep -q 'city-visual-v19-script' dist/new/index.html
           grep -q 'city-visual-v20-script' dist/new/index.html
+          grep -q 'cave-launcher-card' dist/index.html
+          grep -q 'card-cave' dist/index.html
           grep -q 'cave-flight-game' dist/cave/index.html
+          grep -q 'cave-v2-navigation' dist/cave/index.html
+          grep -q 'cave-home' dist/cave/index.html
           if grep -q 'city-visual-v19-script\|city-visual-v20-script' dist/index.html; then
             echo 'ERROR: experimental visuals must not be published at the normal URL'
             exit 1
