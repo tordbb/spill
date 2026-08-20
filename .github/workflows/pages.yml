@@ -67,12 +67,18 @@ jobs:
           python site-overlays/inject-v19.py dist/new/index.html
           python site-overlays/inject-v20.py dist/new/index.html
 
+          # Standalone Cave Flight mini-game.
+          mkdir -p dist/cave
+          cp cave/index.html dist/cave/index.html
+
           test -s dist/index.html
           test -s dist/new/index.html
+          test -s dist/cave/index.html
           grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/index.html
           grep -q 'city-visual-v19-script' dist/new/index.html
           grep -q 'city-visual-v20-script' dist/new/index.html
+          grep -q 'cave-flight-game' dist/cave/index.html
           if grep -q 'city-visual-v19-script\|city-visual-v20-script' dist/index.html; then
             echo 'ERROR: experimental visuals must not be published at the normal URL'
             exit 1
