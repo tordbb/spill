@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#08131d">
+<title>Cave Flight</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08131d;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none;overscroll-behavior:none}
+  body{display:grid;place-items:center}
+  #game{display:block;width:100vw;height:100vh;background:#102434;cursor:pointer}
+  #hint{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);padding:8px 12px;border-radius:999px;background:#061019aa;color:#d8f3ff;font-size:13px;font-weight:700;letter-spacing:.02em;pointer-events:none;transition:opacity .25s;white-space:nowrap;backdrop-filter:blur(4px)}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Cave Flight game. Tap, click, or press Space to make the spaceship jump."></canvas>
+<div id="hint">Tap / click / Space to fly</div>
+<script id="cave-flight-game">
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const hint = document.getElementById('hint');
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  let W = 0;
+  let H = 0;
+  let last = 0;
+  let state = 'ready';
+  let score = 0;
+  let best = Number(localStorage.getItem('caveFlightBest') || 0);
+  let speed = 230;
+  let distance = 0;
+
+  const ship = { x: 0, y: 0, r: 17, vy: 0, rotation: 0 };
+  const columns = [];
+  const stars = [];
+
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ship.x = Math.max(88, W * 0.23);
+    if (state === 'ready') ship.y = H * 0.5;
+    makeStars();
+  }
+
+  function makeStars() {
+    stars.length = 0;
+    const count = Math.max(24, Math.floor(W / 24));
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 0.5 + Math.random() * 1.5,
+        p: 0.15 + Math.random() * 0.4
+      });
+    }
+  }
+
+  function reset() {
+    state = 'ready';
+    score = 0;
+    speed = 230;
+    distance = 0;
+    ship.y = H * 0.5;
+    ship.vy = 0;
+    ship.rotation = 0;
+    columns.length = 0;
+    hint.textContent = 'Tap / click / Space to fly';
+    hint.style.opacity = '1';
+
+    const gap = getGap();
+    const firstX = Math.max(W * 0.78, ship.x + 330);
+    for (let i = 0; i < 4; i++) addColumn(firstX + i * 330, gap);
+  }
+
+  function getGap() {
+    return Math.max(150, Math.min(230, H * 0.36));
+  }
+
+  function addColumn(x, forcedGap) {
+    const gap = forcedGap || getGap();
+    const margin = Math.max(54, H * 0.08);
+    const centerMin = margin + gap * 0.5;
+    const centerMax = H - margin - gap * 0.5;
+    let center = centerMin + Math.random() * Math.max(1, centerMax - centerMin);
+
+    const prev = columns[columns.length - 1];
+    if (prev) {
+      const maxChange = Math.min(100, H * 0.17);
+      center = Math.max(centerMin, Math.min(centerMax, prev.center + (Math.random() * 2 - 1) * maxChange));
+    }
+
+    columns.push({ x, w: 82 + Math.random() * 34, center, gap, passed: false, teeth: 3 + Math.floor(Math.random() * 3) });
+  }
+
+  function flap() {
+    if (state === 'gameover') {
+      reset();
+      state = 'playing';
+    } else if (state === 'ready') {
+      state = 'playing';
+    }
+    if (state === 'playing') {
+      ship.vy = -390;
+      hint.style.opacity = '0';
+    }
+  }
+
+  function input(e) {
+    if (e && e.cancelable) e.preventDefault();
+    flap();
+  }
+
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('pointerdown', input, { passive: false });
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') input(e);
+  });
+
+  function caveBoundsAt(x) {
+    for (const c of columns) {
+      if (x >= c.x - 4 && x <= c.x + c.w + 4) {
+        return { top: c.center - c.gap / 2, bottom: c.center + c.gap / 2 };
+      }
+    }
+    return { top: 0, bottom: H };
+  }
+
+  function crash() {
+    if (state !== 'playing') return;
+    state = 'gameover';
+    best = Math.max(best, score);
+    localStorage.setItem('caveFlightBest', String(best));
+    hint.textContent = 'Crashed — tap to restart';
+    hint.style.opacity = '1';
+  }
+
+  function update(dt) {
+    const step = Math.min(dt, 0.032);
+
+    for (const s of stars) {
+      s.x -= speed * s.p * step;
+      if (s.x < -4) s.x = W + Math.random() * 80;
+    }
+
+    if (state !== 'playing') return;
+
+    distance += speed * step;
+    speed = Math.min(390, 230 + distance * 0.009);
+    ship.vy += 980 * step;
+    ship.y += ship.vy * step;
+    ship.rotation = Math.max(-0.45, Math.min(0.85, ship.vy / 620));
+
+    for (const c of columns) c.x -= speed * step;
+
+    const lastCol = columns[columns.length - 1];
+    if (!lastCol || lastCol.x < W - 300) addColumn(W + 60);
+    while (columns.length && columns[0].x + columns[0].w < -30) columns.shift();
+
+    for (const c of columns) {
+      if (!c.passed && c.x + c.w < ship.x - ship.r) {
+        c.passed = true;
+        score += 1;
+      }
+    }
+
+    if (ship.y - ship.r < 0 || ship.y + ship.r > H) crash();
+
+    const b1 = caveBoundsAt(ship.x - ship.r * 0.6);
+    const b2 = caveBoundsAt(ship.x + ship.r * 0.7);
+    const top = Math.max(b1.top, b2.top);
+    const bottom = Math.min(b1.bottom, b2.bottom);
+    if (ship.y - ship.r * 0.72 < top || ship.y + ship.r * 0.72 > bottom) crash();
+  }
+
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0b1d2a');
+    g.addColorStop(0.5, '#123044');
+    g.addColorStop(1, '#081923');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#bde9ff';
+    for (const s of stars) {
+      ctx.globalAlpha = 0.25 + s.p;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawRockPoly(c, isTop) {
+    const topY = c.center - c.gap / 2;
+    const bottomY = c.center + c.gap / 2;
+    const base = isTop ? topY : bottomY;
+    const edge = isTop ? 0 : H;
+    const points = [];
+    points.push([c.x, edge]);
+    points.push([c.x + c.w, edge]);
+    points.push([c.x + c.w, base]);
+
+    for (let i = c.teeth; i >= 0; i--) {
+      const t = i / c.teeth;
+      const xx = c.x + t * c.w;
+      const wobble = Math.sin(i * 1.91 + c.x * 0.013) * 12 + Math.cos(i * 2.3) * 5;
+      points.push([xx, base + (isTop ? wobble : -wobble)]);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = isTop ? '#24343c' : '#1d2d34';
+    ctx.fill();
+    ctx.strokeStyle = '#50646b';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#152329';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < c.teeth; i++) {
+      const xx = c.x + (i + 0.45) * c.w / c.teeth;
+      const yy = base + (isTop ? -8 : 8);
+      ctx.beginPath();
+      ctx.moveTo(xx - 8, yy);
+      ctx.lineTo(xx + 7, yy + (isTop ? -10 : 10));
+      ctx.stroke();
+    }
+  }
+
+  function drawCave() {
+    for (const c of columns) {
+      drawRockPoly(c, true);
+      drawRockPoly(c, false);
+    }
+  }
+
+  function drawShip() {
+    ctx.save();
+    ctx.translate(ship.x, ship.y);
+    ctx.rotate(ship.rotation);
+
+    if (state === 'playing') {
+      const flame = 13 + Math.random() * 10;
+      const fg = ctx.createLinearGradient(-36, 0, -13, 0);
+      fg.addColorStop(0, '#ff5d2a00');
+      fg.addColorStop(0.45, '#ff7b2f');
+      fg.addColorStop(1, '#ffe66d');
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.moveTo(-14, -6);
+      ctx.lineTo(-14 - flame, 0);
+      ctx.lineTo(-14, 6);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#d7eef5';
+    ctx.strokeStyle = '#5e8999';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(23, 0);
+    ctx.quadraticCurveTo(2, -17, -20, -10);
+    ctx.lineTo(-13, 0);
+    ctx.lineTo(-20, 10);
+    ctx.quadraticCurveTo(2, 17, 23, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#49c4ff';
+    ctx.beginPath();
+    ctx.ellipse(5, -2, 8, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#829eaa';
+    ctx.beginPath();
+    ctx.moveTo(-6, 8);
+    ctx.lineTo(-20, 18);
+    ctx.lineTo(-13, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-6, -8);
+    ctx.lineTo(-20, -18);
+    ctx.lineTo(-13, -5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawHud() {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#00000088';
+    ctx.shadowBlur = 8;
+    ctx.font = '800 42px system-ui, sans-serif';
+    ctx.fillText(String(score), W / 2, 58);
+    ctx.shadowBlur = 0;
+
+    if (state === 'ready') {
+      ctx.fillStyle = '#eefaff';
+      ctx.font = '800 28px system-ui, sans-serif';
+      ctx.fillText('Cave Flight', W / 2, H * 0.28);
+      ctx.fillStyle = '#a9cad8';
+      ctx.font = '600 15px system-ui, sans-serif';
+      ctx.fillText('Stay between the rocks', W / 2, H * 0.28 + 28);
+    }
+
+    if (state === 'gameover') {
+      const boxW = Math.min(300, W - 36);
+      const boxH = 112;
+      const x = (W - boxW) / 2;
+      const y = H * 0.33;
+      ctx.fillStyle = '#06121cdd';
+      ctx.strokeStyle = '#64818e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, boxW, boxH, 18);
+      else ctx.rect(x, y, boxW, boxH);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 24px system-ui, sans-serif';
+      ctx.fillText('Crashed!', W / 2, y + 36);
+      ctx.fillStyle = '#b8d4df';
+      ctx.font = '650 15px system-ui, sans-serif';
+      ctx.fillText(`Score ${score}   •   Best ${best}`, W / 2, y + 67);
+      ctx.fillText('Tap to try again', W / 2, y + 92);
+    }
+  }
+
+  function draw() {
+    drawBackground();
+    drawCave();
+    drawShip();
+    drawHud();
+  }
+
+  function frame(now) {
+    const dt = last ? (now - last) / 1000 : 0;
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  reset();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
