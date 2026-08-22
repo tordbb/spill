@@ -57,6 +57,9 @@ jobs:
 
           cp dist/index.html /tmp/city-v17.html
 
+          # Expand Sudoku only on the stable root; keep /new on its existing set.
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-levels-v6.patch
+
           # Stable normal game: functional v18 and the normal existing save.
           python site-overlays/inject-v18.py dist/index.html root
           python site-overlays/inject-cave-v2.py dist/index.html home
@@ -85,6 +88,11 @@ jobs:
           grep -q 'cave-flight-game' dist/cave/index.html
           grep -q 'cave-v2-navigation' dist/cave/index.html
           grep -q 'cave-home' dist/cave/index.html
+          grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/index.html
+          if grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/new/index.html; then
+            echo 'ERROR: expanded Sudoku levels must not be published under /new/'
+            exit 1
+          fi
           if grep -q 'city-visual-v19-script\|city-visual-v20-script' dist/index.html; then
             echo 'ERROR: experimental visuals must not be published at the normal URL'
             exit 1
