@@ -27,6 +27,7 @@ jobs:
       - name: Build stable root and visual parallel city
         run: |
           set -euxo pipefail
+          node --check site-overlays/city-stable-guidance-v22.js
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
@@ -60,8 +61,9 @@ jobs:
           # Expand Sudoku only on the stable root; keep /new on its existing set.
           patch --batch --forward -d dist -p1 < site-patches/sudoku-levels-v6.patch
 
-          # Stable normal game: functional v18 and the normal existing save.
+          # Stable normal game: functional v18 plus restored text guidance/bench art.
           python site-overlays/inject-v18.py dist/index.html root
+          python site-overlays/inject-stable-city-v22.py dist/index.html
           python site-overlays/inject-cave-v2.py dist/index.html home
 
           # Experimental /new: isolated save plus visual v19/v20 and recognition-first v21.
@@ -81,6 +83,9 @@ jobs:
           test -s dist/new/index.html
           test -s dist/cave/index.html
           grep -q 'city-functional-v18-script' dist/index.html
+          grep -q 'city-stable-guidance-v22-script' dist/index.html
+          grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/index.html
+          grep -q 'stable-bench-icon' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/index.html
           grep -q 'city-visual-v19-script' dist/new/index.html
           grep -q 'city-visual-v20-script' dist/new/index.html
@@ -93,6 +98,14 @@ jobs:
           grep -q 'cave-v2-navigation' dist/cave/index.html
           grep -q 'cave-home' dist/cave/index.html
           grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/index.html
+          if grep -q '🪑' dist/index.html; then
+            echo 'ERROR: chair glyph must not appear in the stable game'
+            exit 1
+          fi
+          if grep -q 'city-stable-guidance-v22-script' dist/new/index.html; then
+            echo 'ERROR: stable city guidance overlay must not be published under /new/'
+            exit 1
+          fi
           if grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/new/index.html; then
             echo 'ERROR: expanded Sudoku levels must not be published under /new/'
             exit 1
