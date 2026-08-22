@@ -1,0 +1,160 @@
+(function(){
+  'use strict';
+
+  const BENCH_TOKEN='__BENCH__';
+  const MAIN_TEXT='Bygg, trykk 🌙, og byen får en ny dag';
+  const chairGlyph=String.fromCodePoint(0x1FA91);
+
+  const style=document.createElement('style');
+  style.id='city-stable-guidance-v22-style';
+  style.textContent=`
+    .stable-bench-icon{display:inline-flex;align-items:center;justify-content:center;width:1.18em;height:1.18em;vertical-align:-.16em;line-height:1;flex:0 0 auto}
+    .stable-bench-icon svg{display:block;width:100%;height:100%;overflow:visible}
+    .ct>.stable-bench-icon{position:absolute;inset:4%;width:92%;height:92%;margin:auto;pointer-events:none;filter:drop-shadow(0 1px 1px #0003)}
+    .cbtn>.stable-bench-icon{width:1.35em;height:1.35em}
+    .cit-thought-icon>.stable-bench-icon,.v18-need-icon>.stable-bench-icon{width:1em;height:1em;vertical-align:0}
+    #cit-help-tip>.stable-bench-icon{width:1.05em;height:1.05em;margin-left:.12em}
+  `;
+  document.head.appendChild(style);
+
+  function benchIcon(){
+    const span=document.createElement('span');
+    span.className='stable-bench-icon';
+    span.setAttribute('role','img');
+    span.setAttribute('aria-label','Benk');
+    span.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><ellipse cx="51" cy="84" rx="35" ry="5" fill="#213d2925"/><path d="M17 43 Q18 38 24 38 H78 Q84 38 84 44 V55 H17Z" fill="#9c633d"/><rect x="20" y="59" width="62" height="12" rx="4" fill="#be7b48"/><path d="M28 69 V86 M73 69 V86" stroke="#71462f" stroke-width="8" stroke-linecap="round"/></svg>';
+    return span;
+  }
+
+  function replaceBenchTokens(root){
+    if(!root)return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    const nodes=[];
+    while(walker.nextNode()){
+      const n=walker.currentNode;
+      if(n.nodeValue&&n.nodeValue.includes(BENCH_TOKEN))nodes.push(n);
+    }
+    for(const node of nodes){
+      const parts=node.nodeValue.split(BENCH_TOKEN);
+      const frag=document.createDocumentFragment();
+      parts.forEach((part,i)=>{
+        if(part)frag.appendChild(document.createTextNode(part));
+        if(i<parts.length-1)frag.appendChild(benchIcon());
+      });
+      node.replaceWith(frag);
+    }
+  }
+
+  function migrateNeeds(){
+    let changed=false;
+    if(typeof S!=='undefined'&&S&&Array.isArray(S.v18CurrentNeeds)){
+      S.v18CurrentNeeds=S.v18CurrentNeeds.map(icon=>{
+        if(icon===chairGlyph||icon===BENCH_TOKEN)return BENCH_TOKEN;
+        return icon;
+      });
+      changed=true;
+    }
+    try{
+      if(typeof citNeedIcons!=='undefined'&&citNeedIcons&&typeof citNeedIcons.has==='function'&&citNeedIcons.has(chairGlyph)){
+        citNeedIcons.delete(chairGlyph);citNeedIcons.add(BENCH_TOKEN);changed=true;
+      }
+    }catch(e){}
+    if(changed&&typeof save==='function')save();
+  }
+
+  function currentNeeds(){
+    const out=[];
+    const add=icon=>{
+      if(!icon)return;
+      if(icon===chairGlyph)icon=BENCH_TOKEN;
+      if(!out.includes(icon))out.push(icon);
+    };
+    try{
+      if(typeof citHelpMode!=='undefined'&&citHelpMode==='needs'&&typeof citNeedIcons!=='undefined')for(const icon of citNeedIcons)add(icon);
+    }catch(e){}
+    try{if(typeof S!=='undefined'&&S&&Array.isArray(S.v18CurrentNeeds))S.v18CurrentNeeds.forEach(add);}catch(e){}
+    return out;
+  }
+
+  function appendNeed(tip,icon){
+    if(icon===BENCH_TOKEN||icon===chairGlyph){tip.appendChild(benchIcon());return;}
+    const s=document.createElement('span');s.textContent=icon;tip.appendChild(s);
+  }
+
+  function stableRenderHelp(){
+    const main=document.querySelector('#cit-help-main'),tip=document.querySelector('#cit-help-tip');
+    if(!main||!tip)return;
+    main.textContent=MAIN_TEXT;
+    let mode='default';
+    try{mode=typeof citHelpMode!=='undefined'?citHelpMode:'default';}catch(e){}
+    if(mode==='undo'){
+      tip.textContent='Tips: Angre med ↶';tip.style.display='';return;
+    }
+    if(mode==='road'){
+      tip.textContent='Tips: alt må ha vei for å besøkes';tip.style.display='';return;
+    }
+    const needs=currentNeeds();
+    if(needs.length){
+      tip.textContent='';tip.appendChild(document.createTextNode('Tips: Bygg det de tenker på: '));
+      needs.forEach(icon=>appendNeed(tip,icon));tip.style.display='';return;
+    }
+    tip.textContent='';tip.style.display='none';
+  }
+
+  function decorateCity(){
+    const city=document.querySelector('#g-cit');
+    if(city)replaceBenchTokens(city);
+  }
+
+  migrateNeeds();
+
+  try{
+    if(typeof CIT_EMO!=='undefined'&&CIT_EMO)CIT_EMO.B=BENCH_TOKEN;
+  }catch(e){}
+
+  if(typeof citRenderHelp==='function')citRenderHelp=stableRenderHelp;
+
+  if(typeof citRenderTools==='function'){
+    const base=citRenderTools;
+    citRenderTools=function(){const r=base.apply(this,arguments);decorateCity();return r;};
+  }
+  if(typeof citRenderTiles==='function'){
+    const base=citRenderTiles;
+    citRenderTiles=function(){const r=base.apply(this,arguments);decorateCity();return r;};
+  }
+  if(typeof citSetThought==='function'){
+    const base=citSetThought;
+    citSetThought=function(el,icon){
+      if(icon===chairGlyph)icon=BENCH_TOKEN;
+      const r=base.call(this,el,icon);if(el)replaceBenchTokens(el);return r;
+    };
+  }
+
+  const help=document.querySelector('#cit-help');
+  if(help){
+    let queued=false;
+    const observer=new MutationObserver(()=>{
+      if(queued)return;queued=true;
+      queueMicrotask(()=>{
+        queued=false;
+        const main=document.querySelector('#cit-help-main');
+        if(main&&main.textContent!==MAIN_TEXT)stableRenderHelp();
+        decorateCity();
+      });
+    });
+    observer.observe(help,{childList:true,subtree:true,characterData:true});
+  }
+
+  const city=document.querySelector('#g-cit');
+  if(city){
+    let queued=false;
+    const observer=new MutationObserver(()=>{
+      if(queued)return;queued=true;
+      requestAnimationFrame(()=>{queued=false;decorateCity();});
+    });
+    observer.observe(city,{childList:true,subtree:true});
+  }
+
+  stableRenderHelp();
+  decorateCity();
+})();
