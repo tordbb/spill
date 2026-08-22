@@ -1,0 +1,103 @@
+/* Visual city correction v21: recognition-first miniature world art. */
+
+/* Two permanent tool columns: categories on the left, selected category contents on the right. */
+#cit-tools.v21-tools {
+  width:82px !important;
+  min-width:82px !important;
+  padding:3px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:flex-start !important;
+  justify-content:center !important;
+  gap:4px !important;
+  overflow:visible !important;
+  background:#f7fbf6ed !important;
+}
+.v21-category-col,.v21-content-col {
+  display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0;
+}
+.v21-category-col { width:34px; flex:0 0 34px; }
+.v21-content-col {
+  width:38px; flex:0 0 38px; max-height:100%; overflow-y:auto; overflow-x:visible;
+  padding-right:1px; scrollbar-width:none;
+}
+.v21-content-col::-webkit-scrollbar { display:none; }
+.v21-tool-btn {
+  width:32px; height:32px; min-width:32px; min-height:32px; padding:0; border:0; border-radius:9px;
+  background:#fff; box-shadow:0 2px 0 #00000017; display:flex; align-items:center; justify-content:center;
+  position:relative; flex:0 0 auto; cursor:pointer;
+}
+.v21-content-col .v21-tool-btn { width:34px; height:34px; min-width:34px; min-height:34px; }
+.v21-tool-btn.sel { outline:3px solid #43a0dc; background:#f2fbff; }
+.v21-tool-btn.category-open { background:#e5f4e8; outline:2px solid #77a982; }
+.v21-tool-btn:disabled { opacity:.28; filter:grayscale(1); }
+.v21-edit-sep { width:27px; height:1px; background:#35533d24; margin:1px 0; flex:0 0 1px; }
+.v21-broom { font-size:17px; }
+.v21-undo { font-size:20px; font-weight:850; color:#344b40; }
+.v21-price {
+  position:absolute; right:-3px; top:-3px; min-width:12px; height:12px; padding:0 2px; border-radius:7px;
+  background:#f1c84e; color:#493a0d; font-size:7px; line-height:12px; font-weight:900; box-shadow:0 1px 0 #0002;
+}
+.v21-tool-svg { width:27px; height:27px; display:block; overflow:visible; pointer-events:none; }
+.v21-category-col .v21-tool-svg { width:25px; height:25px; }
+
+/* Replace v20 non-house art. Houses deliberately stay on the successful v20 treatment. */
+.ct.v21-art:not(.v21-type-H) > .v20-tile-svg { display:none !important; }
+.ct.v21-art > .v21-tile-svg {
+  position:absolute; left:-7%; top:-10%; width:114%; height:114%; z-index:3; pointer-events:none; overflow:visible;
+  filter:drop-shadow(0 calc(var(--v19-ts,20px) * .035) calc(var(--v19-ts,20px) * .025) #203e2938);
+}
+.ct.v21-type-O > .v21-tile-svg { left:-2%; top:-13%; width:105%; height:116%; }
+.ct.v21-type-S > .v21-tile-svg { left:-8%; top:-11%; width:116%; height:116%; }
+.ct.v21-type-K > .v21-tile-svg { left:-9%; top:-9%; width:118%; height:114%; }
+.ct.v21-type-M > .v21-tile-svg { left:-10%; top:-12%; width:120%; height:119%; }
+.ct.v21-type-P > .v21-tile-svg,.ct.v21-type-T > .v21-tile-svg { left:-15%; top:-18%; width:130%; height:130%; }
+.ct.v21-type-B > .v21-tile-svg { left:-4%; top:-3%; width:108%; height:108%; }
+.ct.v21-type-F > .v21-tile-svg,.ct.v21-type-G > .v21-tile-svg { left:-8%; top:-10%; width:116%; height:116%; }
+.ct.v21-type-Q > .v21-tile-svg { left:0; top:0; width:100%; height:100%; opacity:.9; }
+
+/* Shared needs/thought/stats icons come from the same recognition-first drawings. */
+.v21-shared-icon { display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+.v21-shared-icon > .v20-shared-svg { display:none !important; }
+.v21-shared-svg { width:100%; height:100%; display:block; overflow:visible; }
+.cit-thought-icon.v21-shared-icon .v21-shared-svg { width:92%; height:92%; }
+.v18-need-icon.v21-shared-icon .v21-shared-svg { width:25px; height:25px; }
+.v18-stat-icon.v21-shared-icon .v21-shared-svg { width:28px; height:28px; }
+
+/* Bus stops: one unambiguous marker. Road remains visible around an inset line-colour square. */
+.cit-bus-stop.v19-stop {
+  border:0 !important; background:transparent !important; box-shadow:none !important; overflow:visible !important;
+}
+.cit-bus-stop.v19-stop > .v19-bus-glyph { display:none !important; }
+.v21-stop-frame {
+  position:absolute; inset:15%; box-sizing:border-box; border-style:solid; border-color:var(--v21-line,#267ac5);
+  border-radius:1px; z-index:6; pointer-events:none; display:flex; align-items:center; justify-content:center;
+  background:transparent;
+}
+.v21-stop-frame.v21-terminal { box-shadow:inset 0 0 0 1px #ffffffd9, inset 0 0 0 3px var(--v21-line,#267ac5); }
+.v21-stop-bus { width:55%; height:55%; display:block; overflow:visible; filter:drop-shadow(0 1px 0 #22343d55); }
+.v21-stop-bus path,.v21-stop-bus rect,.v21-stop-bus circle { fill:#fff; }
+
+/* More organic park surfaces while keeping road geometry extremely readable. */
+.ct.v21-type-E { background:linear-gradient(145deg,#9ed57c,#84c267) !important; }
+.ct.v21-type-W {
+  background:radial-gradient(ellipse at 48% 48%,#65bddb 0 58%,#4da9ce 59% 76%,#3d91b2 77% 100%) !important;
+  border-radius:19% !important;
+}
+.ct.v21-type-A {
+  background-color:#cbb483 !important;
+  background-image:radial-gradient(circle at 25% 31%,#e4d0a4 0 5%,transparent 6%),radial-gradient(circle at 69% 71%,#bda270 0 4%,transparent 5%) !important;
+}
+
+@media (max-height:430px) {
+  #cit-tools.v21-tools { width:73px !important; min-width:73px !important; gap:3px !important; padding:3px !important; }
+  .v21-category-col { width:30px; flex-basis:30px; gap:3px; }
+  .v21-content-col { width:34px; flex-basis:34px; gap:3px; }
+  .v21-tool-btn { width:28px; height:28px; min-width:28px; min-height:28px; border-radius:8px; }
+  .v21-content-col .v21-tool-btn { width:30px; height:30px; min-width:30px; min-height:30px; }
+  .v21-tool-svg { width:24px; height:24px; }
+  .v21-category-col .v21-tool-svg { width:22px; height:22px; }
+  .v21-broom { font-size:15px; }
+  .v21-undo { font-size:18px; }
+  .v21-edit-sep { width:24px; }
+}
