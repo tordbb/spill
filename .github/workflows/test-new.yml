@@ -77,3 +77,25 @@ jobs:
           fi
           echo "stable root: $(wc -c < dist/index.html) bytes"
           echo "visual /new: $(wc -c < dist/new/index.html) bytes"
+
+      - name: Verify live stable root and visual v21
+        run: |
+          set -euxo pipefail
+          root='https://tordbb.github.io/spill/'
+          visual='https://tordbb.github.io/spill/new/'
+          for attempt in $(seq 1 36); do
+            root_code=$(curl -L -sS -o /tmp/live-root.html -w '%{http_code}' "$root" || true)
+            new_code=$(curl -L -sS -o /tmp/live-new.html -w '%{http_code}' "$visual" || true)
+            echo "attempt=$attempt root=$root_code new=$new_code root_bytes=$(wc -c < /tmp/live-root.html 2>/dev/null || echo 0) new_bytes=$(wc -c < /tmp/live-new.html 2>/dev/null || echo 0)"
+            root_ok=0
+            new_ok=0
+            if [ "$root_code" = '200' ] && grep -q 'city-functional-v18-script' /tmp/live-root.html && ! grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script' /tmp/live-root.html; then root_ok=1; fi
+            if [ "$new_code" = '200' ] && grep -q 'city-functional-v18-script' /tmp/live-new.html && grep -q 'city-visual-v19-script' /tmp/live-new.html && grep -q 'city-visual-v20-script' /tmp/live-new.html && grep -q 'city-visual-v21-script' /tmp/live-new.html && grep -q 'v21-category-col' /tmp/live-new.html && grep -q 'v21-stop-frame' /tmp/live-new.html; then new_ok=1; fi
+            if [ "$root_ok" = '1' ] && [ "$new_ok" = '1' ]; then
+              echo 'LIVE ROOT V18 + /NEW V21 VERIFIED'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Live deployment verification failed'
+          exit 1
