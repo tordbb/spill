@@ -1,0 +1,343 @@
+/* City visual/layout v23 — maximise the board, preserve recognisable symbols. */
+
+/* Use the dynamic viewport so mobile browser bars do not become part of the game surface. */
+@media (orientation:landscape) {
+  #g-cit.active { width:100dvw !important; height:100dvh !important; }
+}
+@media (orientation:portrait) {
+  #g-cit.active { left:100dvw !important; width:100dvh !important; height:100dvw !important; }
+}
+
+#g-cit.v23-layout .stage-wrap {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:4px !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  padding:5px !important;
+}
+/* Safe-area directions rotate with the whole city screen in physical portrait. */
+@media (orientation:landscape) {
+  #g-cit.v23-layout .stage-wrap {
+    padding-top:max(5px,env(safe-area-inset-top)) !important;
+    padding-right:max(5px,env(safe-area-inset-right)) !important;
+    padding-bottom:max(5px,env(safe-area-inset-bottom)) !important;
+    padding-left:max(5px,env(safe-area-inset-left)) !important;
+  }
+}
+@media (orientation:portrait) {
+  #g-cit.v23-layout .stage-wrap {
+    padding-top:max(5px,env(safe-area-inset-right)) !important;
+    padding-right:max(5px,env(safe-area-inset-bottom)) !important;
+    padding-bottom:max(5px,env(safe-area-inset-left)) !important;
+    padding-left:max(5px,env(safe-area-inset-top)) !important;
+  }
+}
+
+/* Everything except the map lives in one narrow rail along the long screen dimension. */
+#v23-rail {
+  --v23-btn:31px;
+  --v23-gap:2px;
+  width:92px;
+  min-width:92px;
+  max-height:100%;
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:stretch;
+  gap:3px;
+  box-sizing:border-box;
+  padding:2px;
+  border:1px solid #304d391d;
+  border-radius:10px;
+  background:#f7fbf6e8;
+  box-shadow:0 2px 8px #203c2915;
+  overflow:hidden;
+}
+#v23-info {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:3px;
+  flex:0 0 auto;
+  min-width:0;
+}
+#g-cit.v23-tight #v23-rail {
+  --v23-btn:29px;
+  width:132px;
+  min-width:132px;
+  height:100%;
+  display:grid;
+  grid-template-columns:58px 68px;
+  grid-template-rows:minmax(0,1fr);
+  gap:2px;
+}
+#g-cit.v23-tight #v23-info {
+  grid-column:1;
+  min-height:0;
+  height:100%;
+}
+#g-cit.v23-tight #cit-tools.v23-tools {
+  grid-column:2;
+  align-self:start;
+}
+#g-cit.v23-micro #v23-rail {
+  --v23-btn:27px;
+  width:125px;
+  min-width:125px;
+  grid-template-columns:55px 64px;
+}
+
+/* Navigation/settings are still fully visible but no longer claim a full top bar. */
+#g-cit.v23-layout .top-bar {
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  min-height:0 !important;
+  height:auto !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:3px !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+#g-cit.v23-layout .top-bar .icon-btn,
+#g-cit.v23-layout .top-bar button {
+  width:30px !important;
+  height:30px !important;
+  min-width:30px !important;
+  min-height:30px !important;
+  padding:0 !important;
+  border:1px solid #304d3920 !important;
+  border-radius:8px !important;
+  box-shadow:none !important;
+  font-size:18px !important;
+}
+#g-cit.v23-micro .top-bar .icon-btn,
+#g-cit.v23-micro .top-bar button { width:27px !important; height:27px !important; min-width:27px !important; min-height:27px !important; font-size:16px !important; }
+
+/* Instruction area: flat on physical portrait, rotated to save height on landscape. */
+#g-cit.v23-layout #cit-help {
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:2px 3px !important;
+  box-sizing:border-box !important;
+  border:0 !important;
+  border-radius:7px !important;
+  background:#ffffffb8 !important;
+  box-shadow:none !important;
+  overflow:hidden !important;
+  color:#294236 !important;
+  font-size:10px !important;
+  line-height:1.08 !important;
+}
+#g-cit.v23-layout #cit-help-main { min-height:0 !important; font-size:inherit !important; line-height:inherit !important; }
+#g-cit.v23-layout #cit-help-tip { margin:0 !important; font-size:9px !important; line-height:1.08 !important; }
+#g-cit.v23-layout .v18-needs-icons { min-height:0 !important; padding:0 !important; gap:2px !important; flex-wrap:wrap !important; }
+#g-cit.v23-layout .v18-need-icon,
+#g-cit.v23-layout .v18-needs-ok { width:22px !important; height:22px !important; min-width:22px !important; font-size:15px !important; border-radius:6px !important; box-shadow:none !important; }
+@media (orientation:portrait) {
+  #g-cit.v23-layout #cit-help { writing-mode:horizontal-tb !important; text-orientation:mixed !important; transform:none !important; white-space:normal !important; }
+}
+@media (orientation:landscape) {
+  #g-cit.v23-layout #cit-help {
+    writing-mode:vertical-rl !important;
+    text-orientation:mixed !important;
+    transform:rotate(180deg) !important;
+    width:28px !important;
+    max-width:28px !important;
+    align-self:center !important;
+    max-height:150px !important;
+  }
+  #g-cit.v23-layout:not(.v23-tight) #v23-info { align-items:center; }
+  #g-cit.v23-layout:not(.v23-tight) #cit-right,
+  #g-cit.v23-layout:not(.v23-tight) .top-bar { align-self:stretch; }
+}
+
+/* Timeline first, then money/stat/day actions. Borders and dead space are deliberately minimal. */
+#g-cit.v23-layout #cit-right {
+  width:100% !important;
+  min-width:0 !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:2px !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  grid-auto-rows:auto !important;
+  align-items:center !important;
+  justify-items:center !important;
+  gap:2px !important;
+  border:1px solid #304d3918 !important;
+  border-radius:8px !important;
+  background:#f8fbf7d9 !important;
+  box-shadow:none !important;
+  box-sizing:border-box !important;
+}
+#g-cit.v23-layout #cit-week {
+  grid-column:1/-1 !important;
+  width:100% !important;
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  gap:1px !important;
+  font-size:0 !important;
+  line-height:1 !important;
+  min-height:9px !important;
+}
+#g-cit.v23-layout #cit-week .dayrow {
+  flex:1 1 0 !important;
+  min-width:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  padding:0 !important;
+  margin:0 !important;
+  outline-width:1px !important;
+  border-radius:4px !important;
+}
+#g-cit.v23-layout #cit-week .daydot { width:7px !important; height:7px !important; min-width:7px !important; border-radius:50% !important; }
+#g-cit.v23-layout #cit-hud {
+  grid-column:auto !important;
+  min-width:0 !important;
+  width:auto !important;
+  padding:2px 4px !important;
+  border:0 !important;
+  border-radius:6px !important;
+  box-shadow:none !important;
+  font-size:13px !important;
+  white-space:nowrap !important;
+}
+#g-cit.v23-layout #cit-pop-wrap.v18-stats-button,
+#g-cit.v23-layout #cit-edit-actions .icon-btn,
+#g-cit.v23-layout #cit-night {
+  width:27px !important;
+  height:27px !important;
+  min-width:27px !important;
+  min-height:27px !important;
+  flex-basis:27px !important;
+  padding:0 !important;
+  border:1px solid #304d391c !important;
+  border-radius:8px !important;
+  box-shadow:none !important;
+  font-size:16px !important;
+}
+#g-cit.v23-layout #cit-edit-actions { gap:2px !important; }
+#g-cit.v23-layout #cit-safe-spacer { display:none !important; }
+
+/* Required two-column tool selector: category on the left, active category contents on the right. */
+#g-cit.v23-layout #cit-tools.v23-tools {
+  width:calc(var(--v23-btn) * 2 + var(--v23-gap) + 6px) !important;
+  min-width:calc(var(--v23-btn) * 2 + var(--v23-gap) + 6px) !important;
+  max-height:none !important;
+  margin:0 auto !important;
+  padding:2px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:flex-start !important;
+  justify-content:center !important;
+  gap:var(--v23-gap) !important;
+  overflow:visible !important;
+  border:1px solid #304d391d !important;
+  border-radius:8px !important;
+  background:#f7fbf6e5 !important;
+  box-shadow:none !important;
+  box-sizing:border-box !important;
+}
+.v23-category-col,.v23-content-col { display:flex; flex-direction:column; align-items:center; gap:var(--v23-gap); min-width:0; }
+.v23-category-col { width:var(--v23-btn); flex:0 0 var(--v23-btn); }
+.v23-content-col { width:var(--v23-btn); flex:0 0 var(--v23-btn); overflow:visible; }
+.v23-tool-btn {
+  width:var(--v23-btn); height:var(--v23-btn); min-width:var(--v23-btn); min-height:var(--v23-btn);
+  padding:0; border:1px solid #304d3925; border-radius:7px; background:#fff; box-shadow:none;
+  display:flex; align-items:center; justify-content:center; position:relative; flex:0 0 auto; cursor:pointer;
+}
+.v23-tool-btn.sel { outline:2px solid #238bd1; outline-offset:0; background:#eff9ff; }
+.v23-tool-btn.category-open { background:#e5f4e8; box-shadow:inset 0 0 0 1px #57916a; }
+.v23-tool-btn:disabled { opacity:.3; filter:grayscale(1); }
+.v23-tool-icon { width:82%; height:82%; display:flex; align-items:center; justify-content:center; overflow:visible; line-height:1; }
+.v23-tool-icon.v23-emoji-symbol { font-size:calc(var(--v23-btn) * .69); filter:drop-shadow(0 0 1px #fff) drop-shadow(0 1px 1px #2034294d); }
+.v23-tool-icon.v23-svg-symbol { width:88%; height:88%; }
+.v23-edit-sep { width:80%; height:1px; background:#304d3926; margin:0; flex:0 0 1px; }
+.v23-broom { font-size:calc(var(--v23-btn) * .58); line-height:1; }
+.v23-undo { font-size:calc(var(--v23-btn) * .66); font-weight:900; color:#31463b; line-height:1; }
+.v23-price {
+  position:absolute; right:-2px; top:-2px; min-width:11px; height:11px; padding:0 2px; border-radius:6px;
+  background:#f0c742; color:#46380c; border:1px solid #fff9; font-size:7px; line-height:10px; font-weight:900;
+}
+
+/* Board gets all remaining short-axis space. */
+#g-cit.v23-layout #cit-viewport {
+  flex:0 0 auto !important;
+  margin:0 !important;
+  border-radius:8px !important;
+  box-shadow:0 2px 0 #00000018 !important;
+  background:#6f9e58 !important;
+  overflow:hidden !important;
+}
+
+/* Remove the experimental generic drawings and restore clear semantic symbols. */
+.ct.v23-map { overflow:visible !important; }
+.ct.v23-map::before,.ct.v23-map::after { display:none !important; content:none !important; }
+.ct.v23-map > .v20-tile-svg,.ct.v23-map > .v21-tile-svg { display:none !important; }
+.v23-map-symbol {
+  position:absolute; inset:5%; width:90%; height:90%; z-index:3; pointer-events:none;
+  display:flex; align-items:center; justify-content:center; overflow:visible;
+}
+.v23-map-glyph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:visible; line-height:1; }
+.v23-map-glyph.v23-emoji-symbol {
+  font-size:calc(var(--v23-ts,20px) * .78);
+  text-shadow:0 0 1px #fff,0 1px 1px #1e34288c;
+  filter:saturate(1.08) contrast(1.06);
+}
+.v23-map-glyph.v23-svg-symbol {
+  width:96%; height:96%;
+  filter:drop-shadow(0 0 1px #fff) drop-shadow(0 1px 1px #20342875);
+}
+.v23-map-M .v23-map-glyph { width:100%; height:100%; }
+.v23-map-B .v23-map-glyph { width:88%; height:88%; }
+
+/* Shared help/thought/stat symbols use the same clear vocabulary. */
+.v23-shared-icon { display:inline-flex !important; align-items:center !important; justify-content:center !important; font-size:0 !important; }
+.v23-shared-icon > .v20-shared-svg,.v23-shared-icon > .v21-shared-svg { display:none !important; }
+.v23-shared-symbol { width:92%; height:92%; display:flex; align-items:center; justify-content:center; overflow:visible; line-height:1; }
+.v23-shared-symbol.v23-emoji-symbol { font-size:20px; filter:drop-shadow(0 0 1px #fff); }
+.v23-shared-symbol.v23-svg-symbol { width:95%; height:95%; }
+
+/* Bus stop = bold front-view bus in exactly the route colour; road remains visible through it. */
+.cit-bus-stop.v23-stop {
+  border:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  overflow:visible !important;
+  z-index:2 !important;
+}
+.cit-bus-stop.v23-stop > .v19-bus-glyph,
+.cit-bus-stop.v23-stop > .v21-stop-frame { display:none !important; }
+.v23-stop-icon {
+  position:absolute; inset:4%; z-index:1; pointer-events:none; color:var(--v23-line,#267ac5);
+  display:flex; align-items:center; justify-content:center;
+  filter:drop-shadow(0 0 1px #fff) drop-shadow(0 1px 1px #1d2c3388);
+}
+.v23-stop-svg { width:100%; height:100%; display:block; overflow:visible; }
+
+/* Moving people and buses always stay visually above the painted stop symbol. */
+#cit-grid .cit-bus-vehicle { z-index:7 !important; }
+#cit-grid .citizen { z-index:6 !important; }
