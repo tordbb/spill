@@ -1,0 +1,159 @@
+/* City visual/layout v24 — screenshot-driven correction pass for /new. */
+
+/* Keep the familiar emoji vocabulary coloured on browsers that inherit v19's transparent tile colour. */
+#g-cit .v23-emoji-symbol,
+#g-cit .v23-map-glyph.v23-emoji-symbol,
+#g-cit .v23-shared-symbol.v23-emoji-symbol {
+  color:#24352b !important;
+  -webkit-text-fill-color:currentColor !important;
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif !important;
+  opacity:1 !important;
+}
+#g-cit .v23-map-glyph.v23-emoji-symbol {
+  filter:saturate(1.14) contrast(1.1) drop-shadow(0 1px 1px #17332666) !important;
+  text-shadow:0 0 1px #fff,0 1px 1px #17332666 !important;
+}
+
+/* Water is one continuous pool: no rounded cell islands and no inset tile edges. */
+#g-cit .ct.v23-type-W,
+#g-cit .ct.v21-type-W.v23-type-W,
+#g-cit .ct.v20-type-W.v23-type-W,
+#g-cit .ct.v19-type-W.v23-type-W {
+  background:#58b4d5 !important;
+  background-image:none !important;
+  border:0 !important;
+  border-radius:0 !important;
+  outline:0 !important;
+  box-shadow:none !important;
+}
+
+/* Bus-stop pictogram stays below moving buses/people; taller wheels make the front view unambiguous. */
+#g-cit .v23-stop-svg .v24-stop-wheel {
+  transform-box:fill-box;
+  transform-origin:center;
+  transform:scaleY(1.55);
+}
+#g-cit .v23-stop-icon { inset:2% !important; }
+
+/* Navigation: exit/home and settings belong together, side by side, never over the action area. */
+#g-cit.v23-layout .top-bar {
+  position:relative !important;
+  flex-wrap:nowrap !important;
+  justify-content:flex-start !important;
+  gap:4px !important;
+  overflow:visible !important;
+}
+#g-cit .v24-home-btn,
+#g-cit .v24-settings-btn {
+  position:static !important;
+  inset:auto !important;
+  transform:none !important;
+  width:30px !important;
+  height:30px !important;
+  min-width:30px !important;
+  min-height:30px !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:1px solid #304d3920 !important;
+  border-radius:8px !important;
+  box-shadow:none !important;
+  font-size:18px !important;
+  flex:0 0 30px !important;
+}
+#g-cit.v23-micro .v24-home-btn,
+#g-cit.v23-micro .v24-settings-btn {
+  width:27px !important;height:27px !important;min-width:27px !important;min-height:27px !important;flex-basis:27px !important;font-size:16px !important;
+}
+
+/* The old standalone trash action disappears; settings contains the city-delete action instead. */
+#g-cit #cit-edit-actions { display:none !important; }
+.v24-settings-delete-row { display:flex; justify-content:center; align-items:center; padding:8px 10px; box-sizing:border-box; }
+.v24-delete-setting {
+  min-height:38px; padding:6px 12px; border:1px solid #a8474733; border-radius:10px;
+  background:#fff4f3; color:#6f2929; font:800 14px/1.1 system-ui,sans-serif; display:flex; align-items:center; justify-content:center; gap:7px;
+  box-shadow:0 2px 0 #0001; cursor:pointer;
+}
+#v24-settings-fallback {
+  display:none; position:absolute; left:0; top:calc(100% + 4px); z-index:90; padding:6px;
+  border:1px solid #304d3925; border-radius:10px; background:#f8fbf7f5; box-shadow:0 6px 20px #152a2040;
+}
+#v24-settings-fallback.show { display:block; }
+
+/* Fixed two-column action selector. The seven-slot content frame never changes size by category. */
+#g-cit.v23-layout #cit-tools.v23-tools {
+  --v24-tool-gap:4px;
+  width:calc(var(--v23-btn) * 2 + var(--v24-tool-gap) + 10px) !important;
+  min-width:calc(var(--v23-btn) * 2 + var(--v24-tool-gap) + 10px) !important;
+  height:calc(var(--v23-btn) * 7 + var(--v24-tool-gap) * 6 + 10px) !important;
+  min-height:calc(var(--v23-btn) * 7 + var(--v24-tool-gap) * 6 + 10px) !important;
+  max-height:calc(var(--v23-btn) * 7 + var(--v24-tool-gap) * 6 + 10px) !important;
+  padding:4px !important;
+  gap:var(--v24-tool-gap) !important;
+  overflow:hidden !important;
+  align-items:flex-start !important;
+  justify-content:flex-start !important;
+  box-sizing:border-box !important;
+}
+#g-cit .v23-category-col,
+#g-cit .v23-content-col {
+  gap:var(--v24-tool-gap) !important;
+  align-content:start !important;
+  justify-content:flex-start !important;
+}
+#g-cit .v23-content-col {
+  height:calc(var(--v23-btn) * 7 + var(--v24-tool-gap) * 6) !important;
+  min-height:calc(var(--v23-btn) * 7 + var(--v24-tool-gap) * 6) !important;
+  max-height:calc(var(--v23-btn) * 7 + var(--v24-tool-gap) * 6) !important;
+  overflow:hidden !important;
+}
+
+/* Timeline keeps all seven Norwegian day initials. Saturday is blue, Sunday red. */
+#g-cit.v23-layout #cit-week {
+  min-height:16px !important;
+  gap:2px !important;
+  overflow:visible !important;
+}
+#g-cit.v23-layout #cit-week .dayrow {
+  display:grid !important;
+  grid-template-columns:7px auto !important;
+  gap:1px !important;
+  min-height:14px !important;
+  padding:1px 2px !important;
+  font-size:0 !important;
+  line-height:1 !important;
+  color:#384b40 !important;
+}
+#g-cit.v23-layout #cit-week .dayrow::after {
+  content:attr(data-v24-day);
+  display:block;
+  font:900 8px/1 system-ui,sans-serif;
+  color:inherit;
+}
+#g-cit.v23-layout #cit-week .dayrow.v24-saturday {
+  color:#2564a8 !important;
+  background:#e8f1fc !important;
+  box-shadow:inset 0 0 0 1px #2564a844 !important;
+}
+#g-cit.v23-layout #cit-week .dayrow.v24-sunday {
+  color:#bd3f3f !important;
+  background:#fdeaea !important;
+  box-shadow:inset 0 0 0 1px #bd3f3f44 !important;
+}
+#g-cit.v23-layout #cit-week .dayrow.today { outline-width:2px !important; }
+
+/* Restore instructional Norwegian text; missing-item icons are supplementary, not a replacement. */
+#g-cit.v23-layout #cit-help-main {
+  display:block !important;
+  min-height:0 !important;
+  font-weight:850 !important;
+  color:#263e31 !important;
+}
+#g-cit.v23-layout #cit-help-tip {
+  min-height:0 !important;
+  color:#40584a !important;
+}
+#g-cit.v23-layout #cit-help-tip .v24-help-lead { margin-inline-end:3px; }
+#g-cit.v23-layout #cit-help-tip .v18-need-icon { display:inline-flex !important; vertical-align:middle !important; margin:1px !important; }
+@media (orientation:landscape) {
+  #g-cit.v23-layout #cit-help { width:34px !important; max-width:34px !important; max-height:210px !important; }
+}
