@@ -28,6 +28,7 @@ jobs:
         run: |
           set -euxo pipefail
           node --check site-overlays/city-stable-guidance-v22.js
+          node --check site-overlays/city-visual-v23.js
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
@@ -66,13 +67,14 @@ jobs:
           python site-overlays/inject-stable-city-v22.py dist/index.html
           python site-overlays/inject-cave-v2.py dist/index.html home
 
-          # Experimental /new: isolated save plus visual v19/v20 and recognition-first v21.
+          # Experimental /new: isolated save plus visual v19/v20/v21 and responsive recognition-first v23.
           mkdir -p dist/new
           cp /tmp/city-v17.html dist/new/index.html
           python site-overlays/inject-v18.py dist/new/index.html parallel
           python site-overlays/inject-v19.py dist/new/index.html
           python site-overlays/inject-v20.py dist/new/index.html
           python site-overlays/inject-v21.py dist/new/index.html
+          python site-overlays/inject-v23.py dist/new/index.html
 
           # Standalone Cave Flight mini-game.
           mkdir -p dist/cave
@@ -90,8 +92,12 @@ jobs:
           grep -q 'city-visual-v19-script' dist/new/index.html
           grep -q 'city-visual-v20-script' dist/new/index.html
           grep -q 'city-visual-v21-script' dist/new/index.html
-          grep -q 'V21_CATEGORIES' dist/new/index.html
-          grep -q 'v21-stop-frame' dist/new/index.html
+          grep -q 'city-visual-v23-script' dist/new/index.html
+          grep -q 'V23_CATEGORIES' dist/new/index.html
+          grep -q 'v23-category-col' dist/new/index.html
+          grep -q 'v23-content-col' dist/new/index.html
+          grep -q 'v23-stop-icon' dist/new/index.html
+          grep -q 'v23-map-symbol' dist/new/index.html
           grep -q 'cave-launcher-card' dist/index.html
           grep -q 'card-cave' dist/index.html
           grep -q 'cave-flight-game' dist/cave/index.html
@@ -110,7 +116,7 @@ jobs:
             echo 'ERROR: expanded Sudoku levels must not be published under /new/'
             exit 1
           fi
-          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script' dist/index.html; then
+          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script' dist/index.html; then
             echo 'ERROR: experimental visuals must not be published at the normal URL'
             exit 1
           fi
