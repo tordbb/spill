@@ -145,6 +145,7 @@
   function v24Fallback(show){
     const c=city(),top=c&&q('.top-bar',c);if(!top)return;
     let box=q('#v24-settings-fallback');
+    if(!box&&!show)return;
     if(!box){box=document.createElement('div');box.id='v24-settings-fallback';box.className='v24-settings-fallback';top.appendChild(box);box.appendChild(v24DeleteButton());}
     box.classList.toggle('show',!!show);
   }
