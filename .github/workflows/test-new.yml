@@ -18,6 +18,7 @@ jobs:
           node --check site-overlays/city-visual-v19.js
           node --check site-overlays/city-visual-v20.js
           node --check site-overlays/city-visual-v21.js
+          node --check site-overlays/city-visual-v23.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
@@ -57,6 +58,7 @@ jobs:
           python site-overlays/inject-v19.py dist/new/index.html
           python site-overlays/inject-v20.py dist/new/index.html
           python site-overlays/inject-v21.py dist/new/index.html
+          python site-overlays/inject-v23.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
@@ -65,13 +67,14 @@ jobs:
           grep -q 'city-visual-v19-script' dist/new/index.html
           grep -q 'city-visual-v20-script' dist/new/index.html
           grep -q 'city-visual-v21-script' dist/new/index.html
-          grep -q 'V21_CATEGORIES' dist/new/index.html
-          grep -q 'v21-category-col' dist/new/index.html
-          grep -q 'v21-content-col' dist/new/index.html
-          grep -q 'v21-stop-frame' dist/new/index.html
-          grep -q 'v21-shared-icon' dist/new/index.html
+          grep -q 'city-visual-v23-script' dist/new/index.html
+          grep -q 'V23_CATEGORIES' dist/new/index.html
+          grep -q 'v23-category-col' dist/new/index.html
+          grep -q 'v23-content-col' dist/new/index.html
+          grep -q 'v23-stop-icon' dist/new/index.html
+          grep -q 'v23-map-symbol' dist/new/index.html
           grep -q 'citFarmDriveW' dist/index.html
-          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script' dist/index.html; then
+          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script' dist/index.html; then
             echo 'ERROR: experimental visuals leaked into stable root build'
             exit 1
           fi
