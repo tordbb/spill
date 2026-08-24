@@ -42,7 +42,7 @@ body > .screen:not(#g-cit) .v25-nav-source {
   overscroll-behavior:contain !important;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
-  touch-action:pan-x pan-y !important;
+  touch-action:none !important;
   scroll-snap-type:y proximity;
   box-sizing:border-box !important;
 }
