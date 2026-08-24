@@ -100,6 +100,7 @@
 
   function ensureNav(){
     const c=city(),info=q('#v23-info',c);if(!c||!info)return;
+    if(c.classList.contains('v31-layout'))return;
     restoreForeignNavSources();
     c.classList.add('v25-controls');
     let slot=q('#v25-nav-slot',c);
@@ -121,6 +122,7 @@
 
   function ensureActions(){
     const c=city(),right=q('#cit-right',c);if(!c||!right)return;
+    if(c.classList.contains('v31-layout'))return;
     c.classList.add('v25-controls');
     let slot=q('#v25-action-slot',right);
     if(!slot){slot=document.createElement('div');slot.id='v25-action-slot';right.appendChild(slot);}

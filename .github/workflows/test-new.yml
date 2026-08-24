@@ -24,6 +24,8 @@ jobs:
           node --check site-overlays/city-visual-v26.js
           node --check site-overlays/city-visual-v27.js
           node --check site-overlays/city-visual-v29.js
+          node --check site-overlays/city-visual-v31.js
+          node --check site-overlays/new-pages-v31.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
@@ -57,66 +59,86 @@ jobs:
 
           cp dist/index.html /tmp/city-v17.html
           python site-overlays/inject-v18.py dist/index.html root
-          mkdir -p dist/new
+          # Experimental /new: each game is a separate document. City-only overlays
+          # are injected only into /new/city/ so they cannot leak into other games.
+          mkdir -p dist/new/{balance,creature,patterns,walk,sudoku,city}
+
           cp /tmp/city-v17.html dist/new/index.html
-          python site-overlays/inject-v18.py dist/new/index.html parallel
-          python site-overlays/inject-v19.py dist/new/index.html
-          python site-overlays/inject-v20.py dist/new/index.html
-          python site-overlays/inject-v21.py dist/new/index.html
-          python site-overlays/inject-v23.py dist/new/index.html
-          python site-overlays/inject-v24.py dist/new/index.html
-          python site-overlays/inject-v25.py dist/new/index.html
-          python site-overlays/inject-v26.py dist/new/index.html
-          python site-overlays/inject-v27.py dist/new/index.html
-          python site-overlays/inject-v29.py dist/new/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/index.html home none home
+
+          cp /tmp/city-v17.html dist/new/balance/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/balance/index.html game g-bal balance
+          cp /tmp/city-v17.html dist/new/creature/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/creature/index.html game g-cre creature
+          cp /tmp/city-v17.html dist/new/patterns/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/patterns/index.html game g-pat patterns
+          cp /tmp/city-v17.html dist/new/walk/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/walk/index.html game g-wal walk
+          cp /tmp/city-v17.html dist/new/sudoku/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/sudoku/index.html game g-sdk sudoku
+
+          cp /tmp/city-v17.html dist/new/city/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/city/index.html game g-cit city
+          python site-overlays/inject-v18.py dist/new/city/index.html parallel
+          python site-overlays/inject-v19.py dist/new/city/index.html
+          python site-overlays/inject-v20.py dist/new/city/index.html
+          python site-overlays/inject-v21.py dist/new/city/index.html
+          python site-overlays/inject-v23.py dist/new/city/index.html
+          python site-overlays/inject-v24.py dist/new/city/index.html
+          python site-overlays/inject-v25.py dist/new/city/index.html
+          python site-overlays/inject-v26.py dist/new/city/index.html
+          python site-overlays/inject-v27.py dist/new/city/index.html
+          python site-overlays/inject-v29.py dist/new/city/index.html
+          python site-overlays/inject-v31.py dist/new/city/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
+          test -s dist/new/balance/index.html
+          test -s dist/new/creature/index.html
+          test -s dist/new/patterns/index.html
+          test -s dist/new/walk/index.html
+          test -s dist/new/sudoku/index.html
+          test -s dist/new/city/index.html
+
+          grep -q 'new-pages-v31-script' dist/new/index.html
+          grep -q 'new-pages-v31-script' dist/new/balance/index.html
+          grep -q 'new-pages-v31-script' dist/new/city/index.html
           grep -q 'city-functional-v18-script' dist/index.html
-          grep -q 'city-functional-v18-script' dist/new/index.html
-          grep -q 'city-visual-v19-script' dist/new/index.html
-          grep -q 'city-visual-v20-script' dist/new/index.html
-          grep -q 'city-visual-v21-script' dist/new/index.html
-          grep -q 'city-visual-v23-script' dist/new/index.html
-          grep -q 'city-visual-v24-script' dist/new/index.html
-          grep -q 'city-visual-v25-script' dist/new/index.html
-          grep -q 'city-visual-v26-script' dist/new/index.html
-          grep -q 'city-visual-v27-script' dist/new/index.html
-          grep -q 'city-visual-v29-script' dist/new/index.html
-          grep -q 'V24_DAYS' dist/new/index.html
-          grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/index.html
-          grep -q 'v24-saturday' dist/new/index.html
-          grep -q 'v24-stop-wheel' dist/new/index.html
-          grep -q 'v25-nav-slot' dist/new/index.html
-          grep -q 'v25-action-slot' dist/new/index.html
-          grep -q 'v26-category-svg' dist/new/index.html
-          grep -q 'v26-shop-original' dist/new/index.html
-          grep -q 'v26-settings-menu' dist/new/index.html
-          grep -q 'v26-polish' dist/new/index.html
-          grep -q 'v27-edit-actions' dist/new/index.html
-          grep -q 'v27-road-network' dist/new/index.html
-          grep -q 'v27-live-needs' dist/new/index.html
-          grep -q 'v29-road-network' dist/new/index.html
-          grep -q 'v29-plain-thought' dist/new/index.html
-          grep -q 'v29-moon-cue' dist/new/index.html
-          if grep -q 'city-visual-v28-script' dist/new/index.html; then
-            echo 'ERROR: v28 must not be published under /new/'
+          grep -q 'city-functional-v18-script' dist/new/city/index.html
+          grep -q 'city-visual-v19-script' dist/new/city/index.html
+          grep -q 'city-visual-v23-script' dist/new/city/index.html
+          grep -q 'city-visual-v29-script' dist/new/city/index.html
+          grep -q 'city-visual-v31-script' dist/new/city/index.html
+          grep -q 'v29-road-network' dist/new/city/index.html
+          grep -q 'v31-layout' dist/new/city/index.html
+
+          for p in balance creature patterns walk sudoku; do
+            if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script\|city-visual-v24-script\|city-visual-v25-script\|city-visual-v26-script\|city-visual-v27-script\|city-visual-v29-script\|city-visual-v31-script' "dist/new/$p/index.html"; then
+              echo "ERROR: city visual overlay leaked into /new/$p/"
+              exit 1
+            fi
+          done
+
+          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script\|city-visual-v24-script\|city-visual-v25-script\|city-visual-v26-script\|city-visual-v27-script\|city-visual-v29-script\|city-visual-v31-script' dist/new/index.html; then
+            echo 'ERROR: city visual overlay leaked into /new/ home'
             exit 1
           fi
-          grep -q 'v23-category-col' dist/new/index.html
-          grep -q 'v23-content-col' dist/new/index.html
-          grep -q 'v23-stop-icon' dist/new/index.html
-          grep -q 'v23-map-symbol' dist/new/index.html
-          grep -q 'citFarmDriveW' dist/index.html
-          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script\|city-visual-v24-script\|city-visual-v25-script\|city-visual-v26-script' dist/index.html; then
+          if grep -q 'city-visual-v28-script' dist/new/city/index.html; then
+            echo 'ERROR: v28 must not be published under /new/city/'
+            exit 1
+          fi
+          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script\|city-visual-v24-script\|city-visual-v25-script\|city-visual-v26-script\|city-visual-v27-script\|city-visual-v29-script\|city-visual-v31-script' dist/index.html; then
             echo 'ERROR: experimental visuals leaked into stable root build'
             exit 1
           fi
+
           echo "stable root: $(wc -c < dist/index.html) bytes"
-          echo "visual /new: $(wc -c < dist/new/index.html) bytes"
+          echo "new home: $(wc -c < dist/new/index.html) bytes"
+          echo "new city: $(wc -c < dist/new/city/index.html) bytes"
 
       - name: Run /new browser regressions
         run: |
           npm install --no-save @playwright/test@1.55.0
           npx playwright install chromium
-          npx playwright test site-overlays/v29-regression.spec.js --reporter=line
+          python3 -m http.server 4173 --directory dist >/tmp/spill-v31-http.log 2>&1 &
+          npx playwright test site-overlays/v31-regression.spec.js --reporter=line
