@@ -90,21 +90,21 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
 
   const parkScroll=await page.evaluate(() => {
     const el=document.querySelector('#cit-tools .v23-content-col');
-    const last=el.lastElementChild;
-    el.scrollTop=el.scrollHeight;
     const cs=getComputedStyle(el);
     return {
       buttons:el.children.length,
       overflowY:cs.overflowY,
-      scrollTop:el.scrollTop,
       scrollHeight:el.scrollHeight,
-      clientHeight:el.clientHeight,
-      lastBottom:last.offsetTop+last.offsetHeight
+      clientHeight:el.clientHeight
     };
   });
   expect(parkScroll.buttons).toBe(7);
   expect(['auto','scroll']).toContain(parkScroll.overflowY);
-  expect(parkScroll.lastBottom).toBeLessThanOrEqual(parkScroll.scrollTop+parkScroll.clientHeight+2);
+  const lastPark=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').last();
+  await lastPark.scrollIntoViewIfNeeded();
+  await expect(lastPark).toBeVisible();
+  await lastPark.click();
+  await expect.poll(()=>page.evaluate(() => citTool)).toBe('T');
 
   const undoState=await page.evaluate(() => {
     const undo=document.querySelector('#cit-undo'), cats=document.querySelector('#cit-tools .v23-category-col');
