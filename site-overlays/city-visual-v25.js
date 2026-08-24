@@ -14,13 +14,14 @@
   }
   function controls(root=city()){return root?qa('button,[role="button"],input[type="button"],input[type="submit"]',root):[];}
   function findHome(){
-    const c=city(),all=controls(c);
+    const c=city(),top=c&&q('.top-bar',c),all=controls(top||c);
     return all.find(el=>visible(el)&&el.classList&&el.classList.contains('nav-home'))||
       all.find(el=>visible(el)&&((el.textContent||'').includes('🏡')||/\b(hjem|home|avslutt spill)\b/.test(text(el))))||
       q('.nav-home',c);
   }
   function findMenu(){
-    const c=city(),all=controls(c).filter(el=>el.id!=='cit-clear'&&!(el.closest&&el.closest('#cit-tools'))&&!el.matches('#v25-menu'));
+    const c=city(),top=c&&q('.top-bar',c);
+    const all=controls(top||c).filter(el=>el.id!=='cit-clear'&&!el.matches('#v25-menu,#v24-delete-setting,#v26-delete-setting'));
     return all.find(el=>visible(el)&&(el.textContent||'').includes('⚙'))||
       all.find(el=>visible(el)&&/(settings?|innstill|gear|cog)/.test(text(el)))||
       all.find(el=>(el.textContent||'').includes('⚙'))||null;
