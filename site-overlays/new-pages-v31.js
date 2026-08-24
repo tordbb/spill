@@ -70,13 +70,11 @@
     btn.textContent='←';btn.setAttribute('aria-label','Tilbake');btn.title='Tilbake';
   });
 
-  requestAnimationFrame(()=>{
-    prune(target);
-    document.documentElement.dataset.newV31Game=slug||target;
-    try{
-      history.replaceState({newV31Game:true},'',location.href);
-      history.pushState({newV31Guard:true},'',location.href);
-      addEventListener('popstate',()=>location.replace(homeUrl().href),{once:true});
-    }catch(_e){}
-  });
+  document.documentElement.dataset.newV31Game=slug||target;
+  try{
+    history.replaceState({newV31Game:true},'',location.href);
+    history.pushState({newV31Guard:true},'',location.href);
+    addEventListener('popstate',()=>location.replace(homeUrl().href),{once:true});
+  }catch(_e){}
+  requestAnimationFrame(()=>prune(target));
 })();
