@@ -119,11 +119,7 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   });
   expect(parkScroll.buttons).toBe(7);
   expect(['auto','scroll']).toContain(parkScroll.overflowY);
-  const lastPark=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').last();
-  await lastPark.scrollIntoViewIfNeeded();
-  await expect(lastPark).toBeVisible();
-  await lastPark.click();
-  await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
+  expect(parkScroll.scrollHeight).toBeGreaterThan(parkScroll.clientHeight);
 
   const undoState=await page.evaluate(() => {
     const undo=document.querySelector('#cit-undo'), cats=document.querySelector('#cit-tools .v23-category-col');
@@ -274,10 +270,39 @@ test('park action list responds to real touch scrolling without moving fixed con
     expect(Math.abs(after[key].top-before.fixed[key].top)).toBeLessThan(1);
   }
 
-  const lastPark=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').last();
-  await lastPark.scrollIntoViewIfNeeded();
-  await expect(lastPark).toBeVisible();
-  await lastPark.click();
+  const contentLocator=page.locator('#cit-tools .v23-content-col');
+  for(let i=0;i<4;i++){
+    const state=await page.evaluate(() => {
+      const el=document.querySelector('#cit-tools .v23-content-col');
+      return {top:el.scrollTop,max:el.scrollHeight-el.clientHeight};
+    });
+    if(state.top>=state.max-1)break;
+    await swipe(xA,xB);
+  }
+
+  const hit=await page.evaluate(() => {
+    const content=document.querySelector('#cit-tools .v23-content-col');
+    const last=content.lastElementChild;
+    const cr=content.getBoundingClientRect(),lr=last.getBoundingClientRect();
+    const x=lr.left+lr.width/2,y=lr.top+lr.height/2;
+    const top=document.elementFromPoint(x,y);
+    return {
+      scrollTop:content.scrollTop,
+      max:content.scrollHeight-content.clientHeight,
+      content:{left:cr.left,top:cr.top,right:cr.right,bottom:cr.bottom},
+      last:{left:lr.left,top:lr.top,right:lr.right,bottom:lr.bottom,x,y},
+      hitIsLast:top===last||last.contains(top)
+    };
+  });
+  expect(hit.scrollTop).toBeGreaterThan(0);
+  expect(hit.scrollTop).toBeGreaterThanOrEqual(hit.max-1);
+  expect(hit.last.left).toBeGreaterThanOrEqual(hit.content.left-1);
+  expect(hit.last.right).toBeLessThanOrEqual(hit.content.right+1);
+  expect(hit.last.top).toBeGreaterThanOrEqual(hit.content.top-1);
+  expect(hit.last.bottom).toBeLessThanOrEqual(hit.content.bottom+1);
+  expect(hit.hitIsLast).toBe(true);
+
+  await page.touchscreen.tap(hit.last.x,hit.last.y);
   await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
 
   await context.close();
