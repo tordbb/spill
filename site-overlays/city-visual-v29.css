@@ -1,0 +1,95 @@
+/* v29 /new regression repair. Keep changes local and preserve the v27 map geometry. */
+
+/* Exit buttons remain the original working buttons; only the glyph changes. */
+.screen:not(#home) .nav-home {
+  font-family:system-ui,sans-serif !important;
+  font-weight:900 !important;
+  font-size:29px !important;
+  line-height:1 !important;
+}
+#v25-exit::before {
+  content:'←' !important;
+  font-family:system-ui,sans-serif !important;
+  font-weight:900 !important;
+  font-size:21px !important;
+}
+
+/* A v25 source is only ever allowed inside the city. This is a second guard in addition to the JS fix. */
+body > .screen:not(#g-cit) .v25-nav-source {
+  position:static !important;
+  left:auto !important;
+  top:auto !important;
+  width:56px !important;
+  height:56px !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  opacity:1 !important;
+  pointer-events:auto !important;
+  overflow:visible !important;
+  z-index:auto !important;
+}
+
+/* Keep the two-column tool panel compact. Park contents scroll in their own column instead of enlarging the rail. */
+#g-cit.v29-repair #cit-tools .v23-content-col {
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain !important;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  touch-action:pan-y;
+}
+#g-cit.v29-repair #cit-tools .v23-category-col {
+  overflow:visible !important;
+}
+#g-cit.v29-repair #cit-tools .v23-edit-sep {
+  margin:3px 0 !important;
+  flex:0 0 1px !important;
+}
+#g-cit.v29-repair #v27-edit-actions {
+  display:none !important;
+}
+
+/* Category icons are stable after every category re-render. */
+#g-cit .v29-category-svg {
+  width:91%;
+  height:91%;
+  display:block;
+  overflow:visible;
+}
+
+/* Use the original semantic thought emoji, scaled to fit inside the white bubble. */
+#g-cit.v29-repair .cit-thought .cit-thought-icon.v29-plain-thought {
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  height:auto !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  font-size:72% !important;
+  line-height:1 !important;
+  transform:none !important;
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif !important;
+  -webkit-text-fill-color:initial !important;
+  color:initial !important;
+}
+#g-cit.v29-repair .cit-thought.v27-empty-thought {
+  display:flex !important;
+}
+
+/* The instruction moon looks like the actual blue moon control. */
+#g-cit #v29-moon-cue {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:1.55em;
+  height:1.55em;
+  margin:0 .16em;
+  box-sizing:border-box;
+  vertical-align:middle;
+  line-height:1;
+  border:1px solid #27346f55;
+}
