@@ -206,7 +206,6 @@
     document.addEventListener('touchcancel',endTouch,{capture:true,passive:true});
 
     document.addEventListener('pointerdown',e=>{
-      if(e.pointerType==='touch')return;
       if(e.pointerType==='mouse'&&e.button!==0)return;
       const content=categoryContentFromTarget(e.target);
       if(!content)return;
