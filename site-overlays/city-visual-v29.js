@@ -181,7 +181,9 @@
       const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
       if(Math.abs(delta)<3)return;
       drag.moved=true;
-      content.scrollTop=drag.scrollTop-delta;
+      const max=Math.max(0,content.scrollHeight-content.clientHeight);
+      content.scrollTop=Math.max(0,Math.min(max,drag.scrollTop-delta));
+      content.dataset.v30PointerScroll=String(content.scrollTop);
       e.preventDefault();
     };
 
@@ -209,7 +211,9 @@
       const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
       if(Math.abs(delta)<3)return;
       touchDrag.moved=true;
-      content.scrollTop=touchDrag.scrollTop-delta;
+      const max=Math.max(0,content.scrollHeight-content.clientHeight);
+      content.scrollTop=Math.max(0,Math.min(max,touchDrag.scrollTop-delta));
+      content.dataset.v30TouchScroll=String(content.scrollTop);
       e.preventDefault();
     },{passive:false});
     const endTouch=()=>{
