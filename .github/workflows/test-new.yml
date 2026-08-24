@@ -112,5 +112,6 @@ jobs:
 
       - name: Run browser diagnostics
         run: |
-          npx -y playwright@1.55.0 install chromium
-          npx -y @playwright/test@1.55.0 test site-overlays/v29-diagnose.spec.js --reporter=line
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install chromium
+          npx playwright test site-overlays/v29-diagnose.spec.js --reporter=line
