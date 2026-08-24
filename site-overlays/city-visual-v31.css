@@ -270,7 +270,7 @@
   overflow-y:auto!important;
   overscroll-behavior:contain!important;
   -webkit-overflow-scrolling:touch;
-  touch-action:pan-y!important;
+  touch-action:none!important;
   scrollbar-width:thin;
 }
 #g-cit.v31-layout #cit-tools .v23-tool-btn{
@@ -322,4 +322,18 @@
     width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px!important;
   }
   #g-cit.v31-layout #cit-tools.v23-tools{--v23-btn:30px}
+}
+/* Category browsing state is the visible selection state. A previously chosen
+   road tool must not leave the road-category button looking permanently active. */
+#g-cit.v31-layout #cit-tools .v23-category-col > .v23-tool-btn.sel:not(.category-open){
+  outline:0!important;
+  outline-offset:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
+#g-cit.v31-layout #cit-tools .v23-category-col > .v23-tool-btn.category-open{
+  outline:2px solid #238bd1!important;
+  outline-offset:0!important;
+  background:#eff9ff!important;
+  box-shadow:none!important;
 }
