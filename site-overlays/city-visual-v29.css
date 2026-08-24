@@ -31,21 +31,93 @@ body > .screen:not(#g-cit) .v25-nav-source {
   z-index:auto !important;
 }
 
-/* Keep the two-column tool panel compact. Park contents scroll in their own column instead of enlarging the rail. */
-#g-cit.v29-repair #cit-tools .v23-content-col {
+/* Keep the tool panel inside the rail. Fixed actions and categories never scroll;
+   only the active category contents do. */
+#g-cit.v29-repair:not(.v23-tight) #v23-rail {
+  height:100% !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+}
+#g-cit.v29-repair:not(.v23-tight) #v23-info {
+  flex:0 1 auto !important;
+  min-height:0 !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+}
+#g-cit.v29-repair:not(.v23-tight) #cit-help {
+  min-height:0 !important;
   overflow-x:hidden !important;
   overflow-y:auto !important;
+  overflow-anchor:none !important;
+  overscroll-behavior:contain !important;
+  scrollbar-width:thin;
+}
+#g-cit.v29-repair #cit-tools.v23-tools {
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+  display:grid !important;
+  grid-template-columns:var(--v23-btn) var(--v23-btn) !important;
+  grid-template-rows:auto auto minmax(0,1fr) !important;
+  align-items:start !important;
+  align-content:stretch !important;
+}
+#g-cit.v29-repair.v23-tight #cit-tools.v23-tools {
+  height:100% !important;
+  max-height:100% !important;
+}
+#g-cit.v29-repair #v30-fixed-actions {
+  grid-column:1 / -1;
+  grid-row:1;
+  display:grid;
+  grid-template-columns:var(--v23-btn) var(--v23-btn);
+  gap:var(--v23-gap);
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+}
+#g-cit.v29-repair #v30-fixed-actions > .v23-tool-btn {
+  margin:0 !important;
+}
+#g-cit.v29-repair #cit-tools .v30-edit-sep {
+  grid-column:1 / -1;
+  grid-row:2;
+  width:100% !important;
+  height:2px !important;
+  min-height:2px !important;
+  margin:4px 0 !important;
+  border-radius:2px !important;
+  background:#65776d66 !important;
+}
+#g-cit.v29-repair #cit-tools .v23-category-col {
+  grid-column:1;
+  grid-row:3;
+  overflow:visible !important;
+  align-self:start !important;
+}
+#g-cit.v29-repair #cit-tools .v23-content-col {
+  grid-column:2;
+  grid-row:3;
+  align-self:stretch !important;
+  height:100% !important;
+  min-height:0 !important;
+  max-height:100% !important;
+  overflow:hidden !important;
   overscroll-behavior:contain !important;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
-  touch-action:pan-y;
+  touch-action:none !important;
+  box-sizing:border-box !important;
 }
-#g-cit.v29-repair #cit-tools .v23-category-col {
-  overflow:visible !important;
-}
-#g-cit.v29-repair #cit-tools .v23-edit-sep {
-  margin:3px 0 !important;
-  flex:0 0 1px !important;
+#g-cit.v29-repair #cit-tools .v30-scroll-inner {
+  width:100%;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:var(--v23-gap);
+  will-change:transform;
+  transform:translate3d(0,0,0);
 }
 #g-cit.v29-repair #v27-edit-actions {
   display:none !important;

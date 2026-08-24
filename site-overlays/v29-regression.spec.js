@@ -76,42 +76,64 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   expect(mapBox.width).toBeGreaterThanOrEqual(670);
   expect(mapBox.height).toBeGreaterThanOrEqual(1000);
 
-  const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn');
-  await expect(category).toHaveCount(5);
+  const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]');
+  await expect(category).toHaveCount(3);
   await expect(category.nth(0).locator('.v29-road-network')).toHaveCount(1);
 
   await category.nth(1).click();
   await page.waitForTimeout(80);
-  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(0).locator('.v29-road-network')).toHaveCount(1);
+  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(0).locator('.v29-road-network')).toHaveCount(1);
 
-  await page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(2).click();
+  await page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(2).click();
   await page.waitForTimeout(100);
-  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(0).locator('.v29-road-network')).toHaveCount(1);
+  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(0).locator('.v29-road-network')).toHaveCount(1);
+
+  const fixedState=await page.evaluate(() => {
+    const fixed=document.querySelector('#v30-fixed-actions');
+    const cats=document.querySelector('#cit-tools .v23-category-col');
+    return {
+      fixed:[...fixed.children].map(el=>({id:el.id,label:el.getAttribute('aria-label')||''})),
+      categories:[...cats.children].map(el=>({id:el.id,label:el.getAttribute('aria-label')||'',tag:el.dataset.v29Category||''}))
+    };
+  });
+  expect(fixedState.fixed[0].id).toBe('cit-undo');
+  expect(fixedState.fixed[1].label).toBe('Slett');
+  expect(fixedState.categories).toHaveLength(3);
+  expect(fixedState.categories.every(x=>x.tag!=='')).toBe(true);
+  const sepStyle=await page.evaluate(() => {
+    const el=document.querySelector('#cit-tools .v30-edit-sep');
+    const cs=getComputedStyle(el);
+    return {height:parseFloat(cs.height),background:cs.backgroundColor};
+  });
+  expect(sepStyle.height).toBeGreaterThanOrEqual(1);
+  expect(sepStyle.background).not.toBe('rgba(0, 0, 0, 0)');
 
   const parkScroll=await page.evaluate(() => {
     const el=document.querySelector('#cit-tools .v23-content-col');
+    const inner=el.querySelector(':scope > .v30-scroll-inner');
     const cs=getComputedStyle(el);
     return {
-      buttons:el.children.length,
+      buttons:inner.children.length,
+      overflowX:cs.overflowX,
       overflowY:cs.overflowY,
-      scrollHeight:el.scrollHeight,
-      clientHeight:el.clientHeight
+      innerHeight:inner.scrollHeight,
+      clientHeight:el.clientHeight,
+      max:Number(el.dataset.v30Offset||0)+Math.max(0,inner.scrollHeight-el.clientHeight)
     };
   });
   expect(parkScroll.buttons).toBe(7);
-  expect(['auto','scroll']).toContain(parkScroll.overflowY);
-  const lastPark=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').last();
-  await lastPark.scrollIntoViewIfNeeded();
-  await expect(lastPark).toBeVisible();
-  await lastPark.click();
-  await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
+  expect(parkScroll.overflowX).toBe('hidden');
+  expect(parkScroll.overflowY).toBe('hidden');
+  expect(parkScroll.innerHeight).toBeGreaterThan(parkScroll.clientHeight);
+  expect(parkScroll.max).toBeGreaterThan(0);
 
   const undoState=await page.evaluate(() => {
-    const undo=document.querySelector('#cit-undo'), cats=document.querySelector('#cit-tools .v23-category-col');
+    const undo=document.querySelector('#cit-undo'), fixed=document.querySelector('#v30-fixed-actions');
     const r=undo.getBoundingClientRect(),vr=document.querySelector('#g-cit').getBoundingClientRect();
-    return {insideCategory:undo.parentElement===cats,left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewLeft:vr.left,viewTop:vr.top,viewRight:vr.right,viewBottom:vr.bottom};
+    return {insideFixed:undo.parentElement===fixed,firstChild:fixed.firstElementChild===undo,left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewLeft:vr.left,viewTop:vr.top,viewRight:vr.right,viewBottom:vr.bottom};
   });
-  expect(undoState.insideCategory).toBe(true);
+  expect(undoState.insideFixed).toBe(true);
+  expect(undoState.firstChild).toBe(true);
   expect(undoState.right).toBeGreaterThan(0);
   expect(undoState.bottom).toBeGreaterThan(0);
   expect(undoState.left).toBeLessThan(709);
@@ -176,4 +198,171 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   expect(moon.cueColor).toBe(moon.nightColor);
   expect(moon.cueImage).toBe(moon.nightImage);
   expect(moon.cueImage!=='none' || moon.cueColor!=='rgba(0, 0, 0, 0)').toBe(true);
+});
+
+
+test('park action list responds to real touch scrolling without moving fixed controls', async ({ browser }) => {
+  const context=await browser.newContext({
+    viewport:{width:709,height:1536},
+    isMobile:true,
+    hasTouch:true
+  });
+  const page=await context.newPage();
+  await page.goto(url);
+  await page.click('#card-cit');
+  await page.waitForTimeout(250);
+
+  const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]');
+  await category.nth(2).click();
+  await page.waitForTimeout(100);
+
+  const before=await page.evaluate(() => {
+    const content=document.querySelector('#cit-tools .v23-content-col');
+    const inner=content.querySelector(':scope > .v30-scroll-inner');
+    const undo=document.querySelector('#cit-undo').getBoundingClientRect();
+    const remove=document.querySelector('#cit-tools .v23-broom').getBoundingClientRect();
+    const firstCategory=document.querySelector('#cit-tools .v23-tool-btn[data-v29-category]').getBoundingClientRect();
+    const r=content.getBoundingClientRect();
+    return {
+      offset:Number(content.dataset.v30Offset||0),
+      max:Math.max(0,inner.scrollHeight-content.clientHeight),
+      content:{left:r.left,top:r.top,width:r.width,height:r.height},
+      fixed:{
+        undo:{left:undo.left,top:undo.top},
+        remove:{left:remove.left,top:remove.top},
+        category:{left:firstCategory.left,top:firstCategory.top}
+      }
+    };
+  });
+  expect(before.max).toBeGreaterThan(0);
+
+  const client=await context.newCDPSession(page);
+  const y=before.content.top+before.content.height/2;
+  const xA=before.content.left+before.content.width*.78;
+  const xB=before.content.left+before.content.width*.22;
+
+  async function swipe(x1,x2){
+    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x1,y}]});
+    const steps=6;
+    for(let i=1;i<=steps;i++){
+      const x=x1+(x2-x1)*(i/steps);
+      await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
+      await page.waitForTimeout(18);
+    }
+    await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await page.waitForTimeout(120);
+  }
+
+  await swipe(xA,xB);
+  let afterOffset=await page.evaluate(() => Number(document.querySelector('#cit-tools .v23-content-col').dataset.v30Offset||0));
+  if(afterOffset===0){
+    await swipe(xB,xA);
+    afterOffset=await page.evaluate(() => Number(document.querySelector('#cit-tools .v23-content-col').dataset.v30Offset||0));
+  }
+  expect(afterOffset).toBeGreaterThan(0);
+
+  const after=await page.evaluate(() => {
+    const undo=document.querySelector('#cit-undo').getBoundingClientRect();
+    const remove=document.querySelector('#cit-tools .v23-broom').getBoundingClientRect();
+    const firstCategory=document.querySelector('#cit-tools .v23-tool-btn[data-v29-category]').getBoundingClientRect();
+    return {
+      undo:{left:undo.left,top:undo.top},
+      remove:{left:remove.left,top:remove.top},
+      category:{left:firstCategory.left,top:firstCategory.top}
+    };
+  });
+  for(const key of ['undo','remove','category']){
+    expect(Math.abs(after[key].left-before.fixed[key].left)).toBeLessThan(1);
+    expect(Math.abs(after[key].top-before.fixed[key].top)).toBeLessThan(1);
+  }
+
+  for(let i=0;i<4;i++){
+    const state=await page.evaluate(() => {
+      const el=document.querySelector('#cit-tools .v23-content-col');
+      const inner=el.querySelector(':scope > .v30-scroll-inner');
+      return {offset:Number(el.dataset.v30Offset||0),max:Math.max(0,inner.scrollHeight-el.clientHeight)};
+    });
+    if(state.offset>=state.max-1)break;
+    await swipe(xA,xB);
+  }
+
+  const hit=await page.evaluate(() => {
+    const content=document.querySelector('#cit-tools .v23-content-col');
+    const inner=content.querySelector(':scope > .v30-scroll-inner');
+    const last=inner.lastElementChild;
+    const cr=content.getBoundingClientRect(),lr=last.getBoundingClientRect();
+    const x=lr.left+lr.width/2,y=lr.top+lr.height/2;
+    const top=document.elementFromPoint(x,y);
+    return {
+      offset:Number(content.dataset.v30Offset||0),
+      max:Math.max(0,inner.scrollHeight-content.clientHeight),
+      content:{left:cr.left,top:cr.top,right:cr.right,bottom:cr.bottom},
+      last:{left:lr.left,top:lr.top,right:lr.right,bottom:lr.bottom,x,y},
+      hitIsLast:top===last||last.contains(top)
+    };
+  });
+  expect(hit.offset).toBeGreaterThan(0);
+  expect(hit.offset).toBeGreaterThanOrEqual(hit.max-1);
+  expect(hit.last.left).toBeGreaterThanOrEqual(hit.content.left-1);
+  expect(hit.last.right).toBeLessThanOrEqual(hit.content.right+1);
+  expect(hit.last.top).toBeGreaterThanOrEqual(hit.content.top-1);
+  expect(hit.last.bottom).toBeLessThanOrEqual(hit.content.bottom+1);
+  expect(hit.hitIsLast).toBe(true);
+
+  await page.touchscreen.tap(hit.last.x,hit.last.y);
+  await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
+
+  await context.close();
+});
+
+test('expanded live-needs text cannot push the action panel outside the rail', async ({ page }) => {
+  await page.setViewportSize({width:709,height:1536});
+  await page.goto(url);
+  await page.click('#card-cit');
+  await page.waitForTimeout(250);
+
+  const before=await page.evaluate(() => {
+    const box=sel=>{const r=document.querySelector(sel).getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    return {
+      rail:box('#v23-rail'),
+      tools:box('#cit-tools'),
+      contentHeight:document.querySelector('#cit-tools .v23-content-col').clientHeight,
+      map:box('#cit-viewport')
+    };
+  });
+
+  await page.evaluate(() => {
+    const tip=document.querySelector('#cit-help-tip');
+    tip.style.display='';
+    tip.innerHTML='<span class="v27-live-lead">Tips: Bygg det de tenker på:</span><span class="v27-live-needs">'+
+      Array.from({length:48},(_,i)=>'<span class="v18-need-icon v27-live-need">'+(['🏠','🏢','🏫','🌳','🚌','⛲'][i%6])+'</span>').join('')+
+      '</span>';
+  });
+  await page.waitForTimeout(250);
+
+  const after=await page.evaluate(() => {
+    const box=sel=>{const r=document.querySelector(sel).getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    const help=document.querySelector('#cit-help');
+    const cs=getComputedStyle(help);
+    return {
+      rail:box('#v23-rail'),
+      info:box('#v23-info'),
+      tools:box('#cit-tools'),
+      fixed:box('#v30-fixed-actions'),
+      cats:box('#cit-tools .v23-category-col'),
+      content:box('#cit-tools .v23-content-col'),
+      map:box('#cit-viewport'),
+      help:{clientHeight:help.clientHeight,scrollHeight:help.scrollHeight,overflowY:cs.overflowY}
+    };
+  });
+
+  expect(after.tools.bottom).toBeLessThanOrEqual(after.rail.bottom+1);
+  expect(after.info.bottom).toBeLessThanOrEqual(after.rail.bottom+1);
+  expect(after.fixed.top).toBeGreaterThanOrEqual(after.tools.top-1);
+  expect(after.cats.bottom).toBeLessThanOrEqual(after.tools.bottom+1);
+  expect(after.content.bottom).toBeLessThanOrEqual(after.tools.bottom+1);
+  expect(after.content.height).toBeGreaterThan(20);
+  expect(after.map.width).toBeCloseTo(before.map.width,0);
+  expect(after.map.height).toBeCloseTo(before.map.height,0);
+  expect(['auto','scroll']).toContain(after.help.overflowY);
 });
