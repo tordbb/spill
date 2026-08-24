@@ -13,10 +13,20 @@ test('new home and every game keep a working exit button', async ({ page }) => {
   await page.goto(url);
   await page.waitForTimeout(200);
 
-  const homeCards = await page.evaluate(() => [...document.querySelectorAll('#home .menu-card')].map(el => {
-    const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
-    return {id:el.id,display:cs.display,visibility:cs.visibility,opacity:cs.opacity,left:r.left,top:r.top,width:r.width,height:r.height};
-  }));
+  const homeState = await page.evaluate(() => {
+    const grid=document.querySelector('#home .menu-grid');
+    return {
+      childCount:grid.children.length,
+      nonCards:[...grid.children].filter(el=>!el.classList.contains('menu-card')).map(el=>el.id||el.className),
+      cards:[...grid.querySelectorAll(':scope > .menu-card')].map(el => {
+        const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+        return {id:el.id,display:cs.display,visibility:cs.visibility,opacity:cs.opacity,left:r.left,top:r.top,width:r.width,height:r.height};
+      })
+    };
+  });
+  expect(homeState.childCount).toBe(6);
+  expect(homeState.nonCards).toEqual([]);
+  const homeCards=homeState.cards;
   expect(homeCards.length).toBe(6);
   homeCards.forEach(c => {
     expect(c.display).not.toBe('none');
