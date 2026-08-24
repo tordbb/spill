@@ -248,7 +248,20 @@ test('park action list responds to real touch scrolling without moving fixed con
     await page.waitForTimeout(180);
   }
 
+  console.log('V30_TOUCH_TARGET',JSON.stringify(await page.evaluate(({x,y})=>{
+    const el=document.elementFromPoint(x,y);
+    const content=document.querySelector('#cit-tools .v23-content-col');
+    return {
+      target:el?{tag:el.tagName,id:el.id,cls:el.className}:null,
+      inside:!!(el&&(el===content||content.contains(el))),
+      content:{left:content.getBoundingClientRect().left,top:content.getBoundingClientRect().top,right:content.getBoundingClientRect().right,bottom:content.getBoundingClientRect().bottom}
+    };
+  },{x:xA,y})));
   await swipe(xA,xB);
+  console.log('V30_TOUCH_AFTER',JSON.stringify(await page.evaluate(()=>{
+    const el=document.querySelector('#cit-tools .v23-content-col');
+    return {scrollTop:el.scrollTop,touch:el.dataset.v30TouchScroll||'',pointer:el.dataset.v30PointerScroll||''};
+  })));
   let afterScroll=await page.evaluate(() => document.querySelector('#cit-tools .v23-content-col').scrollTop);
   if(afterScroll===0){
     await swipe(xB,xA);
