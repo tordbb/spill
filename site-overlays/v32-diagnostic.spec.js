@@ -49,6 +49,6 @@ test('v32 inspect rotation targets', async ({ page }) => {
       }
     }catch(e){person={error:String(e)}}
     const globals=Object.keys(window).filter(k=>/^cit/i.test(k)&&/(bus|person|citizen|thought|marker)/i.test(k)).sort();
-    return {person,globals};
+    return {person,globals,busVehicle:typeof citBusVehicleEl==='function'?String(citBusVehicleEl).slice(0,5000):null,placePerson:typeof citPlacePerson==='function'?String(citPlacePerson).slice(0,3000):null};
   })));
 });
