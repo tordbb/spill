@@ -48,6 +48,7 @@ body > .screen:not(#g-cit) .v25-nav-source {
   min-height:0 !important;
   overflow-x:hidden !important;
   overflow-y:auto !important;
+  overflow-anchor:none !important;
   overscroll-behavior:contain !important;
   scrollbar-width:thin;
 }
