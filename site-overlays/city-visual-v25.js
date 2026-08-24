@@ -12,15 +12,16 @@
     const s=getComputedStyle(el);if(s.display==='none'||s.visibility==='hidden'||Number(s.opacity)===0)return false;
     const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&r.right>0&&r.bottom>0&&r.left<innerWidth&&r.top<innerHeight;
   }
-  function controls(){return qa('button,[role="button"],input[type="button"],input[type="submit"]');}
+  function controls(root=city()){return root?qa('button,[role="button"],input[type="button"],input[type="submit"]',root):[];}
   function findHome(){
-    const all=controls();
+    const c=city(),top=c&&q('.top-bar',c),all=controls(top||c);
     return all.find(el=>visible(el)&&el.classList&&el.classList.contains('nav-home'))||
       all.find(el=>visible(el)&&((el.textContent||'').includes('🏡')||/\b(hjem|home|avslutt spill)\b/.test(text(el))))||
-      q('.nav-home');
+      q('.nav-home',c);
   }
   function findMenu(){
-    const all=controls().filter(el=>el.id!=='cit-clear'&&!(el.closest&&el.closest('#cit-tools'))&&!el.matches('#v25-menu'));
+    const c=city(),top=c&&q('.top-bar',c);
+    const all=controls(top||c).filter(el=>el.id!=='cit-clear'&&!el.matches('#v25-menu,#v24-delete-setting,#v26-delete-setting'));
     return all.find(el=>visible(el)&&(el.textContent||'').includes('⚙'))||
       all.find(el=>visible(el)&&/(settings?|innstill|gear|cog)/.test(text(el)))||
       all.find(el=>(el.textContent||'').includes('⚙'))||null;
@@ -86,8 +87,20 @@
     },420);
   }
 
+  function restoreForeignNavSources(){
+    const c=city();if(!c)return;
+    qa('.v25-nav-source').forEach(el=>{
+      if(c.contains(el))return;
+      el.classList.remove('v25-nav-source','v25-anchor-source');
+      delete el.dataset.v25NavSource;
+      ['left','top','width','height','min-width','min-height','margin','padding','opacity','pointer-events','overflow','z-index']
+        .forEach(p=>el.style.removeProperty(p));
+    });
+  }
+
   function ensureNav(){
     const c=city(),info=q('#v23-info',c);if(!c||!info)return;
+    restoreForeignNavSources();
     c.classList.add('v25-controls');
     let slot=q('#v25-nav-slot',c);
     if(!slot){slot=document.createElement('div');slot.id='v25-nav-slot';info.insertBefore(slot,info.firstChild);}

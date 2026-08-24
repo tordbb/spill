@@ -23,7 +23,7 @@ jobs:
           node --check site-overlays/city-visual-v25.js
           node --check site-overlays/city-visual-v26.js
           node --check site-overlays/city-visual-v27.js
-          node --check site-overlays/city-visual-v28.js
+          node --check site-overlays/city-visual-v29.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
@@ -68,7 +68,7 @@ jobs:
           python site-overlays/inject-v25.py dist/new/index.html
           python site-overlays/inject-v26.py dist/new/index.html
           python site-overlays/inject-v27.py dist/new/index.html
-          python site-overlays/inject-v28.py dist/new/index.html
+          python site-overlays/inject-v29.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
@@ -82,7 +82,7 @@ jobs:
           grep -q 'city-visual-v25-script' dist/new/index.html
           grep -q 'city-visual-v26-script' dist/new/index.html
           grep -q 'city-visual-v27-script' dist/new/index.html
-          grep -q 'city-visual-v28-script' dist/new/index.html
+          grep -q 'city-visual-v29-script' dist/new/index.html
           grep -q 'V24_DAYS' dist/new/index.html
           grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/index.html
           grep -q 'v24-saturday' dist/new/index.html
@@ -96,7 +96,13 @@ jobs:
           grep -q 'v27-edit-actions' dist/new/index.html
           grep -q 'v27-road-network' dist/new/index.html
           grep -q 'v27-live-needs' dist/new/index.html
-          python site-overlays/verify-v28.py dist/index.html dist/new/index.html
+          grep -q 'v29-road-network' dist/new/index.html
+          grep -q 'v29-plain-thought' dist/new/index.html
+          grep -q 'v29-moon-cue' dist/new/index.html
+          if grep -q 'city-visual-v28-script' dist/new/index.html; then
+            echo 'ERROR: v28 must not be published under /new/'
+            exit 1
+          fi
           grep -q 'v23-category-col' dist/new/index.html
           grep -q 'v23-content-col' dist/new/index.html
           grep -q 'v23-stop-icon' dist/new/index.html
@@ -108,3 +114,9 @@ jobs:
           fi
           echo "stable root: $(wc -c < dist/index.html) bytes"
           echo "visual /new: $(wc -c < dist/new/index.html) bytes"
+
+      - name: Run /new browser regressions
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install chromium
+          npx playwright test site-overlays/v29-regression.spec.js --reporter=line
