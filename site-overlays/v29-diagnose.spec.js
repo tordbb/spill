@@ -28,8 +28,7 @@ test('diagnose current /new runtime', async ({ page }) => {
     })
   }));
   console.log('V29_CREATURE', JSON.stringify(creature));
-  const nav = page.locator('#g-cre .nav-home');
-  await nav.click({force:true});
+  await page.evaluate(() => goHome());
   await page.waitForTimeout(100);
   console.log('V29_AFTER_HOME', await page.evaluate(() => document.querySelector('.screen.active')?.id));
 
