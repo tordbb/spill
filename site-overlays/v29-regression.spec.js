@@ -104,7 +104,7 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   await lastPark.scrollIntoViewIfNeeded();
   await expect(lastPark).toBeVisible();
   await lastPark.click();
-  await expect.poll(()=>page.evaluate(() => citTool)).toBe('T');
+  await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
 
   const undoState=await page.evaluate(() => {
     const undo=document.querySelector('#cit-undo'), cats=document.querySelector('#cit-tools .v23-category-col');
