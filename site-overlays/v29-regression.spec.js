@@ -76,17 +76,36 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   expect(mapBox.width).toBeGreaterThanOrEqual(670);
   expect(mapBox.height).toBeGreaterThanOrEqual(1000);
 
-  const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn');
+  const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]');
   await expect(category).toHaveCount(5);
   await expect(category.nth(0).locator('.v29-road-network')).toHaveCount(1);
 
   await category.nth(1).click();
   await page.waitForTimeout(80);
-  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(0).locator('.v29-road-network')).toHaveCount(1);
+  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(0).locator('.v29-road-network')).toHaveCount(1);
 
-  await page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(2).click();
+  await page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(2).click();
   await page.waitForTimeout(100);
-  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(0).locator('.v29-road-network')).toHaveCount(1);
+  await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(0).locator('.v29-road-network')).toHaveCount(1);
+
+  const fixedOrder=await page.evaluate(() => {
+    const cats=document.querySelector('#cit-tools .v23-category-col');
+    return [...cats.children].map(el => ({
+      id:el.id,
+      cls:el.className,
+      label:el.getAttribute('aria-label')||''
+    }));
+  });
+  expect(fixedOrder[0].id).toBe('cit-undo');
+  expect(fixedOrder[1].label).toBe('Fjern');
+  expect(fixedOrder[2].cls).toContain('v30-edit-sep');
+  const sepStyle=await page.evaluate(() => {
+    const el=document.querySelector('#cit-tools .v30-edit-sep');
+    const cs=getComputedStyle(el);
+    return {height:parseFloat(cs.height),background:cs.backgroundColor};
+  });
+  expect(sepStyle.height).toBeGreaterThanOrEqual(1);
+  expect(sepStyle.background).not.toBe('rgba(0, 0, 0, 0)');
 
   const parkScroll=await page.evaluate(() => {
     const el=document.querySelector('#cit-tools .v23-content-col');
@@ -109,9 +128,10 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   const undoState=await page.evaluate(() => {
     const undo=document.querySelector('#cit-undo'), cats=document.querySelector('#cit-tools .v23-category-col');
     const r=undo.getBoundingClientRect(),vr=document.querySelector('#g-cit').getBoundingClientRect();
-    return {insideCategory:undo.parentElement===cats,left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewLeft:vr.left,viewTop:vr.top,viewRight:vr.right,viewBottom:vr.bottom};
+    return {insideCategory:undo.parentElement===cats,firstChild:cats.firstElementChild===undo,left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewLeft:vr.left,viewTop:vr.top,viewRight:vr.right,viewBottom:vr.bottom};
   });
   expect(undoState.insideCategory).toBe(true);
+  expect(undoState.firstChild).toBe(true);
   expect(undoState.right).toBeGreaterThan(0);
   expect(undoState.bottom).toBeGreaterThan(0);
   expect(undoState.left).toBeLessThan(709);
@@ -176,4 +196,89 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   expect(moon.cueColor).toBe(moon.nightColor);
   expect(moon.cueImage).toBe(moon.nightImage);
   expect(moon.cueImage!=='none' || moon.cueColor!=='rgba(0, 0, 0, 0)').toBe(true);
+});
+
+
+test('park action list responds to real touch scrolling without moving fixed controls', async ({ browser }) => {
+  const context=await browser.newContext({
+    viewport:{width:709,height:1536},
+    isMobile:true,
+    hasTouch:true
+  });
+  const page=await context.newPage();
+  await page.goto(url);
+  await page.click('#card-cit');
+  await page.waitForTimeout(250);
+
+  const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]');
+  await category.nth(2).click();
+  await page.waitForTimeout(100);
+
+  const before=await page.evaluate(() => {
+    const content=document.querySelector('#cit-tools .v23-content-col');
+    const undo=document.querySelector('#cit-undo').getBoundingClientRect();
+    const remove=document.querySelector('#cit-tools .v23-broom').getBoundingClientRect();
+    const firstCategory=document.querySelector('#cit-tools .v23-tool-btn[data-v29-category]').getBoundingClientRect();
+    const r=content.getBoundingClientRect();
+    return {
+      scrollTop:content.scrollTop,
+      scrollHeight:content.scrollHeight,
+      clientHeight:content.clientHeight,
+      content:{left:r.left,top:r.top,width:r.width,height:r.height},
+      fixed:{
+        undo:{left:undo.left,top:undo.top},
+        remove:{left:remove.left,top:remove.top},
+        category:{left:firstCategory.left,top:firstCategory.top}
+      }
+    };
+  });
+  expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
+
+  const client=await context.newCDPSession(page);
+  const y=before.content.top+before.content.height/2;
+  const xA=before.content.left+before.content.width*.78;
+  const xB=before.content.left+before.content.width*.22;
+
+  async function swipe(x1,x2){
+    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x1,y}]});
+    const steps=6;
+    for(let i=1;i<=steps;i++){
+      const x=x1+(x2-x1)*(i/steps);
+      await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
+      await page.waitForTimeout(18);
+    }
+    await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await page.waitForTimeout(180);
+  }
+
+  await swipe(xA,xB);
+  let afterScroll=await page.evaluate(() => document.querySelector('#cit-tools .v23-content-col').scrollTop);
+  if(afterScroll===0){
+    await swipe(xB,xA);
+    afterScroll=await page.evaluate(() => document.querySelector('#cit-tools .v23-content-col').scrollTop);
+  }
+  expect(afterScroll).toBeGreaterThan(0);
+
+  const after=await page.evaluate(() => {
+    const undo=document.querySelector('#cit-undo').getBoundingClientRect();
+    const remove=document.querySelector('#cit-tools .v23-broom').getBoundingClientRect();
+    const firstCategory=document.querySelector('#cit-tools .v23-tool-btn[data-v29-category]').getBoundingClientRect();
+    return {
+      undo:{left:undo.left,top:undo.top},
+      remove:{left:remove.left,top:remove.top},
+      category:{left:firstCategory.left,top:firstCategory.top}
+    };
+  });
+  for(const key of ['undo','remove','category']){
+    expect(Math.abs(after[key].left-before.fixed[key].left)).toBeLessThan(1);
+    expect(Math.abs(after[key].top-before.fixed[key].top)).toBeLessThan(1);
+  }
+
+  const lastPark=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').last();
+  await lastPark.scrollIntoViewIfNeeded();
+  await expect(lastPark).toBeVisible();
+  await lastPark.click();
+  await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
+
+  await context.close();
 });
