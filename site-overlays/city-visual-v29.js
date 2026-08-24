@@ -239,7 +239,7 @@
 
     const endTouch=()=>{
       if(!categoryDrag||categoryDrag.kind!=='touch')return;
-      if(categoryDrag.moved)categorySuppressClickUntil=performance.now()+220;
+      if(categoryDrag.moved)categorySuppressClickUntil=performance.now()+80;
       categoryDrag=null;
     };
     document.addEventListener('touchend',endTouch,{capture:true,passive:true});
@@ -265,7 +265,7 @@
 
     const endPointer=e=>{
       if(!categoryDrag||categoryDrag.kind!=='pointer'||categoryDrag.id!==e.pointerId)return;
-      if(categoryDrag.moved)categorySuppressClickUntil=performance.now()+220;
+      if(categoryDrag.moved)categorySuppressClickUntil=performance.now()+80;
       try{categoryDrag.content.releasePointerCapture(e.pointerId);}catch(_e){}
       categoryDrag=null;
     };
