@@ -213,6 +213,9 @@
     document.addEventListener('touchcancel',endTouch,{capture:true,passive:true});
 
     document.addEventListener('pointerdown',e=>{
+      /* Touch generates both TouchEvent and PointerEvent streams. Let the touch
+         stream own touch drags so the pointer stream cannot overwrite its state. */
+      if(e.pointerType==='touch')return;
       if(e.pointerType==='mouse'&&e.button!==0)return;
       const content=categoryContentFromTarget(e.target);
       if(!content)return;
