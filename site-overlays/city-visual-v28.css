@@ -1,0 +1,124 @@
+/* v28 /new-only hardening: geometry is based on the largest category, not the current one. */
+
+#g-cit.v28-hardened #v23-rail {
+  overflow:visible !important;
+  gap:7px !important;
+}
+#g-cit.v28-hardened #v23-info,
+#g-cit.v28-hardened #cit-tools.v23-tools {
+  min-height:0 !important;
+}
+
+/* The building panel always reserves seven content slots plus the bottom edit row. */
+#g-cit.v28-hardened #cit-tools.v23-tools {
+  flex:1 1 auto !important;
+  width:calc(var(--v23-btn) * 2 + var(--v23-gap) + 10px) !important;
+  min-width:calc(var(--v23-btn) * 2 + var(--v23-gap) + 10px) !important;
+  max-height:100% !important;
+  padding:4px !important;
+  display:grid !important;
+  grid-template-columns:var(--v23-btn) var(--v23-btn) !important;
+  grid-template-rows:minmax(0,1fr) auto !important;
+  align-items:start !important;
+  justify-content:center !important;
+  gap:var(--v23-gap) !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+#g-cit.v28-hardened .v23-category-col,
+#g-cit.v28-hardened .v23-content-col {
+  min-height:calc(var(--v23-btn) * 7 + var(--v23-gap) * 6) !important;
+  max-height:calc(var(--v23-btn) * 7 + var(--v23-gap) * 6) !important;
+  overflow:hidden !important;
+}
+#g-cit.v28-hardened .v23-category-col { grid-column:1; grid-row:1; }
+#g-cit.v28-hardened .v23-content-col { grid-column:2; grid-row:1; }
+
+/* Brush and undo are permanently visible at the far end of the lower building panel. */
+#g-cit.v28-hardened #v28-edit-actions {
+  grid-column:1 / -1;
+  grid-row:2;
+  align-self:end;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:var(--v23-gap);
+  min-height:var(--v23-btn);
+  margin-top:6px;
+  padding-top:6px;
+  border-top:2px solid #71829138;
+  box-sizing:border-box;
+}
+#g-cit.v28-hardened #v28-edit-actions > .v23-tool-btn {
+  flex:0 0 var(--v23-btn) !important;
+}
+
+/* On short displays, information and building tools share the long axis instead of stacking. */
+#g-cit.v28-compact #v23-rail {
+  width:calc(60px + var(--v23-btn) * 2 + var(--v23-gap) + 17px) !important;
+  min-width:calc(60px + var(--v23-btn) * 2 + var(--v23-gap) + 17px) !important;
+  height:100% !important;
+  display:grid !important;
+  grid-template-columns:60px calc(var(--v23-btn) * 2 + var(--v23-gap) + 10px) !important;
+  grid-template-rows:minmax(0,1fr) !important;
+  gap:7px !important;
+  align-items:stretch !important;
+}
+#g-cit.v28-compact #v23-info {
+  grid-column:1 !important;
+  grid-row:1 !important;
+  height:100% !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+}
+#g-cit.v28-compact #cit-tools.v23-tools {
+  grid-column:2 !important;
+  grid-row:1 !important;
+  height:100% !important;
+  align-self:stretch !important;
+}
+
+/* Category symbols are owned by v28, so re-rendering another category cannot replace them. */
+#g-cit .v28-category-svg { width:91%; height:91%; display:block; overflow:visible; }
+
+/* The moon shown in the instruction is visually the same kind of blue control as the real moon button. */
+#g-cit #v28-moon-cue {
+  display:inline-flex;
+  width:1.55em;
+  height:1.55em;
+  margin:0 .18em;
+  align-items:center;
+  justify-content:center;
+  vertical-align:middle;
+  line-height:1;
+  box-sizing:border-box;
+  border:1px solid #27346f55;
+}
+
+/* Keep delete reachable: actual settings panels get a sticky early row. */
+#g-cit .v28-delete-row {
+  position:sticky !important;
+  top:0 !important;
+  z-index:8 !important;
+  background:inherit !important;
+}
+
+/* If the base settings panel cannot be detected, the fallback lives inside the info panel instead of off-screen. */
+#g-cit #v26-settings-menu {
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  margin:3px 0 0 !important;
+  box-sizing:border-box !important;
+}
+#g-cit #v23-info.v28-fallback-open {
+  overflow:auto !important;
+}
+#g-cit #v23-info.v28-fallback-open #v26-settings-menu.show {
+  display:block !important;
+}
+
+/* Diagnostic class is intentionally visible only in developer tools, never as a UI artifact. */
+#g-cit.v28-tool-overflow { --v28-layout-warning:1; }
