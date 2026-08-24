@@ -121,8 +121,8 @@
     if(!glyph)return;
     glyph.classList.remove('v19-shared-icon','v20-shared-icon','v21-shared-icon','v23-shared-icon');
     glyph.classList.add('v29-plain-thought');
+    glyph.dataset.v19Original=icon;
     delete glyph.dataset.v19Icon;
-    delete glyph.dataset.v19Original;
     glyph.replaceChildren(document.createTextNode(icon));
   }
 
@@ -176,7 +176,14 @@
     decorateMoonCue();
     qa('#cit-grid .cit-thought').forEach(bubble=>{
       const glyph=q('.cit-thought-icon',bubble);
-      if(glyph&&!glyph.textContent.trim()&&!glyph.children.length)bubble.remove();
+      if(!glyph)return;
+      const remembered=glyph.dataset.v19Original;
+      if(remembered && (!glyph.classList.contains('v29-plain-thought') || glyph.textContent.trim()!==remembered)){
+        const person=bubble.closest('.citizen');
+        restoreThought(person,remembered);
+        return;
+      }
+      if(!glyph.textContent.trim()&&!glyph.children.length)bubble.remove();
     });
   }
   function queueScan(){if(scanQueued)return;scanQueued=true;requestAnimationFrame(scan);}
