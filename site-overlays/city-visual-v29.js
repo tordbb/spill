@@ -143,7 +143,7 @@
 
     const maxHelp=Math.max(22,Math.floor(railH-fixedMin-gap-nonHelp-4));
     help.style.maxHeight=maxHelp+'px';
-    help.style.overflowY=help.scrollHeight>maxHelp?'auto':'hidden';
+    help.style.overflowY='auto';
 
     requestAnimationFrame(()=>{
       const available=Math.max(fixedMin,Math.floor(railH-info.getBoundingClientRect().height-gap));
@@ -158,9 +158,11 @@
     content.dataset.v30Scroller='1';
 
     let drag=null;
+    let touchDrag=null;
     let suppressClickUntil=0;
 
     const begin=(e)=>{
+      if(e.pointerType==='touch')return;
       if(e.pointerType==='mouse'&&e.button!==0)return;
       drag={
         id:e.pointerId,
@@ -194,6 +196,28 @@
     content.addEventListener('pointermove',move,{passive:false});
     content.addEventListener('pointerup',end,{passive:true});
     content.addEventListener('pointercancel',end,{passive:true});
+
+    content.addEventListener('touchstart',e=>{
+      const t=e.touches&&e.touches[0];if(!t)return;
+      touchDrag={x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,moved:false};
+    },{passive:true});
+    content.addEventListener('touchmove',e=>{
+      if(!touchDrag)return;
+      const t=e.touches&&e.touches[0];if(!t)return;
+      const dx=t.clientX-touchDrag.x;
+      const dy=t.clientY-touchDrag.y;
+      const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
+      if(Math.abs(delta)<3)return;
+      touchDrag.moved=true;
+      content.scrollTop=touchDrag.scrollTop-delta;
+      e.preventDefault();
+    },{passive:false});
+    const endTouch=()=>{
+      if(touchDrag&&touchDrag.moved)suppressClickUntil=performance.now()+220;
+      touchDrag=null;
+    };
+    content.addEventListener('touchend',endTouch,{passive:true});
+    content.addEventListener('touchcancel',endTouch,{passive:true});
     content.addEventListener('click',e=>{
       if(performance.now()<suppressClickUntil){
         e.preventDefault();
