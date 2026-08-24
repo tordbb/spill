@@ -73,8 +73,25 @@
     {cls:'v29-park',make:parkIcon}
   ];
 
+  function arrangeFixedActions(){
+    const cats=q('#cit-tools .v23-category-col');
+    if(!cats)return;
+    const broom=q(':scope > .v23-broom,[aria-label="Fjern"]',cats);
+    const undo=q(':scope > #cit-undo',cats);
+    const categories=qa(':scope > .v23-tool-btn',cats).filter(btn=>btn!==broom&&btn!==undo);
+    let sep=q(':scope > .v30-edit-sep',cats)||q(':scope > .v23-edit-sep',cats);
+    if(!sep){sep=document.createElement('div');}
+    sep.className='v23-edit-sep v30-edit-sep';
+    sep.setAttribute('aria-hidden','true');
+    if(broom)broom.dataset.v30FixedAction='remove';
+    if(undo)undo.dataset.v30FixedAction='undo';
+    cats.replaceChildren(...[broom,undo,sep,...categories].filter(Boolean));
+  }
+
   function enforceCategoryIcons(){
-    const buttons=qa('#cit-tools .v23-category-col > .v23-tool-btn').slice(0,3);
+    const buttons=qa('#cit-tools .v23-category-col > .v23-tool-btn')
+      .filter(btn=>!btn.classList.contains('v23-broom')&&btn.id!=='cit-undo')
+      .slice(0,3);
     buttons.forEach((btn,i)=>{
       const spec=categoryIcons[i];if(!spec)return;
       let keep=q(':scope > .'+spec.cls,btn);
@@ -145,8 +162,8 @@
       const base=citRenderTools;
       const wrapped=function(){
         const r=base.apply(this,arguments);
-        queueMicrotask(enforceCategoryIcons);
-        requestAnimationFrame(enforceCategoryIcons);
+        queueMicrotask(()=>{arrangeFixedActions();enforceCategoryIcons();});
+        requestAnimationFrame(()=>{arrangeFixedActions();enforceCategoryIcons();});
         return r;
       };
       wrapped.__v29Wrapped=true;
@@ -172,6 +189,7 @@
     wrapRuntime();
     const c=city();if(!c)return;
     c.classList.add('v29-repair');
+    arrangeFixedActions();
     enforceCategoryIcons();
     decorateMoonCue();
     qa('#cit-grid .cit-thought').forEach(bubble=>{
