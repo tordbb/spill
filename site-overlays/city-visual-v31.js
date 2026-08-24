@@ -20,6 +20,63 @@
     return bin;
   }
 
+  function installActionScroller(content){
+    if(!content||content.dataset.v31PhysicalScroller==='1')return;
+    content.dataset.v31PhysicalScroller='1';
+
+    let drag=null;
+    let suppressUntil=0;
+    const clamp=v=>Math.max(0,Math.min(content.scrollHeight-content.clientHeight,v));
+
+    content.addEventListener('touchstart',e=>{
+      const t=e.touches&&e.touches[0];if(!t)return;
+      const tapTarget=e.target&&e.target.closest?e.target.closest('.v23-tool-btn'):null;
+      drag={x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,tapTarget,moved:false};
+      /* The city screen itself is rotated. Own this gesture so the physical
+         horizontal finger movement maps exactly to the content's local vertical
+         scroll axis instead of letting the browser guess the transformed axis. */
+      e.preventDefault();
+    },{passive:false});
+
+    content.addEventListener('touchmove',e=>{
+      if(!drag)return;
+      const t=e.touches&&e.touches[0];if(!t)return;
+      const dx=t.clientX-drag.x;
+      const dy=t.clientY-drag.y;
+      if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
+      if(Math.abs(dx)>=Math.abs(dy)){
+        drag.moved=true;
+        content.scrollTop=clamp(drag.scrollTop-dx);
+        e.preventDefault();
+      }
+    },{passive:false});
+
+    const end=()=>{
+      if(!drag)return;
+      const {moved,tapTarget}=drag;
+      drag=null;
+      if(moved){
+        suppressUntil=performance.now()+120;
+      }else if(tapTarget&&tapTarget.isConnected){
+        queueMicrotask(()=>tapTarget.click());
+      }
+    };
+    content.addEventListener('touchend',end,{passive:true});
+    content.addEventListener('touchcancel',end,{passive:true});
+    content.addEventListener('click',e=>{
+      if(performance.now()<suppressUntil){
+        e.preventDefault();e.stopImmediatePropagation();
+      }
+    },true);
+    content.addEventListener('wheel',e=>{
+      const delta=Math.abs(e.deltaX)>=Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+      if(!delta)return;
+      const before=content.scrollTop;
+      content.scrollTop=clamp(before+delta);
+      if(content.scrollTop!==before)e.preventDefault();
+    },{passive:false});
+  }
+
   function flattenTools(tools){
     const cats=q('.v23-category-col',tools),content=q('.v23-content-col',tools);
     if(!cats||!content)return;
@@ -41,6 +98,7 @@
       while(inner.firstChild)content.insertBefore(inner.firstChild,inner);
       inner.remove();
     }
+    installActionScroller(content);
   }
 
   function updateHelpDisplay(){
