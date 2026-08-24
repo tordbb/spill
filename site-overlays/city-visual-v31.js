@@ -149,19 +149,21 @@
     if(night.parentNode!==moonCell)moonCell.appendChild(night);
     if(hud.parentNode!==moneyCell)moneyCell.appendChild(hud);
     if(week.parentNode!==dayCell)dayCell.appendChild(week);
-    status.replaceChildren(statsCell,moonCell,moneyCell,dayCell);
+    const statusOrder=[statsCell,moonCell,moneyCell,dayCell];
+    if(status.children.length!==statusOrder.length||statusOrder.some((el,i)=>status.children[i]!==el)){
+      status.replaceChildren(...statusOrder);
+    }
 
     /* Internal top-to-bottom order maps to physical right-to-left after the city
        is rotated. Status above actions therefore becomes status-right/actions-left. */
-    bottom.replaceChildren(status,actions);
+    if(bottom.children.length!==2||bottom.children[0]!==status||bottom.children[1]!==actions){
+      bottom.replaceChildren(status,actions);
+    }
 
-    const keep=new Set([top,viewport,bottom,bin]);
-    [...stage.children].forEach(el=>{if(!keep.has(el))el.remove();});
-    if(top.parentNode!==stage)stage.prepend(top);
-    if(viewport.parentNode!==stage)stage.appendChild(viewport);
-    if(bottom.parentNode!==stage)stage.appendChild(bottom);
-    if(bin.parentNode!==stage)stage.appendChild(bin);
-    stage.replaceChildren(top,viewport,bottom,bin);
+    const desired=[top,viewport,bottom,bin];
+    if(stage.children.length!==desired.length||desired.some((el,i)=>stage.children[i]!==el)){
+      stage.replaceChildren(...desired);
+    }
 
     updateHelpDisplay();
     return true;
@@ -261,7 +263,7 @@
   const c=city();
   if(c){
     const obs=new MutationObserver(queue);
-    obs.observe(c,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','style']});
+    obs.observe(c,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
   }
   addEventListener('resize',queue,{passive:true});
   addEventListener('orientationchange',()=>setTimeout(queue,80),{passive:true});
