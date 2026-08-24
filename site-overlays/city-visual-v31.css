@@ -262,16 +262,21 @@
   height:100%!important;
   min-height:0!important;
   max-height:none!important;
+  display:block!important;
+  overflow:hidden!important;
+  overscroll-behavior:contain!important;
+  touch-action:none!important;
+  box-sizing:border-box!important;
+}
+#g-cit.v31-layout #cit-tools .v31-action-scroll-inner{
+  width:100%!important;
+  min-width:0!important;
   display:flex!important;
   flex-direction:column!important;
   align-items:center!important;
   gap:var(--v23-gap)!important;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-  overscroll-behavior:contain!important;
-  -webkit-overflow-scrolling:touch;
-  touch-action:none!important;
-  scrollbar-width:thin;
+  will-change:transform;
+  transform:translate3d(0,0,0);
 }
 #g-cit.v31-layout #cit-tools .v23-tool-btn{
   transform:rotate(-90deg)!important;
