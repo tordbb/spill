@@ -150,6 +150,7 @@
 
   function v23EnsureLayout(){
     const city=$('#g-cit'),stage=city&&city.querySelector('.stage-wrap'),viewport=$('#cit-viewport');if(!city||!stage||!viewport)return;
+    if(city.classList.contains('v31-layout'))return;
     let rail=$('#v23-rail');if(!rail){rail=document.createElement('div');rail.id='v23-rail';stage.insertBefore(rail,viewport);}
     let info=$('#v23-info');if(!info){info=document.createElement('div');info.id='v23-info';rail.appendChild(info);}
     const top=city.querySelector(':scope > .top-bar')||city.querySelector('.top-bar');
