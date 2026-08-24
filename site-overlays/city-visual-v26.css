@@ -1,0 +1,77 @@
+/* City visual/layout v26 — restore semantic shops, distinct categories and clear UI/land separation. */
+
+/* Unused land is scrubby no-man's-land, not buildable-looking lawn. Explicit grass tiles remain green. */
+#g-cit.v26-polish #cit-grid {
+  background-color:#8e8567 !important;
+  background-image:
+    radial-gradient(ellipse at 24% 62%,#555b3f 0 7%,transparent 8%),
+    radial-gradient(ellipse at 72% 27%,#706a4e 0 6%,transparent 7%),
+    radial-gradient(circle at 56% 78%,#5d6145 0 4%,transparent 5%),
+    linear-gradient(#3e432c24 1px,transparent 1px),
+    linear-gradient(90deg,#3e432c24 1px,transparent 1px) !important;
+  background-size:
+    calc(var(--v26-ts,20px) * 3.1) calc(var(--v26-ts,20px) * 2.4),
+    calc(var(--v26-ts,20px) * 2.6) calc(var(--v26-ts,20px) * 3.2),
+    calc(var(--v26-ts,20px) * 2.2) calc(var(--v26-ts,20px) * 2.8),
+    var(--v26-ts,20px) var(--v26-ts,20px),
+    var(--v26-ts,20px) var(--v26-ts,20px) !important;
+}
+#g-cit.v26-polish .ct.v23-type-E { background:#91ca70 !important; }
+
+/* Shops keep the game's original product-specific symbol instead of a generic storefront overlay. */
+#g-cit .ct.v26-shop-original {
+  font-size:calc(var(--v23-ts,20px) * .78) !important;
+  line-height:1 !important;
+  color:#24352b !important;
+  -webkit-text-fill-color:currentColor !important;
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif !important;
+  text-align:center !important;
+}
+#g-cit .ct.v26-shop-original > .v23-map-S { display:none !important; }
+#g-cit .v26-shop-fallback {
+  position:absolute; inset:4%; z-index:3; display:flex; align-items:center; justify-content:center;
+  font-size:calc(var(--v23-ts,20px) * .72); line-height:1;
+  filter:saturate(1.08) contrast(1.05) drop-shadow(0 1px 1px #17332655);
+}
+
+/* Category buttons use three intentionally different silhouettes. */
+#g-cit .v26-category-svg { width:90%; height:90%; display:block; overflow:visible; }
+#g-cit .v23-category-col > .v23-tool-btn[data-v26-category] > .v23-tool-icon { display:none !important; }
+
+/* Simulation/status actions are a separate control zone, not another build category. */
+#g-cit.v26-polish #v25-action-slot {
+  margin-top:7px !important;
+  padding:5px 3px 3px !important;
+  min-height:36px !important;
+  border-top:2px solid #74899b !important;
+  border-radius:0 0 8px 8px !important;
+  background:#e8eef3 !important;
+  box-shadow:inset 0 1px 0 #fff9 !important;
+}
+#g-cit.v26-polish #v25-action-slot #cit-pop-wrap.v18-stats-button {
+  background:#f5f7f8 !important;
+  border:1px solid #71829255 !important;
+}
+#g-cit.v26-polish #v25-action-slot #cit-night {
+  border:1px solid #27346f88 !important;
+  box-shadow:0 1px 0 #fff7 !important;
+}
+
+/* The trash action belongs inside the menu opened from the cog. Never show the v24 loose fallback. */
+#v24-settings-fallback { display:none !important; }
+.v26-settings-delete-row {
+  display:flex; align-items:center; justify-content:center; padding:8px 10px; margin-top:5px;
+  border-top:1px solid #304d3924; box-sizing:border-box;
+}
+.v26-delete-setting {
+  min-height:38px; padding:6px 12px; border:1px solid #a8474744; border-radius:10px;
+  background:#fff4f3; color:#6f2929; font:800 14px/1.1 system-ui,sans-serif;
+  display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 2px 0 #0001; cursor:pointer;
+}
+#v26-settings-menu {
+  display:none; position:absolute; left:0; top:calc(100% + 4px); z-index:110; min-width:132px;
+  padding:6px; border:1px solid #304d3930; border-radius:10px; background:#f8fbf7fa;
+  box-shadow:0 7px 22px #152a2045; box-sizing:border-box;
+}
+#v26-settings-menu.show { display:block; }
+#v26-settings-menu .v26-delete-setting { width:100%; }
