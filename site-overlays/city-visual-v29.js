@@ -90,15 +90,14 @@
 
   function enforceCategoryIcons(){
     const buttons=qa('#cit-tools .v23-category-col > .v23-tool-btn')
-      .filter(btn=>!btn.classList.contains('v23-broom')&&btn.id!=='cit-undo')
-      .slice(0,3);
-    buttons.forEach((btn,i)=>{
+      .filter(btn=>!btn.classList.contains('v23-broom')&&btn.id!=='cit-undo');
+    buttons.forEach((btn,i)=>{btn.dataset.v29Category=String(i);});
+    buttons.slice(0,3).forEach((btn,i)=>{
       const spec=categoryIcons[i];if(!spec)return;
       let keep=q(':scope > .'+spec.cls,btn);
       qa(':scope > .v26-category-svg,:scope > .v23-tool-icon,:scope > .v19-tool-glyph,:scope > .v27-road-network,:scope > .v28-category-svg,:scope > .v29-category-svg',btn)
         .forEach(el=>{if(el!==keep)el.remove();});
       if(!keep){keep=spec.make();btn.prepend(keep);}
-      btn.dataset.v29Category=String(i);
     });
   }
 
