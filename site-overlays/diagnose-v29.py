@@ -15,6 +15,12 @@ needles=[
  'g-build',
  '🎨',
  '⏬',
+ '.menu-grid',
+ '#card-cit',
+ 'card-cit',
+ 'function citSetThought',
+ '.cit-thought',
+ 'citNoteNeed',
 ]
 for needle in needles:
     print('\n===',needle,'===')
