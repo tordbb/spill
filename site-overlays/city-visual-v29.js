@@ -174,6 +174,7 @@
     if(Math.abs(delta)<3)return false;
     const max=Math.max(0,content.scrollHeight-content.clientHeight);
     content.scrollTop=Math.max(0,Math.min(max,startScroll-delta));
+    if(categoryDrag&&categoryDrag.content===content)categoryDrag.lastScroll=content.scrollTop;
     content.dataset[kind==='touch'?'v30TouchScroll':'v30PointerScroll']=String(content.scrollTop);
     return true;
   }
@@ -186,7 +187,7 @@
       const content=categoryContentFromTarget(e.target);
       const t=e.touches&&e.touches[0];
       if(!content||!t)return;
-      categoryDrag={kind:'touch',content,x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,moved:false};
+      categoryDrag={kind:'touch',content,x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,lastScroll:content.scrollTop,moved:false};
     },{capture:true,passive:true});
 
     document.addEventListener('touchmove',e=>{
@@ -199,8 +200,14 @@
     },{capture:true,passive:false});
 
     const endTouch=()=>{
-      if(categoryDrag&&categoryDrag.kind==='touch'&&categoryDrag.moved)categorySuppressClickUntil=performance.now()+220;
-      if(categoryDrag&&categoryDrag.kind==='touch')categoryDrag=null;
+      if(!categoryDrag||categoryDrag.kind!=='touch')return;
+      const {content,lastScroll,moved}=categoryDrag;
+      if(moved)categorySuppressClickUntil=performance.now()+220;
+      categoryDrag=null;
+      if(moved&&content&&content.isConnected){
+        requestAnimationFrame(()=>{content.scrollTop=lastScroll;});
+        setTimeout(()=>{if(content.isConnected)content.scrollTop=lastScroll;},60);
+      }
     };
     document.addEventListener('touchend',endTouch,{capture:true,passive:true});
     document.addEventListener('touchcancel',endTouch,{capture:true,passive:true});
@@ -209,7 +216,7 @@
       if(e.pointerType==='mouse'&&e.button!==0)return;
       const content=categoryContentFromTarget(e.target);
       if(!content)return;
-      categoryDrag={kind:'pointer',id:e.pointerId,content,x:e.clientX,y:e.clientY,scrollTop:content.scrollTop,moved:false};
+      categoryDrag={kind:'pointer',id:e.pointerId,content,x:e.clientX,y:e.clientY,scrollTop:content.scrollTop,lastScroll:content.scrollTop,moved:false};
       try{content.setPointerCapture(e.pointerId);}catch(_e){}
     },true);
 
@@ -223,9 +230,14 @@
 
     const endPointer=e=>{
       if(!categoryDrag||categoryDrag.kind!=='pointer'||categoryDrag.id!==e.pointerId)return;
-      if(categoryDrag.moved)categorySuppressClickUntil=performance.now()+220;
-      try{categoryDrag.content.releasePointerCapture(e.pointerId);}catch(_e){}
+      const {content,lastScroll,moved}=categoryDrag;
+      if(moved)categorySuppressClickUntil=performance.now()+220;
+      try{content.releasePointerCapture(e.pointerId);}catch(_e){}
       categoryDrag=null;
+      if(moved&&content&&content.isConnected){
+        requestAnimationFrame(()=>{content.scrollTop=lastScroll;});
+        setTimeout(()=>{if(content.isConnected)content.scrollTop=lastScroll;},60);
+      }
     };
     document.addEventListener('pointerup',endPointer,true);
     document.addEventListener('pointercancel',endPointer,true);
