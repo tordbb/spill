@@ -85,7 +85,7 @@
     sep.setAttribute('aria-hidden','true');
     if(broom)broom.dataset.v30FixedAction='remove';
     if(undo)undo.dataset.v30FixedAction='undo';
-    cats.replaceChildren(...[broom,undo,sep,...categories].filter(Boolean));
+    cats.replaceChildren(...[undo,broom,sep,...categories].filter(Boolean));
   }
 
   function enforceCategoryIcons(){
