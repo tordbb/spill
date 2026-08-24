@@ -234,10 +234,16 @@ test('park action contents follow the finger direction and speed', async ({ brow
   await last.click();
   await expect.poll(()=>page.evaluate(()=>citTool)).toBe('W');
 
+  const afterUndo=page.locator('#cit-undo');
+  const afterDelete=page.locator('#cit-tools .v23-broom');
+  const afterRoad=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category="0"]');
+  await expect(afterUndo).toBeVisible();
+  await expect(afterDelete).toBeVisible();
+  await expect(afterRoad).toBeVisible();
   const fixedAfter=await Promise.all([
-    box(page.locator('#cit-undo')),
-    box(page.locator('#cit-tools .v23-broom')),
-    box(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category="0"]'))
+    box(afterUndo),
+    box(afterDelete),
+    box(afterRoad)
   ]);
   for(let i=0;i<fixedBefore.length;i++){
     expect(Math.abs(fixedAfter[i].x-fixedBefore[i].x)).toBeLessThan(1);

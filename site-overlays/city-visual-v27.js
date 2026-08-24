@@ -26,7 +26,15 @@
   }
 
   function decorateRoadCategory(){
-    const b=q('#cit-tools .v23-category-col > .v23-tool-btn[data-v26-category="0"]')||qa('#cit-tools .v23-category-col > .v23-tool-btn')[0];
+    const all=qa('#cit-tools .v23-category-col > .v23-tool-btn');
+    const edit=b=>b.id==='cit-undo'||b.classList.contains('v23-undo')||b.classList.contains('v23-broom')||b.hasAttribute('data-v30-fixed-action');
+    all.filter(edit).forEach(b=>{
+      b.removeAttribute('data-v27-road');
+      qa(':scope > .v27-road-network',b).forEach(el=>el.remove());
+    });
+    const b=q('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category="0"]')||
+      all.find(x=>!edit(x)&&x.dataset.v26Category==='0')||
+      all.find(x=>!edit(x));
     if(!b||b.dataset.v27Road==='1')return;
     qa(':scope > .v26-category-svg,:scope > .v23-tool-icon,:scope > .v19-tool-glyph',b).forEach(el=>el.remove());
     b.prepend(roadNetworkIcon());

@@ -35,6 +35,7 @@ jobs:
           node --check site-overlays/city-visual-v27.js
           node --check site-overlays/city-visual-v29.js
           node --check site-overlays/city-visual-v31.js
+          node --check site-overlays/city-visual-v32.js
           node --check site-overlays/new-pages-v31.js
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
@@ -105,6 +106,7 @@ jobs:
           python site-overlays/inject-v27.py dist/new/city/index.html
           python site-overlays/inject-v29.py dist/new/city/index.html
           python site-overlays/inject-v31.py dist/new/city/index.html
+          python site-overlays/inject-v32.py dist/new/city/index.html
 
           # Standalone Cave Flight mini-game.
           mkdir -p dist/cave
@@ -122,7 +124,8 @@ jobs:
           grep -q 'new-pages-v31-script' dist/new/index.html
           grep -q 'new-pages-v31-script' dist/new/city/index.html
           grep -q 'city-visual-v31-script' dist/new/city/index.html
-          if grep -q 'city-visual-v2[0-9]-script\|city-visual-v31-script' dist/new/balance/index.html; then
+          grep -q 'city-visual-v32-script' dist/new/city/index.html
+          if grep -q 'city-visual-v2[0-9]-script\|city-visual-v31-script\|city-visual-v32-script' dist/new/balance/index.html; then
             echo 'ERROR: city visual overlays leaked into a non-city /new page'
             exit 1
           fi

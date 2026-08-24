@@ -42,7 +42,14 @@
   }
 
   function decorateCategories(){
-    const buttons=qa('#cit-tools .v23-category-col > .v23-tool-btn');
+    const all=qa('#cit-tools .v23-category-col > .v23-tool-btn');
+    const edit=b=>b.id==='cit-undo'||b.classList.contains('v23-undo')||b.classList.contains('v23-broom')||b.hasAttribute('data-v30-fixed-action');
+    all.filter(edit).forEach(b=>{
+      b.removeAttribute('data-v26-category');
+      qa(':scope > .v26-category-svg',b).forEach(el=>el.remove());
+    });
+    let buttons=all.filter(b=>b.hasAttribute('data-v29-category'));
+    if(buttons.length<3)buttons=all.filter(b=>!edit(b)).slice(0,3);
     const makers=[catRoad,catRoof,catPark];
     buttons.slice(0,3).forEach((b,i)=>{
       if(b.dataset.v26Category===String(i))return;
@@ -52,6 +59,8 @@
   }
 
   function directShopText(tile){
+    const wrapped=q(':scope > .v32-shop-original-icon',tile);
+    if(wrapped)return (wrapped.textContent||'').trim();
     let out='';
     for(const n of tile.childNodes){
       if(n.nodeType===Node.TEXT_NODE)out+=n.nodeValue||'';
@@ -68,6 +77,14 @@
       let fallback=q(':scope > .v26-shop-fallback',tile);
       if(txt){
         tile.classList.add('v26-shop-has-original');
+        let wrapped=q(':scope > .v32-shop-original-icon',tile);
+        if(!wrapped){
+          const nodes=[...tile.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE&&(n.nodeValue||'').trim());
+          if(nodes.length){
+            wrapped=document.createElement('span');wrapped.className='v32-shop-original-icon';wrapped.textContent=nodes.map(n=>n.nodeValue||'').join('').trim();
+            nodes[0].replaceWith(wrapped);nodes.slice(1).forEach(n=>n.remove());
+          }
+        }
         if(fallback)fallback.remove();
       }else if(!fallback){
         fallback=document.createElement('span');fallback.className='v26-shop-fallback';fallback.textContent='🛍️';tile.appendChild(fallback);
