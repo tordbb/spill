@@ -108,3 +108,4 @@ jobs:
           fi
           echo "stable root: $(wc -c < dist/index.html) bytes"
           echo "visual /new: $(wc -c < dist/new/index.html) bytes"
+          python site-overlays/diagnose-v29.py dist/new/index.html
