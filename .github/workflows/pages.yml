@@ -34,6 +34,8 @@ jobs:
           node --check site-overlays/city-visual-v26.js
           node --check site-overlays/city-visual-v27.js
           node --check site-overlays/city-visual-v29.js
+          node --check site-overlays/city-visual-v31.js
+          node --check site-overlays/new-pages-v31.js
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
@@ -72,19 +74,37 @@ jobs:
           python site-overlays/inject-stable-city-v22.py dist/index.html
           python site-overlays/inject-cave-v2.py dist/index.html home
 
-          # Experimental /new: isolated save plus visual v19/v20/v21/v23/v24/v25/v26/v27 and targeted v29 regression repair.
-          mkdir -p dist/new
-          cp /tmp/city-v17.html dist/new/index.html
-          python site-overlays/inject-v18.py dist/new/index.html parallel
-          python site-overlays/inject-v19.py dist/new/index.html
-          python site-overlays/inject-v20.py dist/new/index.html
-          python site-overlays/inject-v21.py dist/new/index.html
-          python site-overlays/inject-v23.py dist/new/index.html
-          python site-overlays/inject-v24.py dist/new/index.html
-          python site-overlays/inject-v25.py dist/new/index.html
-          python site-overlays/inject-v26.py dist/new/index.html
-          python site-overlays/inject-v27.py dist/new/index.html
-          python site-overlays/inject-v29.py dist/new/index.html
+          # Experimental /new: each game is a separate document. City-only overlays
+          # are injected only into /new/city/ so they cannot leak into other games.
+          mkdir -p dist/new/{balance,creature,patterns,walk,sudoku,city}
+
+          cp /tmp/city-v17.html dist/new/city/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/city/index.html home none home
+
+          cp /tmp/city-v17.html dist/new/balance/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/balance/index.html game g-bal balance
+          cp /tmp/city-v17.html dist/new/creature/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/creature/index.html game g-cre creature
+          cp /tmp/city-v17.html dist/new/patterns/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/patterns/index.html game g-pat patterns
+          cp /tmp/city-v17.html dist/new/walk/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/walk/index.html game g-wal walk
+          cp /tmp/city-v17.html dist/new/sudoku/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/sudoku/index.html game g-sdk sudoku
+
+          cp /tmp/city-v17.html dist/new/city/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/city/index.html game g-cit city
+          python site-overlays/inject-v18.py dist/new/city/index.html parallel
+          python site-overlays/inject-v19.py dist/new/city/index.html
+          python site-overlays/inject-v20.py dist/new/city/index.html
+          python site-overlays/inject-v21.py dist/new/city/index.html
+          python site-overlays/inject-v23.py dist/new/city/index.html
+          python site-overlays/inject-v24.py dist/new/city/index.html
+          python site-overlays/inject-v25.py dist/new/city/index.html
+          python site-overlays/inject-v26.py dist/new/city/index.html
+          python site-overlays/inject-v27.py dist/new/city/index.html
+          python site-overlays/inject-v29.py dist/new/city/index.html
+          python site-overlays/inject-v31.py dist/new/city/index.html
 
           # Standalone Cave Flight mini-game.
           mkdir -p dist/cave
@@ -93,46 +113,59 @@ jobs:
 
           test -s dist/index.html
           test -s dist/new/index.html
+          test -s dist/new/city/index.html
+          test -s dist/new/balance/index.html
+          test -s dist/new/creature/index.html
+          test -s dist/new/patterns/index.html
+          test -s dist/new/walk/index.html
+          test -s dist/new/sudoku/index.html
+          grep -q 'new-pages-v31-script' dist/new/index.html
+          grep -q 'new-pages-v31-script' dist/new/city/index.html
+          grep -q 'city-visual-v31-script' dist/new/city/index.html
+          if grep -q 'city-visual-v2[0-9]-script\|city-visual-v31-script' dist/new/balance/index.html; then
+            echo 'ERROR: city visual overlays leaked into a non-city /new page'
+            exit 1
+          fi
           test -s dist/cave/index.html
           grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-stable-guidance-v22-script' dist/index.html
           grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/index.html
           grep -q 'stable-bench-icon' dist/index.html
-          grep -q 'city-functional-v18-script' dist/new/index.html
-          grep -q 'city-visual-v19-script' dist/new/index.html
-          grep -q 'city-visual-v20-script' dist/new/index.html
-          grep -q 'city-visual-v21-script' dist/new/index.html
-          grep -q 'city-visual-v23-script' dist/new/index.html
-          grep -q 'city-visual-v24-script' dist/new/index.html
-          grep -q 'city-visual-v25-script' dist/new/index.html
-          grep -q 'city-visual-v26-script' dist/new/index.html
-          grep -q 'city-visual-v27-script' dist/new/index.html
-          grep -q 'city-visual-v29-script' dist/new/index.html
-          grep -q 'V23_CATEGORIES' dist/new/index.html
-          grep -q 'V24_DAYS' dist/new/index.html
-          grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/index.html
-          grep -q 'v24-saturday' dist/new/index.html
-          grep -q 'v24-stop-wheel' dist/new/index.html
-          grep -q 'v25-nav-slot' dist/new/index.html
-          grep -q 'v25-action-slot' dist/new/index.html
-          grep -q 'v26-category-svg' dist/new/index.html
-          grep -q 'v26-shop-original' dist/new/index.html
-          grep -q 'v26-settings-menu' dist/new/index.html
-          grep -q 'v26-polish' dist/new/index.html
-          grep -q 'v27-edit-actions' dist/new/index.html
-          grep -q 'v27-road-network' dist/new/index.html
-          grep -q 'v27-live-needs' dist/new/index.html
-          grep -q 'v29-road-network' dist/new/index.html
-          grep -q 'v29-plain-thought' dist/new/index.html
-          grep -q 'v29-moon-cue' dist/new/index.html
-          if grep -q 'city-visual-v28-script' dist/new/index.html; then
+          grep -q 'city-functional-v18-script' dist/new/city/index.html
+          grep -q 'city-visual-v19-script' dist/new/city/index.html
+          grep -q 'city-visual-v20-script' dist/new/city/index.html
+          grep -q 'city-visual-v21-script' dist/new/city/index.html
+          grep -q 'city-visual-v23-script' dist/new/city/index.html
+          grep -q 'city-visual-v24-script' dist/new/city/index.html
+          grep -q 'city-visual-v25-script' dist/new/city/index.html
+          grep -q 'city-visual-v26-script' dist/new/city/index.html
+          grep -q 'city-visual-v27-script' dist/new/city/index.html
+          grep -q 'city-visual-v29-script' dist/new/city/index.html
+          grep -q 'V23_CATEGORIES' dist/new/city/index.html
+          grep -q 'V24_DAYS' dist/new/city/index.html
+          grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/city/index.html
+          grep -q 'v24-saturday' dist/new/city/index.html
+          grep -q 'v24-stop-wheel' dist/new/city/index.html
+          grep -q 'v25-nav-slot' dist/new/city/index.html
+          grep -q 'v25-action-slot' dist/new/city/index.html
+          grep -q 'v26-category-svg' dist/new/city/index.html
+          grep -q 'v26-shop-original' dist/new/city/index.html
+          grep -q 'v26-settings-menu' dist/new/city/index.html
+          grep -q 'v26-polish' dist/new/city/index.html
+          grep -q 'v27-edit-actions' dist/new/city/index.html
+          grep -q 'v27-road-network' dist/new/city/index.html
+          grep -q 'v27-live-needs' dist/new/city/index.html
+          grep -q 'v29-road-network' dist/new/city/index.html
+          grep -q 'v29-plain-thought' dist/new/city/index.html
+          grep -q 'v29-moon-cue' dist/new/city/index.html
+          if grep -q 'city-visual-v28-script' dist/new/city/index.html; then
             echo 'ERROR: v28 must not be published under /new/'
             exit 1
           fi
-          grep -q 'v23-category-col' dist/new/index.html
-          grep -q 'v23-content-col' dist/new/index.html
-          grep -q 'v23-stop-icon' dist/new/index.html
-          grep -q 'v23-map-symbol' dist/new/index.html
+          grep -q 'v23-category-col' dist/new/city/index.html
+          grep -q 'v23-content-col' dist/new/city/index.html
+          grep -q 'v23-stop-icon' dist/new/city/index.html
+          grep -q 'v23-map-symbol' dist/new/city/index.html
           grep -q 'cave-launcher-card' dist/index.html
           grep -q 'card-cave' dist/index.html
           grep -q 'cave-flight-game' dist/cave/index.html
@@ -143,11 +176,11 @@ jobs:
             echo 'ERROR: chair glyph must not appear in the stable game'
             exit 1
           fi
-          if grep -q 'city-stable-guidance-v22-script' dist/new/index.html; then
+          if grep -q 'city-stable-guidance-v22-script' dist/new/city/index.html; then
             echo 'ERROR: stable city guidance overlay must not be published under /new/'
             exit 1
           fi
-          if grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/new/index.html; then
+          if grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/new/city/index.html; then
             echo 'ERROR: expanded Sudoku levels must not be published under /new/'
             exit 1
           fi
