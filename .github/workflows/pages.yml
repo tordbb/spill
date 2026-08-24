@@ -33,7 +33,7 @@ jobs:
           node --check site-overlays/city-visual-v25.js
           node --check site-overlays/city-visual-v26.js
           node --check site-overlays/city-visual-v27.js
-          node --check site-overlays/city-visual-v28.js
+          node --check site-overlays/city-visual-v29.js
           mkdir -p dist
           cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
           patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
@@ -72,7 +72,7 @@ jobs:
           python site-overlays/inject-stable-city-v22.py dist/index.html
           python site-overlays/inject-cave-v2.py dist/index.html home
 
-          # Experimental /new: isolated save plus visual v19/v20/v21/v23/v24/v25/v26/v27 and v28 hardening.
+          # Experimental /new: isolated save plus visual v19/v20/v21/v23/v24/v25/v26/v27 and targeted v29 regression repair.
           mkdir -p dist/new
           cp /tmp/city-v17.html dist/new/index.html
           python site-overlays/inject-v18.py dist/new/index.html parallel
@@ -84,7 +84,7 @@ jobs:
           python site-overlays/inject-v25.py dist/new/index.html
           python site-overlays/inject-v26.py dist/new/index.html
           python site-overlays/inject-v27.py dist/new/index.html
-          python site-overlays/inject-v28.py dist/new/index.html
+          python site-overlays/inject-v29.py dist/new/index.html
 
           # Standalone Cave Flight mini-game.
           mkdir -p dist/cave
@@ -107,7 +107,7 @@ jobs:
           grep -q 'city-visual-v25-script' dist/new/index.html
           grep -q 'city-visual-v26-script' dist/new/index.html
           grep -q 'city-visual-v27-script' dist/new/index.html
-          grep -q 'city-visual-v28-script' dist/new/index.html
+          grep -q 'city-visual-v29-script' dist/new/index.html
           grep -q 'V23_CATEGORIES' dist/new/index.html
           grep -q 'V24_DAYS' dist/new/index.html
           grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/index.html
@@ -122,7 +122,13 @@ jobs:
           grep -q 'v27-edit-actions' dist/new/index.html
           grep -q 'v27-road-network' dist/new/index.html
           grep -q 'v27-live-needs' dist/new/index.html
-          python site-overlays/verify-v28.py dist/index.html dist/new/index.html
+          grep -q 'v29-road-network' dist/new/index.html
+          grep -q 'v29-plain-thought' dist/new/index.html
+          grep -q 'v29-moon-cue' dist/new/index.html
+          if grep -q 'city-visual-v28-script' dist/new/index.html; then
+            echo 'ERROR: v28 must not be published under /new/'
+            exit 1
+          fi
           grep -q 'v23-category-col' dist/new/index.html
           grep -q 'v23-content-col' dist/new/index.html
           grep -q 'v23-stop-icon' dist/new/index.html
