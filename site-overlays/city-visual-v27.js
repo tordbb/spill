@@ -38,12 +38,21 @@
     if(!c||!rail||!info||!tools)return;
     c.classList.add('v27-panels');
 
-    let actions=q('#v27-edit-actions',tools);
-    if(!actions){actions=document.createElement('div');actions.id='v27-edit-actions';tools.appendChild(actions);}
-    const broom=q('.v23-broom,[aria-label="Fjern"]',tools);
-    const undo=q('#cit-undo',tools);
-    [broom,undo].filter(Boolean).forEach(el=>{if(el.parentNode!==actions)actions.appendChild(el);});
-    qa('.v23-edit-sep',tools).forEach(el=>el.remove());
+    /* Keep edit actions in the category column. A separate grid row rotates outside
+       the compact rail on portrait phones and can become unreachable. */
+    const cats=q('.v23-category-col',tools);
+    const actions=q('#v27-edit-actions',tools);
+    if(cats&&actions){
+      [...actions.children].forEach(el=>cats.appendChild(el));
+      actions.remove();
+    }
+    if(cats&&!q(':scope > .v23-edit-sep',cats)){
+      const broom=q(':scope > .v23-broom,[aria-label="Fjern"]',cats);
+      if(broom){
+        const sep=document.createElement('div');sep.className='v23-edit-sep';
+        cats.insertBefore(sep,broom);
+      }
+    }
   }
 
   function thoughtBubble(glyph){
