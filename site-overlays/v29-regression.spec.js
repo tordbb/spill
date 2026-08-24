@@ -359,8 +359,5 @@ test('expanded live-needs text cannot push the action panel outside the rail', a
   expect(after.content.height).toBeGreaterThan(20);
   expect(after.map.width).toBeCloseTo(before.map.width,0);
   expect(after.map.height).toBeCloseTo(before.map.height,0);
-  expect(['auto','scroll','hidden']).toContain(after.help.overflowY);
-  if(after.help.scrollHeight>after.help.clientHeight){
-    expect(['auto','scroll']).toContain(after.help.overflowY);
-  }
+  expect(['auto','scroll']).toContain(after.help.overflowY);
 });
