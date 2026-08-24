@@ -88,6 +88,63 @@
     cats.replaceChildren(...[undo,broom,sep,...categories].filter(Boolean));
   }
 
+  function installCategoryScroller(){
+    const content=q('#cit-tools .v23-content-col');
+    if(!content||content.dataset.v30Scroller==='1')return;
+    content.dataset.v30Scroller='1';
+
+    let drag=null;
+    let suppressClickUntil=0;
+
+    const begin=(e)=>{
+      if(e.pointerType==='mouse'&&e.button!==0)return;
+      drag={
+        id:e.pointerId,
+        x:e.clientX,
+        y:e.clientY,
+        scrollTop:content.scrollTop,
+        moved:false
+      };
+      try{content.setPointerCapture(e.pointerId);}catch(_e){}
+    };
+
+    const move=(e)=>{
+      if(!drag||e.pointerId!==drag.id)return;
+      const dx=e.clientX-drag.x;
+      const dy=e.clientY-drag.y;
+      const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
+      if(Math.abs(delta)<3)return;
+      drag.moved=true;
+      content.scrollTop=drag.scrollTop-delta;
+      e.preventDefault();
+    };
+
+    const end=(e)=>{
+      if(!drag||e.pointerId!==drag.id)return;
+      if(drag.moved)suppressClickUntil=performance.now()+220;
+      try{content.releasePointerCapture(e.pointerId);}catch(_e){}
+      drag=null;
+    };
+
+    content.addEventListener('pointerdown',begin,{passive:true});
+    content.addEventListener('pointermove',move,{passive:false});
+    content.addEventListener('pointerup',end,{passive:true});
+    content.addEventListener('pointercancel',end,{passive:true});
+    content.addEventListener('click',e=>{
+      if(performance.now()<suppressClickUntil){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    },true);
+    content.addEventListener('wheel',e=>{
+      if(content.scrollHeight<=content.clientHeight)return;
+      const delta=Math.abs(e.deltaY)>=Math.abs(e.deltaX)?e.deltaY:e.deltaX;
+      if(!delta)return;
+      content.scrollTop+=delta;
+      e.preventDefault();
+    },{passive:false});
+  }
+
   function enforceCategoryIcons(){
     const buttons=qa('#cit-tools .v23-category-col > .v23-tool-btn')
       .filter(btn=>!btn.classList.contains('v23-broom')&&btn.id!=='cit-undo');
@@ -161,8 +218,8 @@
       const base=citRenderTools;
       const wrapped=function(){
         const r=base.apply(this,arguments);
-        queueMicrotask(()=>{arrangeFixedActions();enforceCategoryIcons();});
-        requestAnimationFrame(()=>{arrangeFixedActions();enforceCategoryIcons();});
+        queueMicrotask(()=>{arrangeFixedActions();enforceCategoryIcons();installCategoryScroller();});
+        requestAnimationFrame(()=>{arrangeFixedActions();enforceCategoryIcons();installCategoryScroller();});
         return r;
       };
       wrapped.__v29Wrapped=true;
@@ -190,6 +247,7 @@
     c.classList.add('v29-repair');
     arrangeFixedActions();
     enforceCategoryIcons();
+    installCategoryScroller();
     decorateMoonCue();
     qa('#cit-grid .cit-thought').forEach(bubble=>{
       const glyph=q('.cit-thought-icon',bubble);
