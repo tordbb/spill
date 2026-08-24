@@ -231,6 +231,14 @@ test('park action list responds to real touch scrolling without moving fixed con
   });
   expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
 
+  await page.evaluate(() => {
+    const el=document.querySelector('#cit-tools .v23-content-col');
+    window.__v30events={pointerdown:0,pointermove:0,touchstart:0,touchmove:0};
+    for(const type of Object.keys(window.__v30events)){
+      el.addEventListener(type,()=>window.__v30events[type]++,true);
+    }
+  });
+
   const client=await context.newCDPSession(page);
   const y=before.content.top+before.content.height/2;
   const xA=before.content.left+before.content.width*.78;
@@ -267,6 +275,10 @@ test('park action list responds to real touch scrolling without moving fixed con
     await swipe(xB,xA);
     afterScroll=await page.evaluate(() => document.querySelector('#cit-tools .v23-content-col').scrollTop);
   }
+  console.log('V30_TOUCH_DEBUG',JSON.stringify(await page.evaluate(() => {
+    const el=document.querySelector('#cit-tools .v23-content-col');
+    return {events:window.__v30events,scrollTop:el.scrollTop,max:el.scrollHeight-el.clientHeight,pointer:el.dataset.v30PointerScroll||'',touch:el.dataset.v30TouchScroll||''};
+  })));
   expect(afterScroll).toBeGreaterThan(0);
 
   const after=await page.evaluate(() => {
