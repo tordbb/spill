@@ -88,17 +88,18 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   await page.waitForTimeout(100);
   await expect(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]').nth(0).locator('.v29-road-network')).toHaveCount(1);
 
-  const fixedOrder=await page.evaluate(() => {
+  const fixedState=await page.evaluate(() => {
+    const fixed=document.querySelector('#v30-fixed-actions');
     const cats=document.querySelector('#cit-tools .v23-category-col');
-    return [...cats.children].map(el => ({
-      id:el.id,
-      cls:el.className,
-      label:el.getAttribute('aria-label')||''
-    }));
+    return {
+      fixed:[...fixed.children].map(el=>({id:el.id,label:el.getAttribute('aria-label')||''})),
+      categories:[...cats.children].map(el=>({id:el.id,label:el.getAttribute('aria-label')||'',tag:el.dataset.v29Category||''}))
+    };
   });
-  expect(fixedOrder[0].id).toBe('cit-undo');
-  expect(fixedOrder[1].label).toBe('Fjern');
-  expect(fixedOrder[2].cls).toContain('v30-edit-sep');
+  expect(fixedState.fixed[0].id).toBe('cit-undo');
+  expect(fixedState.fixed[1].label).toBe('Fjern');
+  expect(fixedState.categories).toHaveLength(3);
+  expect(fixedState.categories.every(x=>x.tag!=='')).toBe(true);
   const sepStyle=await page.evaluate(() => {
     const el=document.querySelector('#cit-tools .v30-edit-sep');
     const cs=getComputedStyle(el);
@@ -122,11 +123,11 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   expect(parkScroll.scrollHeight).toBeGreaterThan(parkScroll.clientHeight);
 
   const undoState=await page.evaluate(() => {
-    const undo=document.querySelector('#cit-undo'), cats=document.querySelector('#cit-tools .v23-category-col');
+    const undo=document.querySelector('#cit-undo'), fixed=document.querySelector('#v30-fixed-actions');
     const r=undo.getBoundingClientRect(),vr=document.querySelector('#g-cit').getBoundingClientRect();
-    return {insideCategory:undo.parentElement===cats,firstChild:cats.firstElementChild===undo,left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewLeft:vr.left,viewTop:vr.top,viewRight:vr.right,viewBottom:vr.bottom};
+    return {insideFixed:undo.parentElement===fixed,firstChild:fixed.firstElementChild===undo,left:r.left,top:r.top,right:r.right,bottom:r.bottom,viewLeft:vr.left,viewTop:vr.top,viewRight:vr.right,viewBottom:vr.bottom};
   });
-  expect(undoState.insideCategory).toBe(true);
+  expect(undoState.insideFixed).toBe(true);
   expect(undoState.firstChild).toBe(true);
   expect(undoState.right).toBeGreaterThan(0);
   expect(undoState.bottom).toBeGreaterThan(0);
@@ -306,4 +307,60 @@ test('park action list responds to real touch scrolling without moving fixed con
   await expect.poll(()=>page.evaluate(() => citTool)).toBe('W');
 
   await context.close();
+});
+
+
+test('expanded live-needs text cannot push the action panel outside the rail', async ({ page }) => {
+  await page.setViewportSize({width:709,height:1536});
+  await page.goto(url);
+  await page.click('#card-cit');
+  await page.waitForTimeout(250);
+
+  const before=await page.evaluate(() => {
+    const box=sel=>{const r=document.querySelector(sel).getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    return {
+      rail:box('#v23-rail'),
+      tools:box('#cit-tools'),
+      contentHeight:document.querySelector('#cit-tools .v23-content-col').clientHeight,
+      map:box('#cit-viewport')
+    };
+  });
+
+  await page.evaluate(() => {
+    const tip=document.querySelector('#cit-help-tip');
+    tip.style.display='';
+    tip.innerHTML='<span class="v27-live-lead">Tips: Bygg det de tenker på:</span><span class="v27-live-needs">'+
+      Array.from({length:48},(_,i)=>'<span class="v18-need-icon v27-live-need">'+(['🏠','🏢','🏫','🌳','🚌','⛲'][i%6])+'</span>').join('')+
+      '</span>';
+  });
+  await page.waitForTimeout(250);
+
+  const after=await page.evaluate(() => {
+    const box=sel=>{const r=document.querySelector(sel).getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    const help=document.querySelector('#cit-help');
+    const cs=getComputedStyle(help);
+    return {
+      rail:box('#v23-rail'),
+      info:box('#v23-info'),
+      tools:box('#cit-tools'),
+      fixed:box('#v30-fixed-actions'),
+      cats:box('#cit-tools .v23-category-col'),
+      content:box('#cit-tools .v23-content-col'),
+      map:box('#cit-viewport'),
+      help:{clientHeight:help.clientHeight,scrollHeight:help.scrollHeight,overflowY:cs.overflowY}
+    };
+  });
+
+  expect(after.tools.bottom).toBeLessThanOrEqual(after.rail.bottom+1);
+  expect(after.info.bottom).toBeLessThanOrEqual(after.rail.bottom+1);
+  expect(after.fixed.top).toBeGreaterThanOrEqual(after.tools.top-1);
+  expect(after.cats.bottom).toBeLessThanOrEqual(after.tools.bottom+1);
+  expect(after.content.bottom).toBeLessThanOrEqual(after.tools.bottom+1);
+  expect(after.content.height).toBeGreaterThan(20);
+  expect(after.map.width).toBeCloseTo(before.map.width,0);
+  expect(after.map.height).toBeCloseTo(before.map.height,0);
+  expect(['auto','scroll','hidden']).toContain(after.help.overflowY);
+  if(after.help.scrollHeight>after.help.clientHeight){
+    expect(['auto','scroll']).toContain(after.help.overflowY);
+  }
 });
