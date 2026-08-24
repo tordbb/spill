@@ -20,21 +20,56 @@
     return bin;
   }
 
+  function prepareActionScroller(content){
+    if(!content)return null;
+    let inner=q(':scope > .v31-action-scroll-inner',content);
+    if(!inner){
+      inner=document.createElement('div');
+      inner.className='v31-action-scroll-inner';
+      const children=[...content.children];
+      children.forEach(el=>inner.appendChild(el));
+      content.appendChild(inner);
+      content.dataset.v31Progress='0';
+    }
+    const max=Math.max(0,inner.scrollHeight-content.clientHeight);
+    const progress=Math.max(0,Math.min(max,Number(content.dataset.v31Progress)||0));
+    content.dataset.v31Progress=String(progress);
+    inner.style.transform='translate3d(0,'+(-progress)+'px,0)';
+    return {inner,max,progress};
+  }
+
+  function setActionProgress(content,value){
+    const state=prepareActionScroller(content);
+    if(!state)return 0;
+    const next=Math.max(0,Math.min(state.max,Number(value)||0));
+    content.dataset.v31Progress=String(next);
+    state.inner.style.transform='translate3d(0,'+(-next)+'px,0)';
+    return next;
+  }
+
   function installActionScroller(content){
-    if(!content||content.dataset.v31PhysicalScroller==='1')return;
+    if(!content)return;
+    prepareActionScroller(content);
+    if(content.dataset.v31PhysicalScroller==='1')return;
     content.dataset.v31PhysicalScroller='1';
 
     let drag=null;
     let suppressUntil=0;
-    const clamp=v=>Math.max(0,Math.min(content.scrollHeight-content.clientHeight,v));
 
     content.addEventListener('touchstart',e=>{
       const t=e.touches&&e.touches[0];if(!t)return;
+      const state=prepareActionScroller(content);if(!state)return;
       const tapTarget=e.target&&e.target.closest?e.target.closest('.v23-tool-btn'):null;
-      drag={x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,tapTarget,moved:false};
-      /* The city screen itself is rotated. Own this gesture so the physical
-         horizontal finger movement maps exactly to the content's local vertical
-         scroll axis instead of letting the browser guess the transformed axis. */
+      drag={
+        x:t.clientX,
+        y:t.clientY,
+        progress:state.progress,
+        tapTarget,
+        moved:false
+      };
+      /* The entire city is rotated +90 degrees. A local upward translation maps
+         to a physical rightward translation. Therefore physical finger dx maps
+         directly to progress: +42px finger movement => +42px list movement. */
       e.preventDefault();
     },{passive:false});
 
@@ -45,8 +80,9 @@
       const dy=t.clientY-drag.y;
       if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
       if(Math.abs(dx)>=Math.abs(dy)){
-        drag.moved=true;
-        content.scrollTop=clamp(drag.scrollTop-dx);
+        const before=Number(content.dataset.v31Progress)||0;
+        const after=setActionProgress(content,drag.progress+dx);
+        if(after!==before)drag.moved=true;
         e.preventDefault();
       }
     },{passive:false});
@@ -63,18 +99,23 @@
     };
     content.addEventListener('touchend',end,{passive:true});
     content.addEventListener('touchcancel',end,{passive:true});
+
     content.addEventListener('click',e=>{
       if(performance.now()<suppressUntil){
-        e.preventDefault();e.stopImmediatePropagation();
+        e.preventDefault();
+        e.stopImmediatePropagation();
       }
     },true);
+
     content.addEventListener('wheel',e=>{
       const delta=Math.abs(e.deltaX)>=Math.abs(e.deltaY)?e.deltaX:e.deltaY;
       if(!delta)return;
-      const before=content.scrollTop;
-      content.scrollTop=clamp(before+delta);
-      if(content.scrollTop!==before)e.preventDefault();
+      const before=Number(content.dataset.v31Progress)||0;
+      const after=setActionProgress(content,before+delta);
+      if(after!==before)e.preventDefault();
     },{passive:false});
+
+    requestAnimationFrame(()=>prepareActionScroller(content));
   }
 
   function flattenTools(tools){
