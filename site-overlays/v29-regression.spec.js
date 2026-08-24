@@ -110,17 +110,20 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
 
   const parkScroll=await page.evaluate(() => {
     const el=document.querySelector('#cit-tools .v23-content-col');
+    const inner=el.querySelector(':scope > .v30-scroll-inner');
     const cs=getComputedStyle(el);
     return {
-      buttons:el.children.length,
-      overflowY:cs.overflowY,
-      scrollHeight:el.scrollHeight,
-      clientHeight:el.clientHeight
+      buttons:inner.children.length,
+      overflow:cs.overflow,
+      innerHeight:inner.scrollHeight,
+      clientHeight:el.clientHeight,
+      max:Number(el.dataset.v30Offset||0)+Math.max(0,inner.scrollHeight-el.clientHeight)
     };
   });
   expect(parkScroll.buttons).toBe(7);
-  expect(['auto','scroll']).toContain(parkScroll.overflowY);
-  expect(parkScroll.scrollHeight).toBeGreaterThan(parkScroll.clientHeight);
+  expect(parkScroll.overflow).toBe('hidden');
+  expect(parkScroll.innerHeight).toBeGreaterThan(parkScroll.clientHeight);
+  expect(parkScroll.max).toBeGreaterThan(0);
 
   const undoState=await page.evaluate(() => {
     const undo=document.querySelector('#cit-undo'), fixed=document.querySelector('#v30-fixed-actions');
@@ -213,14 +216,14 @@ test('park action list responds to real touch scrolling without moving fixed con
 
   const before=await page.evaluate(() => {
     const content=document.querySelector('#cit-tools .v23-content-col');
+    const inner=content.querySelector(':scope > .v30-scroll-inner');
     const undo=document.querySelector('#cit-undo').getBoundingClientRect();
     const remove=document.querySelector('#cit-tools .v23-broom').getBoundingClientRect();
     const firstCategory=document.querySelector('#cit-tools .v23-tool-btn[data-v29-category]').getBoundingClientRect();
     const r=content.getBoundingClientRect();
     return {
-      scrollTop:content.scrollTop,
-      scrollHeight:content.scrollHeight,
-      clientHeight:content.clientHeight,
+      offset:Number(content.dataset.v30Offset||0),
+      max:Math.max(0,inner.scrollHeight-content.clientHeight),
       content:{left:r.left,top:r.top,width:r.width,height:r.height},
       fixed:{
         undo:{left:undo.left,top:undo.top},
@@ -229,15 +232,7 @@ test('park action list responds to real touch scrolling without moving fixed con
       }
     };
   });
-  expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
-
-  await page.evaluate(() => {
-    const el=document.querySelector('#cit-tools .v23-content-col');
-    window.__v30events={pointerdown:0,pointermove:0,touchstart:0,touchmove:0};
-    for(const type of Object.keys(window.__v30events)){
-      el.addEventListener(type,()=>window.__v30events[type]++,true);
-    }
-  });
+  expect(before.max).toBeGreaterThan(0);
 
   const client=await context.newCDPSession(page);
   const y=before.content.top+before.content.height/2;
@@ -253,33 +248,16 @@ test('park action list responds to real touch scrolling without moving fixed con
       await page.waitForTimeout(18);
     }
     await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    await page.waitForTimeout(180);
+    await page.waitForTimeout(120);
   }
 
-  console.log('V30_TOUCH_TARGET',JSON.stringify(await page.evaluate(({x,y})=>{
-    const el=document.elementFromPoint(x,y);
-    const content=document.querySelector('#cit-tools .v23-content-col');
-    return {
-      target:el?{tag:el.tagName,id:el.id,cls:el.className}:null,
-      inside:!!(el&&(el===content||content.contains(el))),
-      content:{left:content.getBoundingClientRect().left,top:content.getBoundingClientRect().top,right:content.getBoundingClientRect().right,bottom:content.getBoundingClientRect().bottom}
-    };
-  },{x:xA,y})));
   await swipe(xA,xB);
-  console.log('V30_TOUCH_AFTER',JSON.stringify(await page.evaluate(()=>{
-    const el=document.querySelector('#cit-tools .v23-content-col');
-    return {scrollTop:el.scrollTop,touch:el.dataset.v30TouchScroll||'',pointer:el.dataset.v30PointerScroll||''};
-  })));
-  let afterScroll=await page.evaluate(() => document.querySelector('#cit-tools .v23-content-col').scrollTop);
-  if(afterScroll===0){
+  let afterOffset=await page.evaluate(() => Number(document.querySelector('#cit-tools .v23-content-col').dataset.v30Offset||0));
+  if(afterOffset===0){
     await swipe(xB,xA);
-    afterScroll=await page.evaluate(() => document.querySelector('#cit-tools .v23-content-col').scrollTop);
+    afterOffset=await page.evaluate(() => Number(document.querySelector('#cit-tools .v23-content-col').dataset.v30Offset||0));
   }
-  console.log('V30_TOUCH_DEBUG',JSON.stringify(await page.evaluate(() => {
-    const el=document.querySelector('#cit-tools .v23-content-col');
-    return {events:window.__v30events,scrollTop:el.scrollTop,max:el.scrollHeight-el.clientHeight,pointer:el.dataset.v30PointerScroll||'',touch:el.dataset.v30TouchScroll||''};
-  })));
-  expect(afterScroll).toBeGreaterThan(0);
+  expect(afterOffset).toBeGreaterThan(0);
 
   const after=await page.evaluate(() => {
     const undo=document.querySelector('#cit-undo').getBoundingClientRect();
@@ -296,32 +274,33 @@ test('park action list responds to real touch scrolling without moving fixed con
     expect(Math.abs(after[key].top-before.fixed[key].top)).toBeLessThan(1);
   }
 
-  const contentLocator=page.locator('#cit-tools .v23-content-col');
   for(let i=0;i<4;i++){
     const state=await page.evaluate(() => {
       const el=document.querySelector('#cit-tools .v23-content-col');
-      return {top:el.scrollTop,max:el.scrollHeight-el.clientHeight};
+      const inner=el.querySelector(':scope > .v30-scroll-inner');
+      return {offset:Number(el.dataset.v30Offset||0),max:Math.max(0,inner.scrollHeight-el.clientHeight)};
     });
-    if(state.top>=state.max-1)break;
+    if(state.offset>=state.max-1)break;
     await swipe(xA,xB);
   }
 
   const hit=await page.evaluate(() => {
     const content=document.querySelector('#cit-tools .v23-content-col');
-    const last=content.lastElementChild;
+    const inner=content.querySelector(':scope > .v30-scroll-inner');
+    const last=inner.lastElementChild;
     const cr=content.getBoundingClientRect(),lr=last.getBoundingClientRect();
     const x=lr.left+lr.width/2,y=lr.top+lr.height/2;
     const top=document.elementFromPoint(x,y);
     return {
-      scrollTop:content.scrollTop,
-      max:content.scrollHeight-content.clientHeight,
+      offset:Number(content.dataset.v30Offset||0),
+      max:Math.max(0,inner.scrollHeight-content.clientHeight),
       content:{left:cr.left,top:cr.top,right:cr.right,bottom:cr.bottom},
       last:{left:lr.left,top:lr.top,right:lr.right,bottom:lr.bottom,x,y},
       hitIsLast:top===last||last.contains(top)
     };
   });
-  expect(hit.scrollTop).toBeGreaterThan(0);
-  expect(hit.scrollTop).toBeGreaterThanOrEqual(hit.max-1);
+  expect(hit.offset).toBeGreaterThan(0);
+  expect(hit.offset).toBeGreaterThanOrEqual(hit.max-1);
   expect(hit.last.left).toBeGreaterThanOrEqual(hit.content.left-1);
   expect(hit.last.right).toBeLessThanOrEqual(hit.content.right+1);
   expect(hit.last.top).toBeGreaterThanOrEqual(hit.content.top-1);
@@ -333,7 +312,6 @@ test('park action list responds to real touch scrolling without moving fixed con
 
   await context.close();
 });
-
 
 test('expanded live-needs text cannot push the action panel outside the rail', async ({ page }) => {
   await page.setViewportSize({width:709,height:1536});
