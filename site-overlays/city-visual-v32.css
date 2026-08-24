@@ -93,13 +93,15 @@
 
 /* Do not let the narrow logical status cell wrap the money indicator before its
    counter-rotation. */
-#g-cit.v32-rotation-clean #v31-money-cell #cit-hud {
+#g-cit.v32-rotation-clean #v31-status #v31-money-cell #cit-hud {
+  transform:rotate(-90deg) !important;
+  transform-origin:center !important;
   width:max-content !important;
   min-width:max-content !important;
   max-width:none !important;
   white-space:nowrap !important;
 }
-#g-cit.v32-rotation-clean #v31-money-cell #cit-money-wrap {
+#g-cit.v32-rotation-clean #v31-status #v31-money-cell #cit-money-wrap {
   display:inline-flex !important;
   flex-direction:row !important;
   align-items:center !important;
