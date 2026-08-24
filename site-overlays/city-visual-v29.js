@@ -160,11 +160,26 @@
 
   let categoryScrollerInstalled=false;
   let categoryDrag=null;
+  let categoryScrollLock=null;
   let categorySuppressClickUntil=0;
 
   function categoryContentFromTarget(target){
     const el=target&&target.closest?target.closest('#g-cit #cit-tools .v23-content-col'):null;
     return el&&el.isConnected?el:null;
+  }
+
+  function holdCategoryScroll(content,value){
+    if(!content||!content.isConnected)return;
+    const max=Math.max(0,content.scrollHeight-content.clientHeight);
+    value=Math.max(0,Math.min(max,value));
+    categoryScrollLock={content,value,until:performance.now()+380};
+    const apply=()=>{
+      if(!categoryScrollLock||categoryScrollLock.content!==content||performance.now()>categoryScrollLock.until)return;
+      if(content.isConnected&&Math.abs(content.scrollTop-value)>.5)content.scrollTop=value;
+    };
+    apply();
+    requestAnimationFrame(apply);
+    [40,90,160,260,360].forEach(ms=>setTimeout(apply,ms));
   }
 
   function categoryScrollByDrag(content,startX,startY,startScroll,x,y,kind){
@@ -187,6 +202,7 @@
       const content=categoryContentFromTarget(e.target);
       const t=e.touches&&e.touches[0];
       if(!content||!t)return;
+      categoryScrollLock=null;
       categoryDrag={kind:'touch',content,x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,lastScroll:content.scrollTop,moved:false};
     },{capture:true,passive:true});
 
@@ -204,10 +220,7 @@
       const {content,lastScroll,moved}=categoryDrag;
       if(moved)categorySuppressClickUntil=performance.now()+220;
       categoryDrag=null;
-      if(moved&&content&&content.isConnected){
-        requestAnimationFrame(()=>{content.scrollTop=lastScroll;});
-        setTimeout(()=>{if(content.isConnected)content.scrollTop=lastScroll;},60);
-      }
+      if(moved)holdCategoryScroll(content,lastScroll);
     };
     document.addEventListener('touchend',endTouch,{capture:true,passive:true});
     document.addEventListener('touchcancel',endTouch,{capture:true,passive:true});
@@ -219,6 +232,7 @@
       if(e.pointerType==='mouse'&&e.button!==0)return;
       const content=categoryContentFromTarget(e.target);
       if(!content)return;
+      categoryScrollLock=null;
       categoryDrag={kind:'pointer',id:e.pointerId,content,x:e.clientX,y:e.clientY,scrollTop:content.scrollTop,lastScroll:content.scrollTop,moved:false};
       try{content.setPointerCapture(e.pointerId);}catch(_e){}
     },true);
@@ -237,10 +251,7 @@
       if(moved)categorySuppressClickUntil=performance.now()+220;
       try{content.releasePointerCapture(e.pointerId);}catch(_e){}
       categoryDrag=null;
-      if(moved&&content&&content.isConnected){
-        requestAnimationFrame(()=>{content.scrollTop=lastScroll;});
-        setTimeout(()=>{if(content.isConnected)content.scrollTop=lastScroll;},60);
-      }
+      if(moved)holdCategoryScroll(content,lastScroll);
     };
     document.addEventListener('pointerup',endPointer,true);
     document.addEventListener('pointercancel',endPointer,true);
@@ -250,6 +261,12 @@
       if(!categoryContentFromTarget(e.target))return;
       e.preventDefault();
       e.stopImmediatePropagation();
+    },true);
+
+    document.addEventListener('scroll',e=>{
+      const lock=categoryScrollLock;
+      if(!lock||performance.now()>lock.until||e.target!==lock.content)return;
+      if(Math.abs(lock.content.scrollTop-lock.value)>.5)lock.content.scrollTop=lock.value;
     },true);
 
     document.addEventListener('wheel',e=>{
