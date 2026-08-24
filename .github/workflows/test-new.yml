@@ -110,7 +110,7 @@ jobs:
           grep -q 'city-visual-v19-script' dist/new/city/index.html
           grep -q 'city-visual-v23-script' dist/new/city/index.html
           grep -q 'city-visual-v29-script' dist/new/city/index.html
-          grep -q 'city-visual-v31-script\|city-visual-v32-script' dist/new/city/index.html
+          grep -q 'city-visual-v31-script' dist/new/city/index.html
           grep -q 'city-visual-v32-script' dist/new/city/index.html
           grep -q 'v29-road-network' dist/new/city/index.html
           grep -q 'v31-layout' dist/new/city/index.html
