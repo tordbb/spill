@@ -25,6 +25,7 @@ jobs:
           node --check site-overlays/city-visual-v27.js
           node --check site-overlays/city-visual-v29.js
           node --check site-overlays/city-visual-v31.js
+          node --check site-overlays/city-visual-v32.js
           node --check site-overlays/new-pages-v31.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
@@ -90,6 +91,7 @@ jobs:
           python site-overlays/inject-v27.py dist/new/city/index.html
           python site-overlays/inject-v29.py dist/new/city/index.html
           python site-overlays/inject-v31.py dist/new/city/index.html
+          python site-overlays/inject-v32.py dist/new/city/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
@@ -109,6 +111,7 @@ jobs:
           grep -q 'city-visual-v23-script' dist/new/city/index.html
           grep -q 'city-visual-v29-script' dist/new/city/index.html
           grep -q 'city-visual-v31-script' dist/new/city/index.html
+          grep -q 'city-visual-v32-script' dist/new/city/index.html
           grep -q 'v29-road-network' dist/new/city/index.html
           grep -q 'v31-layout' dist/new/city/index.html
 
