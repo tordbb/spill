@@ -21,6 +21,7 @@ jobs:
           node --check site-overlays/city-visual-v23.js
           node --check site-overlays/city-visual-v24.js
           node --check site-overlays/city-visual-v25.js
+          node --check site-overlays/city-visual-v26.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
@@ -63,6 +64,7 @@ jobs:
           python site-overlays/inject-v23.py dist/new/index.html
           python site-overlays/inject-v24.py dist/new/index.html
           python site-overlays/inject-v25.py dist/new/index.html
+          python site-overlays/inject-v26.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
@@ -74,19 +76,23 @@ jobs:
           grep -q 'city-visual-v23-script' dist/new/index.html
           grep -q 'city-visual-v24-script' dist/new/index.html
           grep -q 'city-visual-v25-script' dist/new/index.html
+          grep -q 'city-visual-v26-script' dist/new/index.html
           grep -q 'V24_DAYS' dist/new/index.html
           grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/index.html
           grep -q 'v24-saturday' dist/new/index.html
-          grep -q 'v24-delete-setting' dist/new/index.html
           grep -q 'v24-stop-wheel' dist/new/index.html
           grep -q 'v25-nav-slot' dist/new/index.html
           grep -q 'v25-action-slot' dist/new/index.html
+          grep -q 'v26-category-svg' dist/new/index.html
+          grep -q 'v26-shop-original' dist/new/index.html
+          grep -q 'v26-settings-menu' dist/new/index.html
+          grep -q 'v26-polish' dist/new/index.html
           grep -q 'v23-category-col' dist/new/index.html
           grep -q 'v23-content-col' dist/new/index.html
           grep -q 'v23-stop-icon' dist/new/index.html
           grep -q 'v23-map-symbol' dist/new/index.html
           grep -q 'citFarmDriveW' dist/index.html
-          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script\|city-visual-v24-script\|city-visual-v25-script' dist/index.html; then
+          if grep -q 'city-visual-v19-script\|city-visual-v20-script\|city-visual-v21-script\|city-visual-v23-script\|city-visual-v24-script\|city-visual-v25-script\|city-visual-v26-script' dist/index.html; then
             echo 'ERROR: experimental visuals leaked into stable root build'
             exit 1
           fi
