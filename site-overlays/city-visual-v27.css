@@ -1,0 +1,113 @@
+/* /new-only v27: separate the information and tool panels, repair thoughts, and use an exit arrow. */
+
+/* The compact v25 exit remains the same control; only its meaning is made visually explicit. */
+#v25-exit::before {
+  content:'←' !important;
+  font-family:system-ui,sans-serif !important;
+  font-size:21px !important;
+  font-weight:900 !important;
+  line-height:1 !important;
+  color:#294236 !important;
+}
+
+/* The rail itself is no longer one long blob. Its two children are independent panels. */
+#g-cit.v27-panels #v23-rail {
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  padding:0 !important;
+  gap:7px !important;
+  overflow:visible !important;
+}
+#g-cit.v27-panels #v23-info,
+#g-cit.v27-panels #cit-tools.v23-tools {
+  border:1px solid #304d3928 !important;
+  border-radius:11px !important;
+  background:#f7fbf6ee !important;
+  box-shadow:0 2px 8px #203c2918 !important;
+  box-sizing:border-box !important;
+}
+#g-cit.v27-panels #v23-info {
+  padding:3px !important;
+}
+#g-cit.v27-panels #cit-tools.v23-tools {
+  margin:0 !important;
+  padding:4px !important;
+  display:grid !important;
+  grid-template-columns:var(--v23-btn) var(--v23-btn) !important;
+  grid-template-rows:auto auto !important;
+  align-items:start !important;
+  justify-content:center !important;
+  gap:var(--v23-gap) !important;
+}
+#g-cit.v27-panels #cit-tools .v23-category-col { grid-column:1; grid-row:1; }
+#g-cit.v27-panels #cit-tools .v23-content-col { grid-column:2; grid-row:1; }
+#g-cit.v27-panels #v27-edit-actions {
+  grid-column:1 / -1;
+  grid-row:2;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:var(--v23-gap);
+  margin-top:6px;
+  padding-top:6px;
+  border-top:2px solid #71829138;
+}
+#g-cit.v27-panels #v27-edit-actions .v23-tool-btn {
+  flex:0 0 var(--v23-btn);
+}
+
+/* The road category is a small branching network, not one isolated stretch of road. */
+#g-cit .v27-road-network { width:91%; height:91%; display:block; overflow:visible; }
+
+/* Thought content must read as content inside a bubble, never as a building placed on the map. */
+#g-cit.v27-ui .cit-thought-icon.v23-shared-icon {
+  width:58% !important;
+  height:58% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  flex-basis:auto !important;
+  margin:auto !important;
+}
+#g-cit.v27-ui .cit-thought-icon .v23-shared-symbol,
+#g-cit.v27-ui .cit-thought-icon .v21-shared-svg,
+#g-cit.v27-ui .cit-thought-icon .v20-shared-svg {
+  width:70% !important;
+  height:70% !important;
+  max-width:70% !important;
+  max-height:70% !important;
+}
+#g-cit.v27-ui .cit-thought-icon .v23-shared-symbol.v23-emoji-symbol {
+  font-size:11px !important;
+}
+#g-cit.v27-ui .v27-empty-thought {
+  display:none !important;
+}
+
+/* During simulation, the instruction line receives the missing items live as residents think of them. */
+#g-cit.v27-ui #cit-help-tip {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+}
+#g-cit.v27-ui .v27-live-lead {
+  font-weight:800;
+  white-space:normal;
+}
+#g-cit.v27-ui .v27-live-needs {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+}
+#g-cit.v27-ui .v27-live-need {
+  width:21px !important;
+  height:21px !important;
+  min-width:21px !important;
+  min-height:21px !important;
+  margin:0 !important;
+}
