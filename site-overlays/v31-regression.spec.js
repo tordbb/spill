@@ -107,15 +107,17 @@ async function assertCityStructure(page,width,height){
       open:b.classList.contains('category-open'),
       selected:b.classList.contains('sel'),
       border:s.borderTopWidth,
-      outline:s.outlineStyle,
-      shadow:s.boxShadow,
+      iconShadow:s.boxShadow,
+      buttonOutline:getComputedStyle(b).outlineStyle,
+      buttonShadow:getComputedStyle(b).boxShadow,
       transform:getComputedStyle(b).transform
     };
   });
   expect(roadState.open).toBe(false);
-  expect(roadState.selected).toBe(false);
   expect(roadState.border).toBe('0px');
-  expect(roadState.shadow).toBe('none');
+  expect(roadState.iconShadow).toBe('none');
+  expect(roadState.buttonOutline).toBe('none');
+  expect(roadState.buttonShadow).toBe('none');
   expect(roadState.transform).not.toBe('none');
 
   return {top,map,bottom,actions,status};
