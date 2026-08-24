@@ -191,19 +191,29 @@
       }
     }catch(_e){}
 
-    const byW=Math.floor(availW/CITY_CFG.COLS);
-    const byH=Math.floor(availH/CITY_CFG.ROWS);
-    citTs=Math.max(4,Math.min(byW,byH));
+    /* The screen is rotated, so the local board height becomes the physical
+       board width. Fill that physical width first; if the board becomes wider than
+       the middle strip locally, the viewport crops it rather than shrinking the
+       whole map into a narrow band. */
+    const byPhysicalWidth=Math.floor(availH/CITY_CFG.ROWS);
+    citTs=Math.max(4,byPhysicalWidth);
     const bw=CITY_CFG.COLS*citTs,bh=CITY_CFG.ROWS*citTs;
-    v.style.width=bw+'px';v.style.height=bh+'px';
+    const vw=Math.min(availW,bw);
+    const vh=Math.min(availH,bh);
+    v.style.width=vw+'px';v.style.height=vh+'px';
     g.style.width=bw+'px';g.style.height=bh+'px';
     g.style.backgroundSize=`${citTs}px ${citTs}px, ${citTs}px ${citTs}px, ${citTs}px ${citTs}px`;
     g.querySelectorAll('.ct[data-i]').forEach(d=>d.style.setProperty('--v23-ts',citTs+'px'));
 
     try{
-      if(oldW&&oldH&&typeof citCam!=='undefined'&&citCam.scale>1){
-        citCam.x=bw/2-focusX*bw*citCam.scale;
-        citCam.y=bh/2-focusY*bh*citCam.scale;
+      if(typeof citCam!=='undefined'){
+        if(oldW&&oldH&&citCam.scale>1){
+          citCam.x=vw/2-focusX*bw*citCam.scale;
+          citCam.y=vh/2-focusY*bh*citCam.scale;
+        }else{
+          citCam.x=(vw-bw)/2;
+          citCam.y=(vh-bh)/2;
+        }
       }
       if(typeof citApplyCamera==='function')citApplyCamera();
     }catch(_e){}
