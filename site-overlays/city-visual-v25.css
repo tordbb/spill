@@ -1,7 +1,7 @@
 /* City visual/layout v25 — keep navigation and HUD controls inside fixed rail slots. */
 
 /* Original global navigation buttons stay functional but no longer occupy visual space. */
-.v25-nav-source {
+#g-cit .v25-nav-source {
   position:fixed !important;
   left:-10000px !important;
   top:-10000px !important;
@@ -16,7 +16,7 @@
   overflow:hidden !important;
   z-index:-1 !important;
 }
-.v25-nav-source.v25-anchor-source {
+#g-cit .v25-nav-source.v25-anchor-source {
   z-index:1 !important;
 }
 
