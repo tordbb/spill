@@ -102,22 +102,13 @@ body > .screen:not(#g-cit) .v25-nav-source {
   height:100% !important;
   min-height:0 !important;
   max-height:100% !important;
-  overflow:hidden !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
   overscroll-behavior:contain !important;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
-  touch-action:none !important;
+  touch-action:pan-y !important;
   box-sizing:border-box !important;
-}
-#g-cit.v29-repair #cit-tools .v30-scroll-inner {
-  width:100%;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:var(--v23-gap);
-  will-change:transform;
-  transform:translate3d(0,0,0);
 }
 #g-cit.v29-repair #v27-edit-actions {
   display:none !important;
