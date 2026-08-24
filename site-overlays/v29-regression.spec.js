@@ -77,7 +77,7 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   expect(mapBox.height).toBeGreaterThanOrEqual(1000);
 
   const category=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]');
-  await expect(category).toHaveCount(5);
+  await expect(category).toHaveCount(3);
   await expect(category.nth(0).locator('.v29-road-network')).toHaveCount(1);
 
   await category.nth(1).click();
