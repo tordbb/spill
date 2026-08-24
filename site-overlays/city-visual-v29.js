@@ -102,7 +102,7 @@
       main.append(cue,document.createTextNode(', og byen får en ny dag'));
     }
     const cs=getComputedStyle(night);
-    cue.style.backgroundColor=cs.backgroundColor;
+    cue.style.background=cs.background;
     cue.style.borderColor=cs.borderColor;
     cue.style.borderRadius=cs.borderRadius;
     cue.style.boxShadow=cs.boxShadow;
