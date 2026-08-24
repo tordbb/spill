@@ -34,8 +34,9 @@ body > .screen:not(#g-cit) .v25-nav-source {
 /* Keep the two-column tool panel compact. Only the active category contents scroll.
    The fixed row keeps remove, undo and every category in place. */
 #g-cit.v29-repair #cit-tools .v23-content-col {
-  height:calc(var(--v23-btn) * 5 + var(--v23-gap) * 4) !important;
-  max-height:calc(var(--v23-btn) * 5 + var(--v23-gap) * 4) !important;
+  height:calc(var(--v23-btn) + var(--v23-btn) + var(--v23-btn) + var(--v23-btn) + var(--v23-btn) + var(--v23-gap) + var(--v23-gap) + var(--v23-gap) + var(--v23-gap)) !important;
+  min-height:0 !important;
+  max-height:calc(var(--v23-btn) + var(--v23-btn) + var(--v23-btn) + var(--v23-btn) + var(--v23-btn) + var(--v23-gap) + var(--v23-gap) + var(--v23-gap) + var(--v23-gap)) !important;
   overflow-x:hidden !important;
   overflow-y:auto !important;
   overscroll-behavior:contain !important;
