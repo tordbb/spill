@@ -4,8 +4,10 @@ const ROOT='http://127.0.0.1:4173/new/city/';
 
 function isMinus90(transform){
   if(!transform||transform==='none')return false;
-  const m=new DOMMatrix(transform);
-  return Math.abs(m.a)<0.02 && Math.abs(m.d)<0.02 && Math.abs(m.b+1)<0.02 && Math.abs(m.c-1)<0.02;
+  const match=/matrix\(([^)]+)\)/.exec(transform);
+  if(!match)return false;
+  const [a,b,c,d]=match[1].split(',').map(Number);
+  return Math.abs(a)<0.02 && Math.abs(d)<0.02 && Math.abs(b+1)<0.02 && Math.abs(c-1)<0.02;
 }
 
 async function box(locator){
