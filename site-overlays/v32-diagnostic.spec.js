@@ -39,4 +39,16 @@ test('v32 inspect rotation targets', async ({ page }) => {
   })));
 
   console.log('V32_TOOLS',JSON.stringify(await page.evaluate(()=>[...document.querySelector('#cit-tools .v23-category-col').children].map(el=>({tag:el.tagName,id:el.id||'',cls:el.className||'',text:(el.textContent||'').trim(),html:el.outerHTML.slice(0,1000)})))));
+  console.log('V32_DYNAMIC',JSON.stringify(await page.evaluate(()=>{
+    let person=null;
+    try{
+      if(typeof citPersonEl==='function'){
+        const el=citPersonEl('🙂');
+        person={tag:el.tagName,id:el.id||'',cls:el.className||'',html:el.outerHTML.slice(0,1800)};
+        el.remove();
+      }
+    }catch(e){person={error:String(e)}}
+    const globals=Object.keys(window).filter(k=>/^cit/i.test(k)&&/(bus|person|citizen|thought|marker)/i.test(k)).sort();
+    return {person,globals};
+  })));
 });
