@@ -152,89 +152,94 @@
     });
   }
 
+  let categoryScrollerInstalled=false;
+  let categoryDrag=null;
+  let categorySuppressClickUntil=0;
+
+  function categoryContentFromTarget(target){
+    const el=target&&target.closest?target.closest('#g-cit #cit-tools .v23-content-col'):null;
+    return el&&el.isConnected?el:null;
+  }
+
+  function categoryScrollByDrag(content,startX,startY,startScroll,x,y,kind){
+    if(!content||!content.isConnected)return false;
+    const dx=x-startX,dy=y-startY;
+    const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
+    if(Math.abs(delta)<3)return false;
+    const max=Math.max(0,content.scrollHeight-content.clientHeight);
+    content.scrollTop=Math.max(0,Math.min(max,startScroll-delta));
+    content.dataset[kind==='touch'?'v30TouchScroll':'v30PointerScroll']=String(content.scrollTop);
+    return true;
+  }
+
   function installCategoryScroller(){
-    const content=q('#cit-tools .v23-content-col');
-    if(!content||content.dataset.v30Scroller==='1')return;
-    content.dataset.v30Scroller='1';
+    if(categoryScrollerInstalled)return;
+    categoryScrollerInstalled=true;
 
-    let drag=null;
-    let touchDrag=null;
-    let suppressClickUntil=0;
+    document.addEventListener('touchstart',e=>{
+      const content=categoryContentFromTarget(e.target);
+      const t=e.touches&&e.touches[0];
+      if(!content||!t)return;
+      categoryDrag={kind:'touch',content,x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,moved:false};
+    },{capture:true,passive:true});
 
-    const begin=(e)=>{
+    document.addEventListener('touchmove',e=>{
+      if(!categoryDrag||categoryDrag.kind!=='touch')return;
+      const t=e.touches&&e.touches[0];if(!t)return;
+      if(categoryScrollByDrag(categoryDrag.content,categoryDrag.x,categoryDrag.y,categoryDrag.scrollTop,t.clientX,t.clientY,'touch')){
+        categoryDrag.moved=true;
+        e.preventDefault();
+      }
+    },{capture:true,passive:false});
+
+    const endTouch=()=>{
+      if(categoryDrag&&categoryDrag.kind==='touch'&&categoryDrag.moved)categorySuppressClickUntil=performance.now()+220;
+      if(categoryDrag&&categoryDrag.kind==='touch')categoryDrag=null;
+    };
+    document.addEventListener('touchend',endTouch,{capture:true,passive:true});
+    document.addEventListener('touchcancel',endTouch,{capture:true,passive:true});
+
+    document.addEventListener('pointerdown',e=>{
       if(e.pointerType==='touch')return;
       if(e.pointerType==='mouse'&&e.button!==0)return;
-      drag={
-        id:e.pointerId,
-        x:e.clientX,
-        y:e.clientY,
-        scrollTop:content.scrollTop,
-        moved:false
-      };
+      const content=categoryContentFromTarget(e.target);
+      if(!content)return;
+      categoryDrag={kind:'pointer',id:e.pointerId,content,x:e.clientX,y:e.clientY,scrollTop:content.scrollTop,moved:false};
       try{content.setPointerCapture(e.pointerId);}catch(_e){}
-    };
-
-    const move=(e)=>{
-      if(!drag||e.pointerId!==drag.id)return;
-      const dx=e.clientX-drag.x;
-      const dy=e.clientY-drag.y;
-      const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
-      if(Math.abs(delta)<3)return;
-      drag.moved=true;
-      const max=Math.max(0,content.scrollHeight-content.clientHeight);
-      content.scrollTop=Math.max(0,Math.min(max,drag.scrollTop-delta));
-      content.dataset.v30PointerScroll=String(content.scrollTop);
-      e.preventDefault();
-    };
-
-    const end=(e)=>{
-      if(!drag||e.pointerId!==drag.id)return;
-      if(drag.moved)suppressClickUntil=performance.now()+220;
-      try{content.releasePointerCapture(e.pointerId);}catch(_e){}
-      drag=null;
-    };
-
-    content.addEventListener('pointerdown',begin,{passive:true});
-    content.addEventListener('pointermove',move,{passive:false});
-    content.addEventListener('pointerup',end,{passive:true});
-    content.addEventListener('pointercancel',end,{passive:true});
-
-    content.addEventListener('touchstart',e=>{
-      const t=e.touches&&e.touches[0];if(!t)return;
-      touchDrag={x:t.clientX,y:t.clientY,scrollTop:content.scrollTop,moved:false};
-    },{passive:true});
-    content.addEventListener('touchmove',e=>{
-      if(!touchDrag)return;
-      const t=e.touches&&e.touches[0];if(!t)return;
-      const dx=t.clientX-touchDrag.x;
-      const dy=t.clientY-touchDrag.y;
-      const delta=Math.abs(dx)>=Math.abs(dy)?dx:dy;
-      if(Math.abs(delta)<3)return;
-      touchDrag.moved=true;
-      const max=Math.max(0,content.scrollHeight-content.clientHeight);
-      content.scrollTop=Math.max(0,Math.min(max,touchDrag.scrollTop-delta));
-      content.dataset.v30TouchScroll=String(content.scrollTop);
-      e.preventDefault();
-    },{passive:false});
-    const endTouch=()=>{
-      if(touchDrag&&touchDrag.moved)suppressClickUntil=performance.now()+220;
-      touchDrag=null;
-    };
-    content.addEventListener('touchend',endTouch,{passive:true});
-    content.addEventListener('touchcancel',endTouch,{passive:true});
-    content.addEventListener('click',e=>{
-      if(performance.now()<suppressClickUntil){
-        e.preventDefault();
-        e.stopImmediatePropagation();
-      }
     },true);
-    content.addEventListener('wheel',e=>{
-      if(content.scrollHeight<=content.clientHeight)return;
+
+    document.addEventListener('pointermove',e=>{
+      if(!categoryDrag||categoryDrag.kind!=='pointer'||categoryDrag.id!==e.pointerId)return;
+      if(categoryScrollByDrag(categoryDrag.content,categoryDrag.x,categoryDrag.y,categoryDrag.scrollTop,e.clientX,e.clientY,'pointer')){
+        categoryDrag.moved=true;
+        e.preventDefault();
+      }
+    },{capture:true,passive:false});
+
+    const endPointer=e=>{
+      if(!categoryDrag||categoryDrag.kind!=='pointer'||categoryDrag.id!==e.pointerId)return;
+      if(categoryDrag.moved)categorySuppressClickUntil=performance.now()+220;
+      try{categoryDrag.content.releasePointerCapture(e.pointerId);}catch(_e){}
+      categoryDrag=null;
+    };
+    document.addEventListener('pointerup',endPointer,true);
+    document.addEventListener('pointercancel',endPointer,true);
+
+    document.addEventListener('click',e=>{
+      if(performance.now()>=categorySuppressClickUntil)return;
+      if(!categoryContentFromTarget(e.target))return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    },true);
+
+    document.addEventListener('wheel',e=>{
+      const content=categoryContentFromTarget(e.target);
+      if(!content||content.scrollHeight<=content.clientHeight)return;
       const delta=Math.abs(e.deltaY)>=Math.abs(e.deltaX)?e.deltaY:e.deltaX;
       if(!delta)return;
       content.scrollTop+=delta;
       e.preventDefault();
-    },{passive:false});
+    },{capture:true,passive:false});
   }
 
   function enforceCategoryIcons(){
