@@ -23,7 +23,6 @@ jobs:
           node --check site-overlays/city-visual-v25.js
           node --check site-overlays/city-visual-v26.js
           node --check site-overlays/city-visual-v27.js
-          node --check site-overlays/city-visual-v28.js
       - name: Build and verify stable root plus visual parallel copy
         run: |
           set -euxo pipefail
@@ -68,7 +67,6 @@ jobs:
           python site-overlays/inject-v25.py dist/new/index.html
           python site-overlays/inject-v26.py dist/new/index.html
           python site-overlays/inject-v27.py dist/new/index.html
-          python site-overlays/inject-v28.py dist/new/index.html
 
           test -s dist/index.html
           test -s dist/new/index.html
@@ -82,7 +80,6 @@ jobs:
           grep -q 'city-visual-v25-script' dist/new/index.html
           grep -q 'city-visual-v26-script' dist/new/index.html
           grep -q 'city-visual-v27-script' dist/new/index.html
-          grep -q 'city-visual-v28-script' dist/new/index.html
           grep -q 'V24_DAYS' dist/new/index.html
           grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/new/index.html
           grep -q 'v24-saturday' dist/new/index.html
@@ -96,7 +93,6 @@ jobs:
           grep -q 'v27-edit-actions' dist/new/index.html
           grep -q 'v27-road-network' dist/new/index.html
           grep -q 'v27-live-needs' dist/new/index.html
-          python site-overlays/verify-v28.py dist/index.html dist/new/index.html
           grep -q 'v23-category-col' dist/new/index.html
           grep -q 'v23-content-col' dist/new/index.html
           grep -q 'v23-stop-icon' dist/new/index.html
