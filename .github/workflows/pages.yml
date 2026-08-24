@@ -125,7 +125,7 @@ jobs:
           grep -q 'new-pages-v31-script' dist/new/city/index.html
           grep -q 'city-visual-v31-script' dist/new/city/index.html
           grep -q 'city-visual-v32-script' dist/new/city/index.html
-          if grep -q 'city-visual-v2[0-9]-script\|city-visual-v31-script' dist/new/balance/index.html; then
+          if grep -q 'city-visual-v2[0-9]-script\|city-visual-v31-script\|city-visual-v32-script' dist/new/balance/index.html; then
             echo 'ERROR: city visual overlays leaked into a non-city /new page'
             exit 1
           fi
