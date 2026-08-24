@@ -1,0 +1,325 @@
+/* v31: portrait-optimised city layout. The city uses one rotated virtual
+   coordinate system in both device orientations, so portrait and landscape share
+   the same geometry and browser chrome only reduces the dynamic viewport. */
+
+#g-cit.active.v31-layout{
+  position:fixed!important;
+  top:0!important;
+  left:100dvw!important;
+  width:100dvh!important;
+  height:100dvw!important;
+  transform:rotate(90deg)!important;
+  transform-origin:0 0!important;
+  overflow:hidden!important;
+}
+
+#g-cit.v31-layout .stage-wrap{
+  --v31-top:clamp(52px,8.5vmin,64px);
+  --v31-bottom:clamp(132px,22vmin,176px);
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:
+    max(6px,env(safe-area-inset-right))
+    max(6px,env(safe-area-inset-bottom))
+    max(6px,env(safe-area-inset-left))
+    max(6px,env(safe-area-inset-top))!important;
+  display:grid!important;
+  grid-template-columns:var(--v31-top) minmax(0,1fr) var(--v31-bottom)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  gap:6px!important;
+  align-items:center!important;
+  justify-items:center!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+
+#v31-top{
+  grid-column:1;
+  width:100%;
+  height:100%;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  gap:4px;
+  padding:3px;
+  border:1px solid #304d391c;
+  border-radius:12px;
+  background:#f8fbf7ec;
+  box-sizing:border-box;
+  overflow:hidden;
+}
+#v31-top #v25-exit,
+#v31-top #v25-menu{
+  position:static!important;
+  inset:auto!important;
+  transform:rotate(-90deg)!important;
+  transform-origin:center!important;
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid #304d3922!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  flex:0 0 42px!important;
+}
+#v31-top #v25-exit::before{content:'←'!important;font:900 26px/1 system-ui,sans-serif!important}
+#v31-top #v25-menu::before{font-size:23px!important}
+
+#v31-help-display{
+  --v31-help-length:300px;
+  position:relative;
+  width:100%;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:visible;
+  color:#263e31;
+  font:850 clamp(10px,1.7vmin,14px)/1 system-ui,sans-serif;
+}
+#v31-help-display::before{
+  content:attr(aria-label);
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:var(--v31-help-length);
+  max-width:var(--v31-help-length);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-align:center;
+  transform:translate(-50%,-50%) rotate(-90deg);
+  transform-origin:center;
+}
+#v31-help-display{font-size:0}
+
+#v31-source-bin{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  left:-9999px!important;
+  top:-9999px!important;
+  overflow:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+#v31-source-bin #cit-help{
+  display:block!important;
+  position:static!important;
+  width:1px!important;
+  height:1px!important;
+  max-width:1px!important;
+  max-height:1px!important;
+  overflow:hidden!important;
+}
+
+#g-cit.v31-layout #cit-viewport{
+  grid-column:2;
+  align-self:center!important;
+  justify-self:center!important;
+  margin:0!important;
+  border-radius:8px!important;
+  box-shadow:0 2px 0 #00000018!important;
+  overflow:hidden!important;
+}
+
+#v31-bottom{
+  grid-column:3;
+  width:100%;
+  height:100%;
+  min-height:0;
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(0,1fr) minmax(0,1fr);
+  gap:6px;
+  overflow:hidden;
+}
+#v31-status{grid-row:1}
+#v31-actions{grid-row:2}
+.v31-panel{
+  width:100%;
+  height:100%;
+  min-height:0;
+  min-width:0;
+  padding:4px;
+  border:1px solid #304d391d;
+  border-radius:12px;
+  background:#f7fbf6ed;
+  box-sizing:border-box;
+  overflow:hidden;
+}
+
+/* Status is a 2x2 internal grid. After the screen rotation this becomes:
+   MONEY | STATS
+   DAY   | MOON */
+#v31-status{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:4px;
+}
+#v31-stats-cell{grid-column:1;grid-row:1}
+#v31-moon-cell{grid-column:2;grid-row:1}
+#v31-money-cell{grid-column:1;grid-row:2}
+#v31-day-cell{grid-column:2;grid-row:2}
+.v31-status-cell{
+  min-width:0;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+#v31-status #cit-hud,
+#v31-status #cit-week,
+#v31-status #cit-pop-wrap,
+#v31-status #cit-night{
+  position:static!important;
+  inset:auto!important;
+  float:none!important;
+  margin:0!important;
+  transform:rotate(-90deg)!important;
+  transform-origin:center!important;
+  box-sizing:border-box!important;
+}
+#v31-status #cit-hud{
+  width:auto!important;
+  max-width:92%!important;
+  padding:2px 4px!important;
+  white-space:nowrap!important;
+  font-size:clamp(10px,1.7vmin,13px)!important;
+}
+#v31-status #cit-pop-wrap,
+#v31-status #cit-night{
+  width:clamp(30px,5.2vmin,38px)!important;
+  height:clamp(30px,5.2vmin,38px)!important;
+  min-width:clamp(30px,5.2vmin,38px)!important;
+  min-height:clamp(30px,5.2vmin,38px)!important;
+  max-width:none!important;
+  max-height:none!important;
+}
+#v31-status #cit-week{
+  width:min(150px,85%)!important;
+  display:flex!important;
+  flex-direction:row!important;
+  gap:2px!important;
+}
+#v31-status #cit-week .dayrow{
+  min-width:14px!important;
+  min-height:14px!important;
+}
+
+/* Action box: category row and category-content row are the two existing tool
+   columns. Only category contents scroll; categories/edit controls remain fixed. */
+#v31-actions{
+  display:flex;
+  align-items:stretch;
+  justify-content:stretch;
+}
+#g-cit.v31-layout #cit-tools.v23-tools{
+  --v23-btn:clamp(28px,4.8vmin,36px);
+  --v23-gap:3px;
+  width:100%!important;
+  min-width:0!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:2px!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  gap:3px!important;
+  overflow:hidden!important;
+  border:0!important;
+  background:transparent!important;
+}
+#g-cit.v31-layout #cit-tools .v23-category-col{
+  grid-column:1!important;
+  grid-row:1!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:var(--v23-gap)!important;
+  overflow:hidden!important;
+}
+#g-cit.v31-layout #cit-tools .v23-content-col{
+  grid-column:2!important;
+  grid-row:1!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:var(--v23-gap)!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y!important;
+  scrollbar-width:thin;
+}
+#g-cit.v31-layout #cit-tools .v23-tool-btn{
+  transform:rotate(-90deg)!important;
+  transform-origin:center!important;
+  flex:0 0 var(--v23-btn)!important;
+  width:var(--v23-btn)!important;
+  height:var(--v23-btn)!important;
+  min-width:var(--v23-btn)!important;
+  min-height:var(--v23-btn)!important;
+}
+#g-cit.v31-layout #cit-tools .v31-tool-sep{
+  width:80%!important;
+  height:2px!important;
+  min-height:2px!important;
+  flex:0 0 2px!important;
+  margin:2px 0!important;
+  background:#60746a66!important;
+  border-radius:2px!important;
+}
+#g-cit.v31-layout #v30-fixed-actions,
+#g-cit.v31-layout #cit-tools > .v30-edit-sep{display:none!important}
+
+/* The road-network drawing itself never carries selection chrome. Selection is
+   represented only by the actual button state. */
+#g-cit.v31-layout .v29-road-network,
+#g-cit.v31-layout .v27-road-network{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+#g-cit.v31-layout .v31-road-category:not(.category-open):not(.sel){
+  outline:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+  border:1px solid #304d3925!important;
+}
+
+@media (max-height:520px),(max-width:520px){
+  #g-cit.v31-layout .stage-wrap{
+    --v31-top:48px;
+    --v31-bottom:122px;
+    gap:4px!important;
+    padding:4px!important;
+  }
+  #v31-top{padding:2px;gap:2px}
+  #v31-top #v25-exit,#v31-top #v25-menu{
+    width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px!important;
+  }
+  #g-cit.v31-layout #cit-tools.v23-tools{--v23-btn:27px}
+}
