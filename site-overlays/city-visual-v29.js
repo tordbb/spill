@@ -74,18 +74,82 @@
   ];
 
   function arrangeFixedActions(){
-    const cats=q('#cit-tools .v23-category-col');
-    if(!cats)return;
-    const broom=q(':scope > .v23-broom,[aria-label="Fjern"]',cats);
-    const undo=q(':scope > #cit-undo',cats);
+    const tools=q('#cit-tools');
+    const cats=q('.v23-category-col',tools);
+    const content=q('.v23-content-col',tools);
+    if(!tools||!cats||!content)return;
+
+    const broom=q(':scope > .v23-broom,[aria-label="Fjern"]',cats)||q('#v30-fixed-actions .v23-broom',tools);
+    const undo=q(':scope > #cit-undo',cats)||q('#v30-fixed-actions #cit-undo',tools);
     const categories=qa(':scope > .v23-tool-btn',cats).filter(btn=>btn!==broom&&btn!==undo);
-    let sep=q(':scope > .v30-edit-sep',cats)||q(':scope > .v23-edit-sep',cats);
-    if(!sep){sep=document.createElement('div');}
-    sep.className='v23-edit-sep v30-edit-sep';
-    sep.setAttribute('aria-hidden','true');
-    if(broom)broom.dataset.v30FixedAction='remove';
-    if(undo)undo.dataset.v30FixedAction='undo';
-    cats.replaceChildren(...[undo,broom,sep,...categories].filter(Boolean));
+
+    let fixed=q('#v30-fixed-actions',tools);
+    if(!fixed){fixed=document.createElement('div');fixed.id='v30-fixed-actions';}
+    if(undo){undo.dataset.v30FixedAction='undo';fixed.appendChild(undo);}
+    if(broom){broom.dataset.v30FixedAction='remove';fixed.appendChild(broom);}
+
+    qa(':scope > .v23-edit-sep',cats).forEach(el=>el.remove());
+    let sep=q(':scope > .v30-edit-sep',tools);
+    if(!sep){sep=document.createElement('div');sep.className='v30-edit-sep';sep.setAttribute('aria-hidden','true');}
+
+    cats.replaceChildren(...categories);
+    tools.replaceChildren(fixed,sep,cats,content);
+  }
+
+  function fitAdaptiveRail(){
+    const c=city(),rail=q('#v23-rail',c),info=q('#v23-info',c),tools=q('#cit-tools',c),help=q('#cit-help',c);
+    if(!c||!rail||!info||!tools||!help)return;
+
+    /* Tight mode already places info and tools side-by-side; only the normal stacked
+       rail needs vertical arbitration when the live-needs text grows. */
+    if(c.classList.contains('v23-tight')){
+      help.style.removeProperty('max-height');
+      help.style.removeProperty('overflow-y');
+      tools.style.removeProperty('height');
+      tools.style.removeProperty('max-height');
+      return;
+    }
+
+    const rs=getComputedStyle(rail);
+    const gap=parseFloat(rs.rowGap||rs.gap)||0;
+    const fixed=q('#v30-fixed-actions',tools);
+    const cats=q('.v23-category-col',tools);
+    const sep=q('.v30-edit-sep',tools);
+    const ts=getComputedStyle(tools);
+    const toolChrome=(parseFloat(ts.paddingTop)||0)+(parseFloat(ts.paddingBottom)||0)+(parseFloat(ts.borderTopWidth)||0)+(parseFloat(ts.borderBottomWidth)||0);
+    const fixedMin=Math.ceil(
+      (fixed?fixed.getBoundingClientRect().height:0)+
+      (sep?sep.getBoundingClientRect().height:0)+
+      (cats?cats.scrollHeight:0)+
+      toolChrome+10
+    );
+
+    const railH=rail.clientHeight;
+    if(!railH||!fixedMin)return;
+
+    /* Reserve enough room for all non-scrolling controls. If information grows,
+       only the instruction region is allowed to contract/scroll. */
+    const infoChildren=[...info.children];
+    let nonHelp=0;
+    for(const el of infoChildren){
+      if(el===help)continue;
+      const r=el.getBoundingClientRect();
+      const cs=getComputedStyle(el);
+      nonHelp+=r.height+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);
+    }
+    const is=getComputedStyle(info);
+    const infoGap=parseFloat(is.rowGap||is.gap)||0;
+    if(infoChildren.length>1)nonHelp+=infoGap*(infoChildren.length-1);
+
+    const maxHelp=Math.max(22,Math.floor(railH-fixedMin-gap-nonHelp-4));
+    help.style.maxHeight=maxHelp+'px';
+    help.style.overflowY=help.scrollHeight>maxHelp?'auto':'hidden';
+
+    requestAnimationFrame(()=>{
+      const available=Math.max(fixedMin,Math.floor(railH-info.getBoundingClientRect().height-gap));
+      tools.style.height=Math.min(railH,available)+'px';
+      tools.style.maxHeight=Math.min(railH,available)+'px';
+    });
   }
 
   function installCategoryScroller(){
@@ -218,8 +282,8 @@
       const base=citRenderTools;
       const wrapped=function(){
         const r=base.apply(this,arguments);
-        queueMicrotask(()=>{arrangeFixedActions();enforceCategoryIcons();installCategoryScroller();});
-        requestAnimationFrame(()=>{arrangeFixedActions();enforceCategoryIcons();installCategoryScroller();});
+        queueMicrotask(()=>{arrangeFixedActions();enforceCategoryIcons();installCategoryScroller();fitAdaptiveRail();});
+        requestAnimationFrame(()=>{arrangeFixedActions();enforceCategoryIcons();installCategoryScroller();fitAdaptiveRail();});
         return r;
       };
       wrapped.__v29Wrapped=true;
@@ -230,7 +294,7 @@
       const base=citRenderHelp;
       const wrapped=function(){
         const r=base.apply(this,arguments);
-        queueMicrotask(decorateMoonCue);
+        queueMicrotask(()=>{decorateMoonCue();fitAdaptiveRail();});
         return r;
       };
       wrapped.__v29Wrapped=true;
@@ -249,6 +313,7 @@
     enforceCategoryIcons();
     installCategoryScroller();
     decorateMoonCue();
+    fitAdaptiveRail();
     qa('#cit-grid .cit-thought').forEach(bubble=>{
       const glyph=q('.cit-thought-icon',bubble);
       if(!glyph)return;
@@ -270,6 +335,7 @@
   const obs=new MutationObserver(queueScan);
   obs.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
   addEventListener('resize',queueScan,{passive:true});
+  addEventListener('orientationchange',()=>setTimeout(queueScan,80),{passive:true});
   if(window.visualViewport)visualViewport.addEventListener('resize',queueScan,{passive:true});
   queueScan();
 })();
