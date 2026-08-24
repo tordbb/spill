@@ -43,15 +43,18 @@ test('remaining portrait content counter-rotates without decorating edit actions
 
   const transforms=await page.evaluate(()=>{
     const tr=sel=>getComputedStyle(document.querySelector(sel)).transform;
+    const hiddenFarm=document.querySelector('#cit-grid .farm-decor-symbol');
     return {
       map:tr('#cit-grid .v23-map-symbol'),
-      farm:tr('#cit-grid .farm-decor-symbol'),
-      shop:tr('#cit-grid .v32-shop-original-icon')
+      farmCenter:tr('#cit-grid .v23-map-M'),
+      shop:tr('#cit-grid .v32-shop-original-icon'),
+      hiddenFarmDisplay:hiddenFarm?getComputedStyle(hiddenFarm).display:null
     };
   });
   expect(isMinus90(transforms.map)).toBe(true);
-  expect(isMinus90(transforms.farm)).toBe(true);
+  expect(isMinus90(transforms.farmCenter)).toBe(true);
   expect(isMinus90(transforms.shop)).toBe(true);
+  expect(transforms.hiddenFarmDisplay).toBe('none');
 
   const dynamic=await page.evaluate(()=>{
     const grid=document.querySelector('#cit-grid');
@@ -129,6 +132,8 @@ test('stats and settings cards cancel the city rotation and remain on-screen', a
 
   await expect(page.locator('#v26-delete-setting')).toHaveCount(1);
   await expect(page.locator('#v26-delete-setting')).toBeVisible();
+  const settingsText=await page.locator('#cit-settings').innerText();
+  expect((settingsText.match(/Slett byen/g)||[]).length).toBe(1);
   const oldDelete=page.locator('#v24-delete-setting');
   if(await oldDelete.count())await expect(oldDelete).toBeHidden();
 
