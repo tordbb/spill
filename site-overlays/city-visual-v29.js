@@ -79,14 +79,20 @@
     const content=q('.v23-content-col',tools);
     if(!tools||!cats||!content)return;
 
-    const broom=q(':scope > .v23-broom,[aria-label="Fjern"]',cats)||q('#v30-fixed-actions .v23-broom',tools);
+    const broom=q(':scope > .v23-broom',cats)||q('#v30-fixed-actions .v23-broom',tools);
     const undo=q(':scope > #cit-undo',cats)||q('#v30-fixed-actions #cit-undo',tools);
     const categories=qa(':scope > .v23-tool-btn',cats).filter(btn=>btn!==broom&&btn!==undo);
 
     let fixed=q('#v30-fixed-actions',tools);
     if(!fixed){fixed=document.createElement('div');fixed.id='v30-fixed-actions';}
     if(undo){undo.dataset.v30FixedAction='undo';fixed.appendChild(undo);}
-    if(broom){broom.dataset.v30FixedAction='remove';fixed.appendChild(broom);}
+    if(broom){
+      broom.dataset.v30FixedAction='remove';
+      broom.textContent='🗑️';
+      broom.title='Slett';
+      broom.setAttribute('aria-label','Slett');
+      fixed.appendChild(broom);
+    }
 
     qa(':scope > .v23-edit-sep',cats).forEach(el=>el.remove());
     let sep=q(':scope > .v30-edit-sep',tools);
