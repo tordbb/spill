@@ -168,9 +168,12 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
   await page.waitForTimeout(50);
   const moon=await page.evaluate(() => {
     const cue=document.querySelector('#v29-moon-cue'),night=document.querySelector('#cit-night');
-    return cue&&night?{cue:getComputedStyle(cue).backgroundColor,night:getComputedStyle(night).backgroundColor}:null;
+    if(!cue||!night)return null;
+    const a=getComputedStyle(cue),b=getComputedStyle(night);
+    return {cueColor:a.backgroundColor,nightColor:b.backgroundColor,cueImage:a.backgroundImage,nightImage:b.backgroundImage};
   });
   expect(moon).not.toBeNull();
-  expect(moon.cue).toBe(moon.night);
-  expect(moon.cue).not.toBe('rgba(0, 0, 0, 0)');
+  expect(moon.cueColor).toBe(moon.nightColor);
+  expect(moon.cueImage).toBe(moon.nightImage);
+  expect(moon.cueImage!=='none' || moon.cueColor!=='rgba(0, 0, 0, 0)').toBe(true);
 });
