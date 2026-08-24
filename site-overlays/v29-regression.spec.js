@@ -114,14 +114,16 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
     const cs=getComputedStyle(el);
     return {
       buttons:inner.children.length,
-      overflow:cs.overflow,
+      overflowX:cs.overflowX,
+      overflowY:cs.overflowY,
       innerHeight:inner.scrollHeight,
       clientHeight:el.clientHeight,
       max:Number(el.dataset.v30Offset||0)+Math.max(0,inner.scrollHeight-el.clientHeight)
     };
   });
   expect(parkScroll.buttons).toBe(7);
-  expect(parkScroll.overflow).toBe('hidden');
+  expect(parkScroll.overflowX).toBe('hidden');
+  expect(parkScroll.overflowY).toBe('hidden');
   expect(parkScroll.innerHeight).toBeGreaterThan(parkScroll.clientHeight);
   expect(parkScroll.max).toBeGreaterThan(0);
 
