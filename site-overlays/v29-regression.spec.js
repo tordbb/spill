@@ -97,7 +97,7 @@ test('city controls stay compact, scrollable and semantic', async ({ page }) => 
     };
   });
   expect(fixedState.fixed[0].id).toBe('cit-undo');
-  expect(fixedState.fixed[1].label).toBe('Fjern');
+  expect(fixedState.fixed[1].label).toBe('Slett');
   expect(fixedState.categories).toHaveLength(3);
   expect(fixedState.categories.every(x=>x.tag!=='')).toBe(true);
   const sepStyle=await page.evaluate(() => {
