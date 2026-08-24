@@ -78,8 +78,8 @@ jobs:
           # are injected only into /new/city/ so they cannot leak into other games.
           mkdir -p dist/new/{balance,creature,patterns,walk,sudoku,city}
 
-          cp /tmp/city-v17.html dist/new/city/index.html
-          python site-overlays/inject-new-pages-v31.py dist/new/city/index.html home none home
+          cp /tmp/city-v17.html dist/new/index.html
+          python site-overlays/inject-new-pages-v31.py dist/new/index.html home none home
 
           cp /tmp/city-v17.html dist/new/balance/index.html
           python site-overlays/inject-new-pages-v31.py dist/new/balance/index.html game g-bal balance
