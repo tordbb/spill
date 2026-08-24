@@ -52,6 +52,23 @@ test('diagnose current /new runtime', async ({ page }) => {
   });
   console.log('V29_CITY',JSON.stringify(city));
 
+
+  await page.locator('#cit-tools .v23-category-col > .v23-tool-btn').nth(2).click();
+  await page.waitForTimeout(150);
+  console.log('V29_PARK', JSON.stringify(await page.evaluate(() => {
+    const el=document.querySelector('#cit-tools .v23-content-col'), r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+    return {buttons:el.children.length,left:r.left,top:r.top,width:r.width,height:r.height,scrollWidth:el.scrollWidth,scrollHeight:el.scrollHeight,clientWidth:el.clientWidth,clientHeight:el.clientHeight,overflow:cs.overflow,overflowY:cs.overflowY};
+  })));
+
+  await page.locator('#v25-menu').click();
+  await page.waitForTimeout(450);
+  console.log('V29_DELETE', JSON.stringify(await page.evaluate(() => {
+    const del=document.querySelector('#v26-delete-setting')||document.querySelector('#v24-delete-setting');
+    const settings=document.querySelector('#cit-settings');
+    const data=el=>{if(!el)return null;const r=el.getBoundingClientRect(),cs=getComputedStyle(el);return {id:el.id,cls:el.className,display:cs.display,visibility:cs.visibility,opacity:cs.opacity,left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height,parent:el.parentElement?.id||el.parentElement?.className};};
+    return {del:data(del),settings:data(settings),fallback:data(document.querySelector('#v26-settings-menu'))};
+  })));
+
   const thought = await page.evaluate(() => {
     if(typeof citPersonEl!=='function'||typeof citSetThought!=='function')return {error:'missing functions'};
     const el=citPersonEl('🙂');
