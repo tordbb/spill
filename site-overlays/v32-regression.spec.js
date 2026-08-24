@@ -64,16 +64,19 @@ test('remaining portrait content counter-rotates without decorating edit actions
     const face=getComputedStyle(person.querySelector('.cit-face')).transform;
     const thought=getComputedStyle(person.querySelector('.cit-thought-icon')).transform;
     const riderTransform=getComputedStyle(vehicle.rider).transform;
+    const riderInline=vehicle.rider.style.getPropertyValue('transform');
+    const riderPriority=vehicle.rider.style.getPropertyPriority('transform');
     const body=document.createElement('span');
     const mock={body};
     citBusOrient(mock,0,1);
     const orient=body.style.transform;
     person.remove();vehicle.el.remove();
-    return {face,thought,riderTransform,orient};
+    return {face,thought,riderTransform,riderInline,riderPriority,orient};
   });
   expect(isMinus90(dynamic.face)).toBe(true);
   expect(isMinus90(dynamic.thought)).toBe(true);
-  expect(isMinus90(dynamic.riderTransform)).toBe(true);
+  expect(dynamic.riderInline).toBe('rotate(-90deg)');
+  expect(dynamic.riderPriority).toBe('important');
   expect(dynamic.orient.startsWith('rotate(-90deg)')).toBe(true);
 });
 
