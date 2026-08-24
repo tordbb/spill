@@ -76,10 +76,6 @@ body > .screen:not(#g-cit) .v25-nav-source {
   -webkit-text-fill-color:initial !important;
   color:initial !important;
 }
-#g-cit.v29-repair .cit-thought.v27-empty-thought {
-  display:flex !important;
-}
-
 /* The instruction moon looks like the actual blue moon control. */
 #g-cit #v29-moon-cue {
   display:inline-flex;
