@@ -84,6 +84,7 @@
         const wrapped=function(){
           const v=baseVehicle.apply(this,arguments);
           if(v&&v.body)v.body.style.transform='rotate(-90deg)';
+          if(v&&v.rider)v.rider.style.setProperty('transform','rotate(-90deg)','important');
           return v;
         };
         wrapped.__v32Rotation=true;
@@ -115,6 +116,7 @@
     cleanEditActions();
     syncDayTracker();
     dedupeSettingsDelete();
+    qa('#cit-grid .cit-bus-rider').forEach(rider=>rider.style.setProperty('transform','rotate(-90deg)','important'));
     wrapBusOrientation();
   }
 
