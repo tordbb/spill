@@ -46,6 +46,8 @@ body > .screen:not(#g-cit) .v25-nav-source {
 }
 #g-cit.v29-repair:not(.v23-tight) #cit-help {
   min-height:0 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
   overscroll-behavior:contain !important;
   scrollbar-width:thin;
 }
@@ -105,11 +107,8 @@ body > .screen:not(#g-cit) .v25-nav-source {
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
   touch-action:none !important;
-  scroll-snap-type:y proximity;
+  scroll-behavior:auto !important;
   box-sizing:border-box !important;
-}
-#g-cit.v29-repair #cit-tools .v23-content-col > .v23-tool-btn {
-  scroll-snap-align:start;
 }
 #g-cit.v29-repair #v27-edit-actions {
   display:none !important;
