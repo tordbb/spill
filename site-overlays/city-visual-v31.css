@@ -226,7 +226,7 @@
   justify-content:stretch;
 }
 #g-cit.v31-layout #cit-tools.v23-tools{
-  --v23-btn:clamp(28px,4.8vmin,36px);
+  --v23-btn:clamp(30px,7.8vmin,56px);
   --v23-gap:3px;
   width:100%!important;
   min-width:0!important;
@@ -321,5 +321,5 @@
   #v31-top #v25-exit,#v31-top #v25-menu{
     width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px!important;
   }
-  #g-cit.v31-layout #cit-tools.v23-tools{--v23-btn:27px}
+  #g-cit.v31-layout #cit-tools.v23-tools{--v23-btn:30px}
 }
