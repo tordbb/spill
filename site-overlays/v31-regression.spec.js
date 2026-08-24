@@ -163,6 +163,17 @@ test('park action contents track the finger direction with native scrolling', as
   const y=cr.cy;
   const startX=cr.x+cr.width*0.78;
   const endX=startX-42;
+  await page.evaluate(() => {
+    const el=document.querySelector('#cit-tools .v23-content-col');
+    window.__v31TouchDiag={start:0,move:0,x0:null,x1:null};
+    el.addEventListener('touchstart',e=>{const t=e.touches[0];window.__v31TouchDiag.start++;window.__v31TouchDiag.x0=t&&t.clientX;},true);
+    el.addEventListener('touchmove',e=>{const t=e.touches[0];window.__v31TouchDiag.move++;window.__v31TouchDiag.x1=t&&t.clientX;},true);
+  });
+  console.log('V31_SCROLL_TARGET',JSON.stringify(await page.evaluate(({x,y})=>{
+    const el=document.elementFromPoint(x,y);
+    const content=document.querySelector('#cit-tools .v23-content-col');
+    return {tag:el?.tagName,id:el?.id||'',cls:el?.className||'',inside:!!(el&&(el===content||content.contains(el))),installed:content.dataset.v31PhysicalScroller||'',max:content.scrollHeight-content.clientHeight};
+  },{x:startX,y})));
   await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:startX,y}]});
   for(let i=1;i<=6;i++){
     const x=startX+(endX-startX)*(i/6);
@@ -174,6 +185,7 @@ test('park action contents track the finger direction with native scrolling', as
 
   const after=await box(first);
   const scrollTop=await page.evaluate(()=>document.querySelector('#cit-tools .v23-content-col').scrollTop);
+  console.log('V31_SCROLL_AFTER',JSON.stringify(await page.evaluate(()=>({diag:window.__v31TouchDiag,scrollTop:document.querySelector('#cit-tools .v23-content-col').scrollTop}))));
   expect(scrollTop).toBeGreaterThan(0);
   expect(after.x).toBeLessThan(before.x);
 
