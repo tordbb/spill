@@ -132,7 +132,7 @@ test('city uses the same portrait-first top/map/bottom structure in portrait and
   expect(landscape.bottom.height).toBeLessThan(210);
 });
 
-test('park action contents track the finger direction with native scrolling', async ({ browser }) => {
+test('park action contents follow the finger direction and speed', async ({ browser }) => {
   const context=await browser.newContext({
     viewport:{width:709,height:1536},
     isMobile:true,
@@ -144,56 +144,27 @@ test('park action contents track the finger direction with native scrolling', as
 
   const categories=page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category]');
   await categories.nth(2).click();
-  await page.waitForTimeout(100);
+  await page.waitForTimeout(120);
 
   const content=page.locator('#cit-tools .v23-content-col');
   const state=await page.evaluate(()=>{
     const el=document.querySelector('#cit-tools .v23-content-col');
-    return {scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,scrollTop:el.scrollTop};
+    const inner=el.querySelector(':scope > .v31-action-scroll-inner');
+    return {
+      installed:el.dataset.v31PhysicalScroller||'',
+      progress:Number(el.dataset.v31Progress)||0,
+      max:Math.max(0,inner.scrollHeight-el.clientHeight),
+      buttons:inner.children.length
+    };
   });
-  expect(state.scrollHeight).toBeGreaterThan(state.clientHeight);
+  expect(state.installed).toBe('1');
+  expect(state.buttons).toBe(7);
+  expect(state.max).toBeGreaterThan(0);
+  expect(state.progress).toBe(0);
 
   const cr=await box(content);
-  const first=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').first();
+  const first=page.locator('#cit-tools .v31-action-scroll-inner > .v23-tool-btn').first();
   const before=await box(first);
-
-  // The internal vertical scroll axis is physically horizontal because the city
-  // screen is rotated. Drag the finger left and the list must visibly move left.
-  const client=await context.newCDPSession(page);
-  const y=cr.cy;
-  const startX=cr.x+cr.width*0.78;
-  const endX=startX-42;
-  await page.evaluate(() => {
-    const el=document.querySelector('#cit-tools .v23-content-col');
-    window.__v31TouchDiag={start:0,move:0,x0:null,x1:null};
-    el.addEventListener('touchstart',e=>{const t=e.touches[0];window.__v31TouchDiag.start++;window.__v31TouchDiag.x0=t&&t.clientX;},true);
-    el.addEventListener('touchmove',e=>{const t=e.touches[0];window.__v31TouchDiag.move++;window.__v31TouchDiag.x1=t&&t.clientX;},true);
-  });
-  console.log('V31_SCROLL_TARGET',JSON.stringify(await page.evaluate(({x,y})=>{
-    const el=document.elementFromPoint(x,y);
-    const content=document.querySelector('#cit-tools .v23-content-col');
-    return {tag:el?.tagName,id:el?.id||'',cls:el?.className||'',inside:!!(el&&(el===content||content.contains(el))),installed:content.dataset.v31PhysicalScroller||'',max:content.scrollHeight-content.clientHeight};
-  },{x:startX,y})));
-  await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:startX,y}]});
-  for(let i=1;i<=6;i++){
-    const x=startX+(endX-startX)*(i/6);
-    await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
-    await page.waitForTimeout(18);
-  }
-  await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await page.waitForTimeout(100);
-
-  const after=await box(first);
-  const scrollTop=await page.evaluate(()=>document.querySelector('#cit-tools .v23-content-col').scrollTop);
-  console.log('V31_SCROLL_AFTER',JSON.stringify(await page.evaluate(()=>({diag:window.__v31TouchDiag,scrollTop:document.querySelector('#cit-tools .v23-content-col').scrollTop}))));
-  expect(scrollTop).toBeGreaterThan(0);
-  expect(after.x).toBeLessThan(before.x);
-
-  const fingerDelta=endX-startX;
-  const listDelta=after.x-before.x;
-  expect(Math.sign(listDelta)).toBe(Math.sign(fingerDelta));
-  expect(Math.abs(listDelta)).toBeGreaterThan(8);
-  expect(Math.abs(listDelta)).toBeLessThan(80);
 
   const fixedBefore=await Promise.all([
     box(page.locator('#cit-undo')),
@@ -201,22 +172,65 @@ test('park action contents track the finger direction with native scrolling', as
     box(page.locator('#cit-tools .v23-category-col > .v23-tool-btn[data-v29-category="0"]'))
   ]);
 
-  // Scroll farther and verify the last park action becomes reachable while fixed
-  // controls stay put.
-  for(let i=0;i<4;i++){
-    const s=await page.evaluate(()=>{
-      const el=document.querySelector('#cit-tools .v23-content-col');
-      return {top:el.scrollTop,max:el.scrollHeight-el.clientHeight};
-    });
-    if(s.top>=s.max-1)break;
-    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:startX,y}]});
-    await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:endX,y}]});
+  /* Later Park actions initially extend beyond the physical left edge because the
+     city is rotated. Dragging the visible strip to the RIGHT must move the list
+     to the RIGHT by the same number of CSS pixels. */
+  const client=await context.newCDPSession(page);
+  const y=cr.cy;
+  const startX=cr.x+cr.width*0.30;
+  const fingerDelta=Math.min(42,state.max*.65);
+  const endX=startX+fingerDelta;
+
+  async function dragRight(delta){
+    const x0=startX,x1=startX+delta;
+    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x0,y}]});
+    for(let i=1;i<=6;i++){
+      const x=x0+(x1-x0)*(i/6);
+      await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
+      await page.waitForTimeout(18);
+    }
     await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(150);
   }
 
-  const last=page.locator('#cit-tools .v23-content-col > .v23-tool-btn').last();
+  await dragRight(fingerDelta);
+
+  const after=await box(first);
+  const scrollState=await page.evaluate(()=>{
+    const el=document.querySelector('#cit-tools .v23-content-col');
+    const inner=el.querySelector(':scope > .v31-action-scroll-inner');
+    return {
+      progress:Number(el.dataset.v31Progress)||0,
+      max:Math.max(0,inner.scrollHeight-el.clientHeight)
+    };
+  });
+  expect(scrollState.progress).toBeGreaterThan(0);
+
+  const listDelta=after.x-before.x;
+  expect(Math.sign(listDelta)).toBe(Math.sign(fingerDelta));
+  expect(Math.abs(listDelta-fingerDelta)).toBeLessThan(3);
+
+  /* Continue to the end; the last Park action must become reachable. */
+  for(let i=0;i<5;i++){
+    const s=await page.evaluate(()=>{
+      const el=document.querySelector('#cit-tools .v23-content-col');
+      const inner=el.querySelector(':scope > .v31-action-scroll-inner');
+      return {p:Number(el.dataset.v31Progress)||0,max:Math.max(0,inner.scrollHeight-el.clientHeight)};
+    });
+    if(s.p>=s.max-1)break;
+    await dragRight(Math.min(55,s.max-s.p+2));
+  }
+
+  const endState=await page.evaluate(()=>{
+    const el=document.querySelector('#cit-tools .v23-content-col');
+    const inner=el.querySelector(':scope > .v31-action-scroll-inner');
+    return {p:Number(el.dataset.v31Progress)||0,max:Math.max(0,inner.scrollHeight-el.clientHeight)};
+  });
+  expect(endState.p).toBeGreaterThanOrEqual(endState.max-1);
+
+  const last=page.locator('#cit-tools .v31-action-scroll-inner > .v23-tool-btn').last();
   await expect(last).toBeVisible();
+  await page.waitForTimeout(160);
   await last.click();
   await expect.poll(()=>page.evaluate(()=>citTool)).toBe('W');
 
