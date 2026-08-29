@@ -17,7 +17,7 @@
     #cit-help-tip>.stable-bench-icon{width:1.05em;height:1.05em;margin-left:.12em}
     .cit-bus-stop.stable-line-stop{border:0!important;background:transparent!important;filter:none!important}
     .cit-bus-stop>.stable-line-stop-icon{position:absolute;inset:9%;display:block;color:var(--bus-color);pointer-events:none}
-    .cit-bus-stop.end>.stable-line-stop-icon{inset:7%}
+    .cit-bus-stop.end>.stable-line-stop-icon{inset:9%}
     .stable-line-stop-icon svg{display:block;width:100%;height:100%;overflow:visible;color:inherit}
   `;
   document.head.appendChild(style);
@@ -40,30 +40,30 @@
       span.innerHTML=`<svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
         <defs><mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="120" height="120">
           <rect width="120" height="120" fill="#fff"/>
-          <rect x="38" y="48" width="28" height="10" rx="5" fill="#000"/>
-          <rect x="35" y="66" width="36" height="22" rx="5" fill="#000"/>
-          <circle cx="40" cy="95" r="6.5" fill="#000"/>
-          <circle cx="66" cy="95" r="6.5" fill="#000"/>
+          <rect x="25" y="34" width="38" height="12" rx="6" fill="#000"/>
+          <rect x="21" y="54" width="46" height="30" rx="6" fill="#000"/>
+          <circle cx="28" cy="95" r="8.5" fill="#000"/>
+          <circle cx="60" cy="95" r="8.5" fill="#000"/>
         </mask></defs>
-        <path d="M13 23 L107 37 M18 28 V108 M105 37 V108" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="27" y="38" width="50" height="66" rx="12" fill="currentColor" mask="url(#${maskId})"/>
-        <rect x="32" y="99" width="13" height="14" rx="5" fill="currentColor"/>
-        <rect x="60" y="99" width="13" height="14" rx="5" fill="currentColor"/>
-        <path d="M81 88 H95 M84 88 V108 M93 88 V108 M95 88 L101 63" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 15 C35 5 85 5 112 15" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round"/>
+        <rect x="11" y="23" width="66" height="84" rx="15" fill="currentColor" mask="url(#${maskId})"/>
+        <rect x="19" y="102" width="16" height="16" rx="5" fill="currentColor"/>
+        <rect x="55" y="102" width="16" height="16" rx="5" fill="currentColor"/>
+        <path d="M83 92 H103 M87 92 V116 M100 92 V116 M103 92 L110 60" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>`;
     }else{
       span.innerHTML=`<svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
         <defs><mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="120" height="120">
           <rect width="120" height="120" fill="#fff"/>
-          <rect x="26" y="25" width="36" height="10" rx="5" fill="#000"/>
-          <rect x="22" y="45" width="44" height="28" rx="5" fill="#000"/>
-          <circle cx="28" cy="85" r="7.5" fill="#000"/>
-          <circle cx="60" cy="85" r="7.5" fill="#000"/>
+          <rect x="25" y="24" width="38" height="12" rx="6" fill="#000"/>
+          <rect x="21" y="44" width="46" height="30" rx="6" fill="#000"/>
+          <circle cx="28" cy="85" r="8.5" fill="#000"/>
+          <circle cx="60" cy="85" r="8.5" fill="#000"/>
         </mask></defs>
-        <rect x="12" y="14" width="64" height="82" rx="14" fill="currentColor" mask="url(#${maskId})"/>
-        <rect x="20" y="91" width="14" height="16" rx="5" fill="currentColor"/>
-        <rect x="56" y="91" width="14" height="16" rx="5" fill="currentColor"/>
-        <path d="M84 82 H102 M87 82 V105 M100 82 V105 M102 82 L109 52" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="11" y="13" width="66" height="84" rx="15" fill="currentColor" mask="url(#${maskId})"/>
+        <rect x="19" y="92" width="16" height="16" rx="5" fill="currentColor"/>
+        <rect x="55" y="92" width="16" height="16" rx="5" fill="currentColor"/>
+        <path d="M83 82 H103 M87 82 V106 M100 82 V106 M103 82 L110 50" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>`;
     }
     return span;
