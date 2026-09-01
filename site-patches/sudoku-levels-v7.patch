@@ -1,0 +1,26 @@
+--- a/index.html
++++ b/index.html
+@@ -1664,2 +1664,22 @@
+-  {regions:['AAABBB','CAABBB','CABBBB','CCDBEE','CCDEEF','CDDDEF'],solution:[1,3,0,4,2,5],grade:3}
++  {regions:['BBBBAA','BBBBAA','EEEAAC','EEDDCC','EEDDFF','EEDFFF'],solution:[4,1,5,2,0,3],grade:2},
++  {regions:['AAAAAA','BBAAAA','BBCCCD','EECCDD','FEECDD','FFCCDD'],solution:[4,1,3,5,2,0],grade:2},
++  {regions:['AABBBB','AAABBB','CCCCBB','CCDCCC','DDDFEE','DDDFFE'],solution:[1,4,0,2,5,3],grade:2},
++  {regions:['AAAABB','AAAABB','CCCABB','DDCCCB','DFFEEB','DFFEEE'],solution:[3,5,2,0,4,1],grade:2},
++  {regions:['BBAAAA','BBBAAA','CBBBAA','CCCCCD','FCEEED','FFFEED'],solution:[4,2,0,5,3,1],grade:2},
++  {regions:['AAABBB','AAABBB','ACABBB','CCAEBD','CCEEDD','CCEFFF'],solution:[0,3,1,5,2,4],grade:2},
++  {regions:['AAAAAB','AAAAAB','CCCCBB','ECCDDD','ECCDDF','EEEDFF'],solution:[2,5,1,3,0,4],grade:2},
++  {regions:['BAAAAA','BAAAAC','BBDDCC','BBDDDE','FDDDDE','FFFFFE'],solution:[3,0,4,2,5,1],grade:2},
++  {regions:['BAACCC','BBACCC','EEECDD','EEEDDD','EEEDDD','FFFFFF'],solution:[2,0,3,5,1,4],grade:2},
++  {regions:['BAAAAA','BBBBAA','BBECCC','EBECCD','EEECDD','EEEFFF'],solution:[2,0,3,5,1,4],grade:2},
++  {regions:['AADBBB','ACDBBB','ACDDDF','ECDDDF','EEEEDF','EFFFFF'],solution:[0,3,1,4,2,5],grade:2},
++  {regions:['AAABBB','AAAABB','CCCABB','CCDDBE','CCDDFE','CDDFFE'],solution:[1,4,0,2,5,3],grade:2},
++  {regions:['BAAACC','BBAACC','BBACCC','BBACDD','EEEDDF','EEEDFF'],solution:[2,0,3,5,1,4],grade:2},
++  {regions:['BBAAAA','BBBAAA','BBBACC','BDDDDC','EFFDDC','EEFDDC'],solution:[4,1,5,3,0,2],grade:2},
++  {regions:['BBBAAA','BBBBAA','CBDBAA','CDDEEE','CFFEEE','CFFEEE'],solution:[5,3,0,2,4,1],grade:2},
++  {regions:['AAABCC','ADDBBC','DDDDCC','DEEDFF','EEEFFF','EEFFFF'],solution:[1,3,5,0,2,4],grade:2},
++  {regions:['AAAABB','AAAABB','ACCCBB','CCDDDE','CCDFEE','CCFFFF'],solution:[0,4,1,3,5,2],grade:2},
++  {regions:['BAAAAA','BBBAAA','BBCCCA','DDDDCC','EEFDDC','EFFFDD'],solution:[5,1,4,2,0,3],grade:2},
++  {regions:['BBBAAC','DDBBAC','DDBBBC','FDDEEE','FDEEEE','FFFEEE'],solution:[4,2,5,1,3,0],grade:2},
++  {regions:['AAACCC','BBACCC','BDACCF','DDDECF','DEEEEF','FFFFFF'],solution:[2,0,4,1,3,5],grade:2},
++  {regions:['AAABBB','CAABBB','CABBBB','CCDBEE','CCDEEF','CDDDEF'],solution:[1,3,0,4,2,5],grade:3}
+ ].map((lv,i)=>Object.assign({},lv,{animal:['🦝','🐼','🐰','🐸','🦊','🐵','🐧','🐨'][i%=8],palette:[
