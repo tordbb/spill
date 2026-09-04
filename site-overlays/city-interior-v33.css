@@ -1,0 +1,70 @@
+/* Stable city building interiors. Scoped to #g-cit so other games are untouched. */
+#g-cit.cit-interior-open #cit-help,
+#g-cit.cit-interior-open #cit-left-nav,
+#g-cit.cit-interior-open #cit-tools,
+#g-cit.cit-interior-open #cit-right,
+#g-cit.cit-interior-open #cit-safe-spacer { visibility:hidden !important; pointer-events:none !important; }
+
+#cit-interior-v33 { display:none; position:absolute; inset:0; z-index:90; overflow:hidden; background:#eadfcf; touch-action:none; transform-origin:var(--ci-origin-x,50%) var(--ci-origin-y,50%); transform:scale(.12); opacity:.05; transition:transform .2s cubic-bezier(.2,.85,.3,1),opacity .16s ease; }
+#cit-interior-v33.show { display:block; }
+#cit-interior-v33.opened { transform:scale(1); opacity:1; }
+#cit-interior-v33.closing { transform:scale(.14); opacity:0; }
+#cit-interior-v33 .ci-scene { position:absolute; inset:0; overflow:hidden; background:#e9dfcf; }
+#cit-interior-v33 .ci-room-bg { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+#cit-interior-v33 .ci-back-wall { position:absolute; left:11%; right:2%; top:0; height:51%; background:linear-gradient(#f4eadb,#e8dccb); border-bottom:5px solid #c6aa86; box-shadow:inset 0 -16px 34px #a8875a16; }
+#cit-interior-v33.shop-room .ci-back-wall { background:linear-gradient(#f4f3ee,#e1e5e3); border-bottom-color:#adb9b2; }
+#cit-interior-v33 .ci-floor { position:absolute; left:11%; right:2%; top:50%; bottom:0; background:linear-gradient(165deg,#cfa97c 0 18%,#bd9367 18% 20%,#c9a273 20% 38%,#b98e62 38% 40%,#caa374 40% 58%,#ba8d61 58% 60%,#c79d6f 60%); transform-origin:top center; }
+#cit-interior-v33.shop-room .ci-floor { background:linear-gradient(165deg,#d9d9d4 0 18%,#c9cbc6 18% 20%,#d3d5d0 20% 38%,#c4c6c1 38% 40%,#d4d5d1 40% 58%,#c2c5c0 58% 60%,#d1d3ce 60%); }
+#cit-interior-v33 .ci-side-wall { position:absolute; top:0; bottom:0; width:14%; background:#ddceb9; opacity:.82; }
+#cit-interior-v33 .ci-left-wall { left:0; clip-path:polygon(0 0,100% 5%,100% 93%,0 100%); }
+#cit-interior-v33 .ci-right-wall { right:-9%; clip-path:polygon(0 6%,100% 0,100% 100%,0 94%); }
+#cit-interior-v33.shop-room .ci-side-wall { background:#d2d8d4; }
+#cit-interior-v33 .ci-baseboard { position:absolute; left:11%; right:2%; top:49.2%; height:2.2%; background:#fffaf2; box-shadow:0 2px 2px #0002; }
+#cit-interior-v33 .ci-room-title { position:absolute; z-index:6; left:50%; top:9px; transform:translateX(-50%); padding:6px 14px; border-radius:14px; background:#ffffffd9; box-shadow:0 3px 0 #0002; font-weight:850; font-size:20px; }
+#cit-interior-v33 .ci-exit { position:absolute; z-index:10; right:12px; top:10px; min-width:92px; height:48px; border:0; border-radius:15px; background:#fff; box-shadow:0 3px 0 #0002; font-size:18px; font-weight:800; cursor:pointer; }
+#cit-interior-v33 .ci-palette { position:absolute; z-index:9; left:8px; top:8px; bottom:8px; width:112px; padding:6px; border-radius:18px; background:#ffffffde; box-shadow:0 4px 16px #0003; display:flex; flex-direction:column; gap:6px; }
+#cit-interior-v33 .ci-tabs { display:grid; grid-template-columns:1fr 1fr; gap:5px; flex:0 0 auto; }
+#cit-interior-v33 .ci-tab { height:48px; border:0; border-radius:12px; background:#edf1ec; font-size:22px; box-shadow:0 2px 0 #0001; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+#cit-interior-v33 .ci-tab span { font-size:8px; font-weight:800; }
+#cit-interior-v33 .ci-tab.active { outline:3px solid #42a5f5; background:#fff; }
+#cit-interior-v33 .ci-palette-items { min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:2px; touch-action:pan-y; overscroll-behavior:contain; }
+#cit-interior-v33 .ci-choice { position:relative; min-width:0; height:58px; border:0; border-radius:11px; background:#fff; box-shadow:0 2px 0 #0001; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+#cit-interior-v33 .ci-choice-glyph { font-size:27px; line-height:1; font-weight:900; }
+#cit-interior-v33 .ci-choice-label { max-width:100%; font-size:8px; line-height:1.05; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#cit-interior-v33 .ci-choice.wall-only::after { content:'▥'; position:absolute; right:2px; top:2px; font-size:10px; opacity:.58; }
+#cit-interior-v33 .ci-delete { position:absolute; z-index:10; left:126px; bottom:12px; width:48px; height:48px; border:0; border-radius:14px; background:#fff; box-shadow:0 3px 0 #0002; font-size:23px; }
+#cit-interior-v33 .ci-delete:disabled { opacity:.32; filter:grayscale(1); }
+#cit-interior-v33 .ci-wall-note { position:absolute; z-index:6; left:50%; bottom:9px; transform:translateX(-50%); border-radius:10px; padding:4px 9px; background:#ffffffb8; font-size:10px; font-weight:750; opacity:.72; pointer-events:none; }
+#cit-interior-v33 .ci-canvas { position:absolute; z-index:5; left:120px; right:0; top:0; bottom:0; touch-action:none; user-select:none; }
+#cit-interior-v33 .ci-item { position:absolute; width:72px; height:64px; transform:translate(-50%,-50%) scale(var(--ci-scale,1)); display:flex; align-items:center; justify-content:center; cursor:grab; touch-action:none; filter:drop-shadow(0 3px 2px #0003); }
+#cit-interior-v33 .ci-item-glyph { font-size:48px; line-height:1; pointer-events:none; }
+#cit-interior-v33 .ci-item.selected::after { content:''; position:absolute; inset:-7px; border:3px solid #42a5f5; border-radius:12px; background:#42a5f512; pointer-events:none; }
+#cit-interior-v33 .ci-item.dragging { cursor:grabbing; z-index:40 !important; filter:drop-shadow(0 7px 5px #0005); }
+#cit-interior-v33 .ci-item.ci-wall-item { z-index:3; }
+#cit-interior-v33 .ci-item.ci-on-furniture { z-index:20; }
+#cit-interior-v33 .ci-item.ci-pop { animation:ciPop .22s ease-out; }
+@keyframes ciPop { from{transform:translate(-50%,-50%) scale(.3)} 70%{transform:translate(-50%,-50%) scale(calc(var(--ci-scale,1)*1.12))} to{transform:translate(-50%,-50%) scale(var(--ci-scale,1))} }
+#cit-interior-v33 .ci-type-table .ci-item-glyph,
+#cit-interior-v33 .ci-type-counter .ci-item-glyph { color:#8b5e3c; font-size:58px; transform:scaleX(1.25); text-shadow:0 11px 0 #6d472f; }
+#cit-interior-v33 .ci-type-display .ci-item-glyph { color:#a9784f; font-size:58px; transform:scaleX(1.3); text-shadow:0 9px 0 #805738; }
+#cit-interior-v33 .ci-type-shelf { width:96px; height:46px; }
+#cit-interior-v33 .ci-type-shelf .ci-item-glyph { color:#8a6447; font-size:50px; transform:scaleX(1.4); text-shadow:0 8px 0 #62452f; }
+#cit-interior-v33 .ci-type-rug { width:116px; height:58px; filter:drop-shadow(0 2px 1px #0002); }
+#cit-interior-v33 .ci-type-rug .ci-item-glyph { color:#b85f57; font-size:72px; transform:scaleX(1.55); opacity:.88; }
+#cit-interior-v33 .ci-type-rack .ci-item-glyph { color:#5f6a70; font-size:56px; transform:scaleX(1.25); }
+@media (max-height:430px) {
+  #cit-interior-v33 .ci-palette { width:100px; padding:5px; }
+  #cit-interior-v33 .ci-canvas { left:108px; }
+  #cit-interior-v33 .ci-choice { height:50px; }
+  #cit-interior-v33 .ci-choice-glyph { font-size:23px; }
+  #cit-interior-v33 .ci-tab { height:42px; font-size:20px; }
+  #cit-interior-v33 .ci-delete { left:112px; width:42px; height:42px; }
+  #cit-interior-v33 .ci-exit { height:42px; min-width:82px; }
+  #cit-interior-v33 .ci-room-title { font-size:17px; padding:5px 12px; }
+  #cit-interior-v33 .ci-item { width:62px; height:56px; }
+  #cit-interior-v33 .ci-item-glyph { font-size:42px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #cit-interior-v33 { transition:none; }
+  #cit-interior-v33 .ci-item.ci-pop { animation:none; }
+}
