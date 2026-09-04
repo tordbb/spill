@@ -143,3 +143,5 @@ test('stats and settings cards cancel the city rotation and remain on-screen', a
   expect(sizeText).toContain('30×20');
   expect(sizeText).toContain('60×40');
 });
+
+require('./stable-interior-regression.spec.js');
