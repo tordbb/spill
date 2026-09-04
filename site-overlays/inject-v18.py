@@ -12,6 +12,8 @@ if mode not in ('root', 'parallel'):
 root = Path(__file__).resolve().parent
 css = (root / 'city-functional-v18.css').read_text(encoding='utf-8')
 js = (root / 'city-functional-v18.js').read_text(encoding='utf-8')
+interior_css = ''
+interior_js = ''
 
 # The parallel /new version intentionally has its own local save. When v18 is promoted
 # to the normal URL, keep the game's existing save function and storage untouched.
@@ -23,10 +25,17 @@ if mode == 'root':
     if start < 0 or end < 0:
         raise SystemExit('could not locate parallel-save block in v18 script')
     js = js[:start] + '  /* Normal deployment: preserve the existing save storage and save() implementation. */' + js[end:]
+    interior_css = (root / 'city-interior-v33.css').read_text(encoding='utf-8')
+    interior_js = (root / 'city-interior-v33.js').read_text(encoding='utf-8')
 
 html = html_path.read_text(encoding='utf-8')
 if '</head>' not in html or '</body>' not in html:
     raise SystemExit('expected closing head/body tags')
-html = html.replace('</head>', f'\n<style id="city-functional-v18">\n{css}\n</style>\n</head>', 1)
-html = html.replace('</body>', f'\n<script id="city-functional-v18-script">\n{js}\n</script>\n</body>', 1)
+head_payload = f'\n<style id="city-functional-v18">\n{css}\n</style>\n'
+body_payload = f'\n<script id="city-functional-v18-script">\n{js}\n</script>\n'
+if mode == 'root':
+    head_payload += f'<style id="city-interior-v33-style">\n{interior_css}\n</style>\n'
+    body_payload += f'<script id="city-interior-v33-script">\n{interior_js}\n</script>\n'
+html = html.replace('</head>', head_payload + '</head>', 1)
+html = html.replace('</body>', body_payload + '</body>', 1)
 html_path.write_text(html, encoding='utf-8')
