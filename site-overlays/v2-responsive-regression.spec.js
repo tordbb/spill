@@ -21,10 +21,18 @@ async function openCity(page,width,height){
 async function expectInsideViewport(page,locator,width,height){
   await expect(locator).toBeVisible();
   const b=await box(locator);
-  expect(b.x).toBeGreaterThanOrEqual(-1);
-  expect(b.y).toBeGreaterThanOrEqual(-1);
-  expect(b.right).toBeLessThanOrEqual(width+1);
-  expect(b.bottom).toBeLessThanOrEqual(height+1);
+  const meta=await locator.evaluate(el=>({
+    tag:el.tagName.toLowerCase(),
+    id:el.id||'',
+    cls:typeof el.className==='string'?el.className:'',
+    text:(el.textContent||'').trim().replace(/\s+/g,' ').slice(0,60),
+    aria:el.getAttribute('aria-label')||''
+  }));
+  const note=`${meta.tag}#${meta.id}.${meta.cls} text="${meta.text}" aria="${meta.aria}" rect=${JSON.stringify(b)}`;
+  expect(b.x,note).toBeGreaterThanOrEqual(-1);
+  expect(b.y,note).toBeGreaterThanOrEqual(-1);
+  expect(b.right,note).toBeLessThanOrEqual(width+1);
+  expect(b.bottom,note).toBeLessThanOrEqual(height+1);
   return b;
 }
 
