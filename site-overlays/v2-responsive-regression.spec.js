@@ -54,7 +54,7 @@ test('/v2 home replicates the stable root and Cave Flight stays inside /v2', asy
 });
 
 test('landscape uses visual viewport: nav row, scrollable tool column, maximised map, visible status', async ({ page }) => {
-  const width=844,height=350; // deliberately short: browser chrome has already reduced usable height
+  const width=844,height=350;
   await openCity(page,width,height);
   await expect(page.locator('#g-cit')).toHaveClass(/v2-landscape/);
 
@@ -201,7 +201,7 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
     const cols=(typeof CITY_CFG!=='undefined'&&CITY_CFG.COLS)||12;
     const rows=(typeof CITY_CFG!=='undefined'&&CITY_CFG.ROWS)||Math.ceil(cit.g.length/cols);
     const row=Math.floor(i/cols),col=i%cols;
-    cit.g[i]='E';
+    cit.g[i]=0;
     for(const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){
       const rr=row+dr,cc=col+dc;
       if(rr>=0&&rr<rows&&cc>=0&&cc<cols)cit.g[rr*cols+cc]='R';
@@ -220,14 +220,13 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
   await page.mouse.click(b.cx,b.cy);
   await page.waitForTimeout(220);
 
-  const diag=await page.evaluate(({i,before})=>{
+  const result=await page.evaluate(({i,before})=>{
     const after=Array.from(cit.g);
     const changed=[];
-    for(let n=0;n<Math.max(before.length,after.length);n++)if(before[n]!==after[n])changed.push({i:n,before:before[n],after:after[n]});
-    return {chosen:i,value:after[i],tool:citTool,changed};
+    for(let n=0;n<Math.max(before.length,after.length);n++)if(before[n]!==after[n])changed.push(n);
+    return {value:after[i],tool:citTool,changed};
   },setup);
-  console.log('portrait paint diagnostic',JSON.stringify(diag));
-  expect(diag.tool).toBe('R');
-  expect(diag.changed.map(x=>x.i)).toContain(setup.i);
-  expect(diag.value).toBe('R');
+  expect(result.tool).toBe('R');
+  expect(result.changed).toContain(setup.i);
+  expect(result.value).toBe('R');
 });
