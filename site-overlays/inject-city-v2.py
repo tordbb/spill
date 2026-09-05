@@ -9,6 +9,7 @@ html_path = Path(sys.argv[1])
 root = Path(__file__).resolve().parent
 html = html_path.read_text(encoding='utf-8')
 css = (root / 'city-v2-responsive.css').read_text(encoding='utf-8')
+css += '\n' + (root / 'city-v2-responsive-compact.css').read_text(encoding='utf-8')
 js = (root / 'city-v2-responsive.js').read_text(encoding='utf-8')
 
 if '</head>' not in html or '</body>' not in html:
