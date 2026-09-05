@@ -1,0 +1,83 @@
+name: Verify v2 responsive city
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check v2 overlay sources
+        run: |
+          set -euxo pipefail
+          node --check site-overlays/city-v2-responsive.js
+          python -m py_compile site-overlays/inject-city-v2.py
+
+      - name: Build stable root and generated v2 artifact
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          cat site-v3/part-*.txt | base64 -d | gzip -dc > dist/index.html
+          patch --batch --forward -d dist -p1 < site-patches/sdk-city-v2.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-school-v3.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-farm-thought-v4.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-levels-v5.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-hint-ui-v5.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-hint-js-v5.patch
+          cat site-patches/city-balance-v6.part* > /tmp/city-balance-v6.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v6.patch
+          base64 -d site-patches/city-balance-v7.patch.gz.b64 | gzip -dc > /tmp/city-balance-v7.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v7.patch
+          base64 -d site-patches/city-balance-v8.patch.gz.b64 | gzip -dc > /tmp/city-balance-v8.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-balance-v8.patch
+          cat site-patches/city-camera-v9.part* | base64 -d | gzip -dc > /tmp/city-camera-v9.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-camera-v9.patch
+          cat site-patches/city-buses-v10.part* | base64 -d | gzip -dc > /tmp/city-buses-v10.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-buses-v10.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-speed-v11.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-riders-v12.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-bus-demand-v13.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-no-teachers-v14.patch
+          base64 -d site-patches/city-lines-v15.patch.gz.b64 | gzip -dc > /tmp/city-lines-v15.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-lines-v15.patch
+          base64 -d site-patches/city-bus-markers-fast-v16.patch.gz.b64 | gzip -dc > /tmp/city-bus-markers-fast-v16.patch
+          patch --batch --forward -d dist -p1 < /tmp/city-bus-markers-fast-v16.patch
+          patch --batch --forward -d dist -p1 < site-patches/city-farm-parallel-endpoints-v17.patch
+          patch --batch --forward -d dist -p1 < site-patches/sudoku-levels-v6.patch
+
+          python site-overlays/inject-v18.py dist/index.html root
+          python site-overlays/inject-stable-city-v22.py dist/index.html
+          python site-overlays/inject-cave-v2.py dist/index.html home
+
+          mkdir -p dist/v2 dist/cave dist/v2/cave
+          cp dist/index.html dist/v2/index.html
+          python site-overlays/inject-city-v2.py dist/v2/index.html
+
+          cp cave/index.html dist/cave/index.html
+          python site-overlays/inject-cave-v2.py dist/cave/index.html game
+          cp dist/cave/index.html dist/v2/cave/index.html
+
+          test -s dist/index.html
+          test -s dist/v2/index.html
+          test -s dist/v2/cave/index.html
+          grep -q 'city-v2-responsive-script' dist/v2/index.html
+          grep -q 'city-interior-v33-script' dist/v2/index.html
+          grep -q 'cave-launcher-card' dist/v2/index.html
+          if grep -q 'city-v2-responsive-script' dist/index.html; then
+            echo 'ERROR: v2 city overlay leaked into stable root'
+            exit 1
+          fi
+
+      - name: Run v2 browser regressions
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install chromium
+          python3 -m http.server 4173 --directory dist >/tmp/spill-v2-http.log 2>&1 &
+          npx playwright test site-overlays/v2-responsive-regression.spec.js --reporter=line
