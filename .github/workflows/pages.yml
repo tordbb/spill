@@ -24,10 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Build stable root and visual parallel city
+      - name: Build stable root, v2, and visual parallel city
         run: |
           set -euxo pipefail
           node --check site-overlays/city-stable-guidance-v22.js
+          node --check site-overlays/city-v2-responsive.js
           node --check site-overlays/city-visual-v23.js
           node --check site-overlays/city-visual-v24.js
           node --check site-overlays/city-visual-v25.js
@@ -75,6 +76,12 @@ jobs:
           python site-overlays/inject-stable-city-v22.py dist/index.html
           python site-overlays/inject-cave-v2.py dist/index.html home
 
+          # /v2 is a byte-for-byte copy of the completed stable SPA before receiving
+          # only the v2 responsive city overlay. All other games therefore stay in sync.
+          mkdir -p dist/v2
+          cp dist/index.html dist/v2/index.html
+          python site-overlays/inject-city-v2.py dist/v2/index.html
+
           # Experimental /new: each game is a separate document. City-only overlays
           # are injected only into /new/city/ so they cannot leak into other games.
           mkdir -p dist/new/{balance,creature,patterns,walk,sudoku,city}
@@ -108,12 +115,15 @@ jobs:
           python site-overlays/inject-v31.py dist/new/city/index.html
           python site-overlays/inject-v32.py dist/new/city/index.html
 
-          # Standalone Cave Flight mini-game.
-          mkdir -p dist/cave
+          # Standalone Cave Flight mini-game, mirrored under /v2/cave/ too.
+          mkdir -p dist/cave dist/v2/cave
           cp cave/index.html dist/cave/index.html
           python site-overlays/inject-cave-v2.py dist/cave/index.html game
+          cp dist/cave/index.html dist/v2/cave/index.html
 
           test -s dist/index.html
+          test -s dist/v2/index.html
+          test -s dist/v2/cave/index.html
           test -s dist/new/index.html
           test -s dist/new/city/index.html
           test -s dist/new/balance/index.html
@@ -121,6 +131,14 @@ jobs:
           test -s dist/new/patterns/index.html
           test -s dist/new/walk/index.html
           test -s dist/new/sudoku/index.html
+          grep -q 'city-v2-responsive-script' dist/v2/index.html
+          grep -q 'city-v2-responsive-style' dist/v2/index.html
+          grep -q 'cave-launcher-card' dist/v2/index.html
+          grep -q 'cave-v2-navigation' dist/v2/cave/index.html
+          if grep -q 'city-v2-responsive-script' dist/index.html; then
+            echo 'ERROR: v2 city overlay leaked into stable root'
+            exit 1
+          fi
           grep -q 'new-pages-v31-script' dist/new/index.html
           grep -q 'new-pages-v31-script' dist/new/city/index.html
           grep -q 'city-visual-v31-script' dist/new/city/index.html

@@ -1,0 +1,70 @@
+/* Compact the portrait top/status strip along the rotated local Y axis.
+   Local element heights become physical widths after the -90deg city rotation. */
+#g-cit.v2-portrait #cit-right {
+  justify-content:center !important;
+  gap:3px !important;
+}
+
+#g-cit.v2-portrait #v2-status-nav > button {
+  width:38px !important;
+  height:38px !important;
+  min-width:38px !important;
+  min-height:38px !important;
+  max-width:38px !important;
+  max-height:38px !important;
+  flex:0 0 38px !important;
+}
+
+#g-cit.v2-portrait #cit-hud {
+  width:auto !important;
+  max-width:88px !important;
+  height:30px !important;
+  min-height:30px !important;
+  max-height:30px !important;
+  flex:0 0 30px !important;
+  padding:2px 4px !important;
+  line-height:1 !important;
+  overflow:hidden !important;
+}
+
+#g-cit.v2-portrait #cit-pop-wrap {
+  width:38px !important;
+  height:38px !important;
+  min-width:38px !important;
+  min-height:38px !important;
+  max-width:38px !important;
+  max-height:38px !important;
+  flex:0 0 38px !important;
+}
+
+#g-cit.v2-portrait #cit-week {
+  width:88px !important;
+  max-width:88px !important;
+  height:38px !important;
+  min-height:38px !important;
+  max-height:38px !important;
+  flex:0 0 38px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:1px !important;
+  padding:1px !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+
+#g-cit.v2-portrait #cit-week .dayrow {
+  flex:1 1 0 !important;
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  height:28px !important;
+  min-height:28px !important;
+  max-height:28px !important;
+  padding:0 !important;
+  margin:0 !important;
+  font-size:9px !important;
+  line-height:1 !important;
+  overflow:hidden !important;
+}
