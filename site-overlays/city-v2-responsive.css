@@ -1,0 +1,348 @@
+/* /v2 city layout only. Uses the dynamic visual viewport dimensions written by
+   city-v2-responsive.js so mobile browser chrome is excluded from the usable area. */
+
+#g-cit.v2-city-layout.active {
+  position:fixed !important;
+  margin:0 !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+
+#g-cit.v2-city-layout .stage-wrap {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  padding:max(5px, env(safe-area-inset-top)) max(5px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(5px, env(safe-area-inset-left)) !important;
+  gap:6px !important;
+}
+
+#g-cit.v2-city-layout #cit-safe-spacer { display:none !important; width:0 !important; }
+#g-cit.v2-city-layout #v2-source-bin {
+  position:absolute !important;
+  left:-10000px !important;
+  top:-10000px !important;
+  width:1px !important;
+  height:1px !important;
+  overflow:hidden !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
+#v2-side,
+#g-cit.v2-city-layout #cit-right {
+  min-width:0;
+  min-height:0;
+  box-sizing:border-box;
+  border:1px solid #2f4b381f;
+  border-radius:14px;
+  background:#f7fbf7ee;
+  box-shadow:0 2px 7px #00000012;
+  overflow:hidden;
+}
+
+#v2-side {
+  display:grid;
+}
+#v2-nav {
+  min-width:0;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  box-sizing:border-box;
+}
+#v2-nav > button,
+#v2-status-nav > button {
+  position:static !important;
+  inset:auto !important;
+  margin:0 !important;
+  flex:0 0 auto;
+  width:44px !important;
+  height:44px !important;
+  min-width:44px !important;
+  min-height:44px !important;
+  padding:0 !important;
+}
+
+#v2-tool-zone {
+  min-width:0;
+  min-height:0;
+  display:grid;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:5px;
+  padding:5px;
+  box-sizing:border-box;
+  background:#e8f0e8;
+  overflow:hidden;
+}
+#v2-tool-scroll {
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  border-radius:10px;
+}
+#g-cit.v2-city-layout #cit-tools {
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  max-height:none !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#v2-quick-actions {
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+}
+#v2-quick-actions:empty { display:none; }
+
+#g-cit.v2-city-layout #cit-help {
+  position:absolute !important;
+  z-index:12 !important;
+  margin:0 !important;
+  padding:3px 8px !important;
+  border-radius:10px !important;
+  background:#ffffffe8 !important;
+  box-shadow:0 1px 4px #0002 !important;
+  overflow:hidden !important;
+  pointer-events:none !important;
+  box-sizing:border-box !important;
+}
+#g-cit.v2-city-layout #cit-help-main,
+#g-cit.v2-city-layout #cit-help-tip {
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+#g-cit.v2-city-layout #cit-viewport {
+  position:relative !important;
+  margin:0 !important;
+  align-self:center !important;
+  justify-self:center !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+  border-radius:9px !important;
+}
+
+/* Landscape: left control column spans the full short dimension. Home/settings
+   occupy the clearly separated top section; the existing scrollable tools fill
+   the lower section. The map uses the middle remainder and status stays visible. */
+#g-cit.v2-city-layout.v2-landscape {
+  left:0 !important;
+  top:0 !important;
+  width:var(--v2-vw,100dvw) !important;
+  height:var(--v2-vh,100dvh) !important;
+  transform:none !important;
+  transform-origin:0 0 !important;
+}
+#g-cit.v2-landscape .stage-wrap {
+  display:grid !important;
+  grid-template-columns:clamp(138px,16vw,188px) minmax(0,1fr) clamp(88px,10vw,118px) !important;
+  grid-template-rows:minmax(0,1fr) !important;
+  align-items:stretch !important;
+  justify-items:stretch !important;
+}
+#g-cit.v2-landscape #v2-side {
+  grid-column:1;
+  grid-row:1;
+  grid-template-rows:minmax(54px,20%) minmax(0,80%);
+  height:100%;
+}
+#g-cit.v2-landscape #v2-nav {
+  grid-row:1;
+  background:#d8e7da;
+  border-bottom:1px solid #2f4b3822;
+}
+#g-cit.v2-landscape #v2-tool-zone { grid-row:2; }
+#g-cit.v2-landscape #v2-quick-actions { display:none; }
+#g-cit.v2-landscape #cit-viewport { grid-column:2; grid-row:1; }
+#g-cit.v2-landscape #cit-right {
+  grid-column:3;
+  grid-row:1;
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  max-height:100% !important;
+  margin:0 !important;
+  padding:6px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:6px !important;
+}
+#g-cit.v2-landscape #cit-right > * {
+  position:static !important;
+  inset:auto !important;
+  max-width:100% !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+#g-cit.v2-landscape #cit-help {
+  left:calc(clamp(138px,16vw,188px) + 12px) !important;
+  right:calc(clamp(88px,10vw,118px) + 12px) !important;
+  top:max(7px,env(safe-area-inset-top)) !important;
+  width:auto !important;
+  max-width:none !important;
+}
+
+/* Portrait: the complete city coordinate system is rotated 90deg CCW exactly
+   once. Local left becomes the physical bottom, so tools and frequent actions
+   live there. Local right becomes the physical top, where navigation and status
+   information live. Every descendant therefore shares the same CCW rotation. */
+#g-cit.v2-city-layout.v2-portrait {
+  left:0 !important;
+  top:var(--v2-vh,100dvh) !important;
+  width:var(--v2-vh,100dvh) !important;
+  height:var(--v2-vw,100dvw) !important;
+  transform:rotate(-90deg) !important;
+  transform-origin:0 0 !important;
+}
+#g-cit.v2-portrait .stage-wrap {
+  display:grid !important;
+  grid-template-columns:clamp(126px,22vmin,164px) minmax(0,1fr) clamp(96px,18vmin,116px) !important;
+  grid-template-rows:minmax(0,1fr) !important;
+  align-items:stretch !important;
+  justify-items:stretch !important;
+}
+#g-cit.v2-portrait #v2-side {
+  grid-column:1;
+  grid-row:1;
+  grid-template-rows:minmax(0,1fr);
+  height:100%;
+  background:#e8f0e8;
+}
+#g-cit.v2-portrait #v2-nav { display:none; }
+#g-cit.v2-portrait #v2-tool-zone {
+  grid-row:1;
+  grid-template-rows:minmax(0,1fr) auto;
+  height:100%;
+}
+#g-cit.v2-portrait #cit-tools {
+  touch-action:none !important;
+  scrollbar-width:thin;
+}
+#g-cit.v2-portrait #v2-quick-actions {
+  display:flex;
+  min-height:48px;
+  padding-top:3px;
+  border-top:1px solid #2f4b3820;
+}
+#g-cit.v2-portrait #cit-viewport { grid-column:2; grid-row:1; }
+#g-cit.v2-portrait #cit-right {
+  grid-column:3;
+  grid-row:1;
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  max-height:100% !important;
+  margin:0 !important;
+  padding:4px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:4px !important;
+  background:#f4f8f4f5 !important;
+}
+#g-cit.v2-portrait #cit-right > * {
+  position:static !important;
+  inset:auto !important;
+  margin:0 !important;
+  flex:0 0 auto;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+#v2-status-nav {
+  display:contents;
+}
+#g-cit.v2-portrait #cit-hud {
+  font-size:clamp(10px,2.8vmin,13px) !important;
+  padding:3px 4px !important;
+  white-space:nowrap !important;
+}
+#g-cit.v2-portrait #cit-pop-wrap {
+  width:42px !important;
+  height:42px !important;
+  min-width:42px !important;
+  min-height:42px !important;
+}
+#g-cit.v2-portrait #cit-week {
+  width:92px !important;
+  max-width:92px !important;
+  gap:1px !important;
+  overflow:hidden !important;
+}
+#g-cit.v2-portrait #cit-week .dayrow {
+  min-width:10px !important;
+  min-height:10px !important;
+}
+#g-cit.v2-portrait #cit-night,
+#g-cit.v2-portrait #cit-edit-actions {
+  position:static !important;
+  inset:auto !important;
+  margin:0 !important;
+}
+#g-cit.v2-portrait #cit-help {
+  left:calc(clamp(126px,22vmin,164px) + 12px) !important;
+  right:calc(clamp(96px,18vmin,116px) + 12px) !important;
+  top:max(7px,env(safe-area-inset-top)) !important;
+  width:auto !important;
+  max-width:none !important;
+}
+
+/* Remove any old portrait-only child counter-rotation. The single root rotation
+   above is the rotation for labels, icons, tiles, day tracker and action controls. */
+#g-cit.v2-portrait .top-bar,
+#g-cit.v2-portrait #cit-help,
+#g-cit.v2-portrait #cit-tools,
+#g-cit.v2-portrait #cit-right,
+#g-cit.v2-portrait #cit-grid,
+#g-cit.v2-portrait #cit-grid .ct,
+#g-cit.v2-portrait #cit-hud,
+#g-cit.v2-portrait #cit-week,
+#g-cit.v2-portrait #cit-night,
+#g-cit.v2-portrait #cit-pop-wrap,
+#g-cit.v2-portrait #cit-edit-actions,
+#g-cit.v2-portrait #v2-side,
+#g-cit.v2-portrait #v2-status-nav,
+#g-cit.v2-portrait #v2-quick-actions {
+  rotate:none !important;
+}
+
+@media (max-height:520px) and (orientation:landscape) {
+  #g-cit.v2-landscape .stage-wrap {
+    grid-template-columns:132px minmax(0,1fr) 84px !important;
+    gap:4px !important;
+    padding:4px !important;
+  }
+  #g-cit.v2-landscape #v2-nav > button { width:40px !important; height:40px !important; min-width:40px !important; min-height:40px !important; }
+  #g-cit.v2-landscape #cit-help { left:140px !important; right:92px !important; top:4px !important; }
+}
+
+@media (max-width:390px) and (orientation:portrait) {
+  #g-cit.v2-portrait .stage-wrap {
+    grid-template-columns:120px minmax(0,1fr) 92px !important;
+    gap:4px !important;
+    padding:4px !important;
+  }
+  #g-cit.v2-portrait #cit-help { left:128px !important; right:100px !important; top:4px !important; }
+}
