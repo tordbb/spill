@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import sys
 
 if len(sys.argv) != 2:
@@ -13,59 +14,71 @@ js = (root / 'city-v2-responsive.js').read_text(encoding='utf-8')
 if '</head>' not in html or '</body>' not in html:
     raise SystemExit('expected closing head/body tags')
 
-# Stable city painting was written for the old clockwise portrait transform.
-# /v2 rotates the complete city counterclockwise, so invert physical pointer
-# coordinates accordingly. This replacement is deliberately limited to /v2's
-# generated copy and does not alter the stable root.
-old_paint = """    const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle($('#g-cit')).transform!=='none';
-    const localX=rotated ? (e.clientY-r.top) : (e.clientX-r.left);
-    const localY=rotated ? (r.right-e.clientX) : (e.clientY-r.top);"""
-new_paint = """    const cityRoot=$('#g-cit');
+# Older generated builds had an inline tile mapper written specifically for the
+# old clockwise portrait transform. Later camera patches can replace that block,
+# so update it when present without making the v2 build depend on one old source
+# spelling. The browser regression still verifies real portrait hit-testing.
+paint_pattern = re.compile(
+    r"\s*const rotated=matchMedia\('\(orientation:portrait\)'\)\.matches\s*&&\s*getComputedStyle\(\$\('#g-cit'\)\)\.transform\s*!==\s*'none';"
+    r"\s*const localX=rotated\s*\?\s*\(e\.clientY-r\.top\)\s*:\s*\(e\.clientX-r\.left\);"
+    r"\s*const localY=rotated\s*\?\s*\(r\.right-e\.clientX\)\s*:\s*\(e\.clientY-r\.top\);"
+)
+paint_replacement = """
+    const cityRoot=$('#g-cit');
     const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle(cityRoot).transform!=='none';
     const ccw=rotated && cityRoot.classList.contains('v2-portrait');
     const localX=ccw ? (r.bottom-e.clientY) : rotated ? (e.clientY-r.top) : (e.clientX-r.left);
     const localY=ccw ? (e.clientX-r.left) : rotated ? (r.right-e.clientX) : (e.clientY-r.top);"""
-if old_paint not in html:
-    raise SystemExit('could not find stable city paint pointer mapping')
-html = html.replace(old_paint, new_paint, 1)
+html, paint_count = paint_pattern.subn(paint_replacement, html, count=1)
 
-# Building double-click hit-testing uses the same old clockwise mapping.
-old_interior_cell = """    const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle(document.getElementById('g-cit')).transform!=='none';
-    const local=rotated?{x:e.clientY-r.top,y:r.right-e.clientX}:{x:e.clientX-r.left,y:e.clientY-r.top};"""
-new_interior_cell = """    const cityRoot=document.getElementById('g-cit');
+# Building double-click hit-testing is part of the stable v33 overlay and uses
+# the old clockwise mapping until this v2-only generated copy is adapted.
+interior_pattern = re.compile(
+    r"\s*const rotated=matchMedia\('\(orientation:portrait\)'\)\.matches\s*&&\s*getComputedStyle\(document\.getElementById\('g-cit'\)\)\.transform\s*!==\s*'none';"
+    r"\s*const local=rotated\?\{x:e\.clientY-r\.top,y:r\.right-e\.clientX\}:\{x:e\.clientX-r\.left,y:e\.clientY-r\.top\};"
+)
+interior_replacement = """
+    const cityRoot=document.getElementById('g-cit');
     const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle(cityRoot).transform!=='none';
     const ccw=rotated && cityRoot.classList.contains('v2-portrait');
     const local=ccw?{x:r.bottom-e.clientY,y:e.clientX-r.left}:rotated?{x:e.clientY-r.top,y:r.right-e.clientX}:{x:e.clientX-r.left,y:e.clientY-r.top};"""
-if old_interior_cell not in html:
-    raise SystemExit('could not find stable interior tile pointer mapping')
-html = html.replace(old_interior_cell, new_interior_cell, 1)
+html, interior_count = interior_pattern.subn(interior_replacement, html, count=1)
+if interior_count != 1:
+    raise SystemExit('could not adapt stable interior tile pointer mapping')
 
 # Interior dragging also needs coordinates in the counterclockwise local system.
-old_canvas = """    const c=document.getElementById('ci-canvas'),r=c.getBoundingClientRect();
-    return {x:(e.clientX-r.left)/Math.max(1,r.width)*100,y:(e.clientY-r.top)/Math.max(1,r.height)*100};"""
-new_canvas = """    const c=document.getElementById('ci-canvas'),r=c.getBoundingClientRect();
+canvas_pattern = re.compile(
+    r"\s*const c=document\.getElementById\('ci-canvas'\),r=c\.getBoundingClientRect\(\);"
+    r"\s*return \{x:\(e\.clientX-r\.left\)/Math\.max\(1,r\.width\)\*100,y:\(e\.clientY-r\.top\)/Math\.max\(1,r\.height\)\*100\};"
+)
+canvas_replacement = """
+    const c=document.getElementById('ci-canvas'),r=c.getBoundingClientRect();
     const cityRoot=document.getElementById('g-cit');
     const ccw=matchMedia('(orientation:portrait)').matches && cityRoot.classList.contains('v2-portrait') && getComputedStyle(cityRoot).transform!=='none';
     const x=ccw?(r.bottom-e.clientY):(e.clientX-r.left);
     const y=ccw?(e.clientX-r.left):(e.clientY-r.top);
     return {x:x/Math.max(1,ccw?r.height:r.width)*100,y:y/Math.max(1,ccw?r.width:r.height)*100};"""
-if old_canvas not in html:
-    raise SystemExit('could not find stable interior canvas pointer mapping')
-html = html.replace(old_canvas, new_canvas, 1)
+html, canvas_count = canvas_pattern.subn(canvas_replacement, html, count=1)
+if canvas_count != 1:
+    raise SystemExit('could not adapt stable interior canvas pointer mapping')
 
-# The stable fitter intentionally left large portrait/browser-chrome reserves.
-# /v2 measures the dynamic visual viewport itself, so use the actual remaining
-# stage space after the tool/status columns instead of subtracting those old
-# fixed reserves a second time.
-old_fit = """  const topReserve=Math.max(70, help?(help.offsetTop+help.offsetHeight+8):70);
-  const byW=Math.floor((vw - 68 - sideW - 24) / CITY_CFG.COLS);
-  const byH=Math.floor((vh - topReserve - 6) / CITY_CFG.ROWS);"""
-new_fit = """  const topReserve=Math.max(0, help?(help.offsetTop+help.offsetHeight+8):0);
+# The stable fitter used large fixed reserves for its previous portrait layout.
+# When that legacy calculation is still present, remove the duplicate reserve;
+# v2 itself measures visualViewport and the actual tool/status columns.
+fit_pattern = re.compile(
+    r"\s*const topReserve=Math\.max\(70,\s*help\?\(help\.offsetTop\+help\.offsetHeight\+8\):70\);"
+    r"\s*const byW=Math\.floor\(\(vw\s*-\s*68\s*-\s*sideW\s*-\s*24\)\s*/\s*CITY_CFG\.COLS\);"
+    r"\s*const byH=Math\.floor\(\(vh\s*-\s*topReserve\s*-\s*6\)\s*/\s*CITY_CFG\.ROWS\);"
+)
+fit_replacement = """
+  const topReserve=Math.max(0, help?(help.offsetTop+help.offsetHeight+8):0);
   const byW=Math.floor((vw - sideW - 20) / CITY_CFG.COLS);
   const byH=Math.floor((vh - 14) / CITY_CFG.ROWS);"""
-if old_fit not in html:
-    raise SystemExit('could not find stable city board fitting calculation')
-html = html.replace(old_fit, new_fit, 1)
+html, fit_count = fit_pattern.subn(fit_replacement, html, count=1)
+
+# Expose which generated variants were adapted for CI/debugging without changing
+# runtime behavior. The required v33 mappings above must always be present.
+print(f'v2 generated adaptations: paint={paint_count} interior={interior_count} canvas={canvas_count} fit={fit_count}')
 
 head = f'\n<style id="city-v2-responsive-style">\n{css}\n</style>\n'
 body = f'\n<script id="city-v2-responsive-script">\n{js}\n</script>\n'
