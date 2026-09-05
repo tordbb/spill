@@ -16,9 +16,8 @@ if '</head>' not in html or '</body>' not in html:
     raise SystemExit('expected closing head/body tags')
 
 # Older generated builds had an inline tile mapper written specifically for the
-# old clockwise portrait transform. Later camera patches can replace that block,
-# so update it when present without making the v2 build depend on one old source
-# spelling. The browser regression still verifies real portrait hit-testing.
+# old clockwise portrait transform. Update it when present, but do not require
+# it because the later camera patch replaces this block in current builds.
 paint_pattern = re.compile(
     r"\s*const rotated=matchMedia\('\(orientation:portrait\)'\)\.matches\s*&&\s*getComputedStyle\(\$\('#g-cit'\)\)\.transform\s*!==\s*'none';"
     r"\s*const localX=rotated\s*\?\s*\(e\.clientY-r\.top\)\s*:\s*\(e\.clientX-r\.left\);"
@@ -31,6 +30,29 @@ paint_replacement = """
     const localX=ccw ? (r.bottom-e.clientY) : rotated ? (e.clientY-r.top) : (e.clientX-r.left);
     const localY=ccw ? (e.clientX-r.left) : rotated ? (r.right-e.clientX) : (e.clientY-r.top);"""
 html, paint_count = paint_pattern.subn(paint_replacement, html, count=1)
+
+# Current stable builds use the camera patch's localOf() mapper. Its portrait
+# branch was also written for the old clockwise root transform. In /v2 portrait,
+# invert the new counterclockwise root rotation before camera inversion.
+camera_pattern = re.compile(
+    r"const localOf=e=>\{\s*const r=v\.getBoundingClientRect\(\);\s*"
+    r"return rotated\(\)\s*\?\s*\{x:e\.clientY-r\.top,\s*y:r\.right-e\.clientX\}\s*"
+    r":\s*\{x:e\.clientX-r\.left,\s*y:e\.clientY-r\.top\};\s*\};"
+)
+camera_replacement = """const localOf=e=>{
+    const r=v.getBoundingClientRect();
+    const cityRoot=$('#g-cit');
+    const isRotated=rotated();
+    const ccw=isRotated && cityRoot.classList.contains('v2-portrait');
+    return ccw
+      ? {x:r.bottom-e.clientY,y:e.clientX-r.left}
+      : isRotated
+        ? {x:e.clientY-r.top,y:r.right-e.clientX}
+        : {x:e.clientX-r.left,y:e.clientY-r.top};
+  };"""
+html, camera_count = camera_pattern.subn(camera_replacement, html, count=1)
+if camera_count != 1:
+    raise SystemExit('could not adapt stable camera pointer mapping')
 
 # Building double-click hit-testing is part of the stable v33 overlay and uses
 # the old clockwise mapping until this v2-only generated copy is adapted.
@@ -77,21 +99,7 @@ fit_replacement = """
   const byH=Math.floor((vh - 14) / CITY_CFG.ROWS);"""
 html, fit_count = fit_pattern.subn(fit_replacement, html, count=1)
 
-# Temporary CI trace: locate the later camera-patch mapper that supersedes the
-# older paint block above. Keep the output compact and restricted to city-camera
-# coordinate code so the exact generated spelling can be adapted safely.
-seen = 0
-for m in re.finditer(r'.{0,260}clientX.{0,700}', html, re.S):
-    snippet = m.group(0)
-    if ('citCam' in snippet or 'citTs' in snippet) and ('pointer' in snippet.lower() or 'cell' in snippet.lower() or 'world' in snippet.lower()):
-        print('V2_CAMERA_MAPPER', re.sub(r'\s+', ' ', snippet)[:1100])
-        seen += 1
-        if seen >= 8:
-            break
-
-# Expose which generated variants were adapted for CI/debugging without changing
-# runtime behavior. The required v33 mappings above must always be present.
-print(f'v2 generated adaptations: paint={paint_count} interior={interior_count} canvas={canvas_count} fit={fit_count}')
+print(f'v2 generated adaptations: paint={paint_count} camera={camera_count} interior={interior_count} canvas={canvas_count} fit={fit_count}')
 
 head = f'\n<style id="city-v2-responsive-style">\n{css}\n</style>\n'
 body = f'\n<script id="city-v2-responsive-script">\n{js}\n</script>\n'
