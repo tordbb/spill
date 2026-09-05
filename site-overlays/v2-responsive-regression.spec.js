@@ -198,7 +198,12 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
   const width=390,height=760;
   await openCity(page,width,height);
 
-  const chosen=await page.evaluate(()=>{
+  const road=page.locator('#cit-tools button').filter({hasText:'🛣'}).first();
+  await expect(road).toBeVisible();
+  await road.click();
+  await expect.poll(()=>page.evaluate(()=>citTool)).toBe('R');
+
+  const setup=await page.evaluate(()=>{
     const tiles=[...document.querySelectorAll('#cit-grid .ct[data-i]')];
     const visible=tiles.filter(el=>{
       const r=el.getBoundingClientRect();
@@ -206,17 +211,34 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
     });
     const el=visible[Math.floor(visible.length/2)]||tiles[Math.floor(tiles.length/2)];
     const i=Number(el.dataset.i);
+    const cols=(typeof CITY_CFG!=='undefined'&&CITY_CFG.COLS)||12;
+    const rows=(typeof CITY_CFG!=='undefined'&&CITY_CFG.ROWS)||Math.ceil(cit.g.length/cols);
+    const row=Math.floor(i/cols),col=i%cols;
     cit.g[i]='E';
-    citTool='R';
+    for(const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){
+      const rr=row+dr,cc=col+dc;
+      if(rr>=0&&rr<rows&&cc>=0&&cc<cols)cit.g[rr*cols+cc]='R';
+    }
+    for(const key of ['money','cash','coins','funds'])if(typeof cit[key]==='number')cit[key]=9999;
     if(typeof save==='function')save();
     if(typeof citRenderTiles==='function')citRenderTiles();
-    if(typeof citRenderTools==='function')citRenderTools();
-    return i;
+    return {i,before:Array.from(cit.g)};
   });
   await page.waitForTimeout(100);
 
-  const tile=page.locator(`#cit-grid .ct[data-i="${chosen}"]`);
+  const tile=page.locator(`#cit-grid .ct[data-i="${setup.i}"]`);
   const b=await box(tile);
   await page.mouse.click(b.cx,b.cy);
-  await expect.poll(()=>page.evaluate(i=>cit.g[i],chosen),{timeout:1500}).toBe('R');
+  await page.waitForTimeout(220);
+
+  const diag=await page.evaluate(({i,before})=>{
+    const after=Array.from(cit.g);
+    const changed=[];
+    for(let n=0;n<Math.max(before.length,after.length);n++)if(before[n]!==after[n])changed.push({i:n,before:before[n],after:after[n]});
+    return {chosen:i,value:after[i],tool:citTool,changed};
+  },setup);
+  console.log('portrait paint diagnostic',JSON.stringify(diag));
+  expect(diag.tool).toBe('R');
+  expect(diag.changed.map(x=>x.i)).toContain(setup.i);
+  expect(diag.value).toBe('R');
 });
