@@ -77,6 +77,18 @@ fit_replacement = """
   const byH=Math.floor((vh - 14) / CITY_CFG.ROWS);"""
 html, fit_count = fit_pattern.subn(fit_replacement, html, count=1)
 
+# Temporary CI trace: locate the later camera-patch mapper that supersedes the
+# older paint block above. Keep the output compact and restricted to city-camera
+# coordinate code so the exact generated spelling can be adapted safely.
+seen = 0
+for m in re.finditer(r'.{0,260}clientX.{0,700}', html, re.S):
+    snippet = m.group(0)
+    if ('citCam' in snippet or 'citTs' in snippet) and ('pointer' in snippet.lower() or 'cell' in snippet.lower() or 'world' in snippet.lower()):
+        print('V2_CAMERA_MAPPER', re.sub(r'\s+', ' ', snippet)[:1100])
+        seen += 1
+        if seen >= 8:
+            break
+
 # Expose which generated variants were adapted for CI/debugging without changing
 # runtime behavior. The required v33 mappings above must always be present.
 print(f'v2 generated adaptations: paint={paint_count} interior={interior_count} canvas={canvas_count} fit={fit_count}')
