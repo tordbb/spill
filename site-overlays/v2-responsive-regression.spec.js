@@ -197,6 +197,7 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
       return r.left>=20&&r.top>=80&&r.right<=innerWidth-20&&r.bottom<=innerHeight-80&&r.width>8&&r.height>8;
     });
     const el=visible[Math.floor(visible.length/2)]||tiles[Math.floor(tiles.length/2)];
+    const rect=el.getBoundingClientRect();
     const i=Number(el.dataset.i);
     const cols=(typeof CITY_CFG!=='undefined'&&CITY_CFG.COLS)||12;
     const rows=(typeof CITY_CFG!=='undefined'&&CITY_CFG.ROWS)||Math.ceil(cit.g.length/cols);
@@ -210,14 +211,12 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
     if(typeof save==='function')save();
     if(typeof citRenderTiles==='function')citRenderTiles();
     citTool='R';
-    return {i,before:Array.from(cit.g)};
+    return {i,x:rect.left+rect.width/2,y:rect.top+rect.height/2,before:Array.from(cit.g)};
   });
   await expect.poll(()=>page.evaluate(()=>citTool)).toBe('R');
   await page.waitForTimeout(100);
 
-  const tile=page.locator(`#cit-grid .ct[data-i="${setup.i}"]`);
-  const b=await box(tile);
-  await page.mouse.click(b.cx,b.cy);
+  await page.mouse.click(setup.x,setup.y);
   await page.waitForTimeout(220);
 
   const result=await page.evaluate(({i,before})=>{
