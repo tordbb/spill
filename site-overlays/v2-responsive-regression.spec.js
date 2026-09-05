@@ -140,9 +140,27 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
     expect(tr==='none'||!tr.includes('matrix(0, 1')&&!tr.includes('matrix(0, -1')).toBeTruthy();
   }
 
+  // Fixed controls must never be clipped by browser chrome. Tool choices are the
+  // one exception because they intentionally live in the scrollable action tray.
   const visibleButtons=page.locator('#g-cit button:visible');
   const count=await visibleButtons.count();
-  for(let i=0;i<count;i++)await expectInsideViewport(page,visibleButtons.nth(i),width,height);
+  for(let i=0;i<count;i++){
+    const button=visibleButtons.nth(i);
+    if(await button.evaluate(el=>!!el.closest('#cit-tools')))continue;
+    await expectInsideViewport(page,button,width,height);
+  }
+
+  // A tool that starts partially outside the physical right edge must be reachable
+  // by the portrait action tray's transformed scroll, then fully clickable.
+  const school=page.locator('#cit-tools button').filter({hasText:'🏫'}).first();
+  await expect(school).toBeVisible();
+  const before=await box(school);
+  const needed=Math.max(0,before.right-(width-8));
+  await page.locator('#cit-tools').evaluate((el,delta)=>{el.scrollTop+=delta;},needed+12);
+  await page.waitForTimeout(80);
+  await expectInsideViewport(page,school,width,height);
+  await school.click();
+  await expect.poll(()=>page.evaluate(()=>citTool)).toBe('K');
 });
 
 test('portrait CCW hit-testing opens the building that was actually double-tapped', async ({ page }) => {
@@ -174,4 +192,31 @@ test('portrait CCW hit-testing opens the building that was actually double-tappe
   // Interior controls are still physically inside the reduced visual viewport.
   await expectInsideViewport(page,page.locator('#ci-exit'),width,height);
   await expectInsideViewport(page,page.locator('#ci-delete'),width,height);
+});
+
+test('portrait CCW painting edits the tile under the physical pointer', async ({ page }) => {
+  const width=390,height=760;
+  await openCity(page,width,height);
+
+  const chosen=await page.evaluate(()=>{
+    const tiles=[...document.querySelectorAll('#cit-grid .ct[data-i]')];
+    const visible=tiles.filter(el=>{
+      const r=el.getBoundingClientRect();
+      return r.left>=20&&r.top>=80&&r.right<=innerWidth-20&&r.bottom<=innerHeight-80&&r.width>8&&r.height>8;
+    });
+    const el=visible[Math.floor(visible.length/2)]||tiles[Math.floor(tiles.length/2)];
+    const i=Number(el.dataset.i);
+    cit.g[i]='E';
+    citTool='R';
+    if(typeof save==='function')save();
+    if(typeof citRenderTiles==='function')citRenderTiles();
+    if(typeof citRenderTools==='function')citRenderTools();
+    return i;
+  });
+  await page.waitForTimeout(100);
+
+  const tile=page.locator(`#cit-grid .ct[data-i="${chosen}"]`);
+  const b=await box(tile);
+  await page.mouse.click(b.cx,b.cy);
+  await expect.poll(()=>page.evaluate(i=>cit.g[i],chosen),{timeout:1500}).toBe('R');
 });
