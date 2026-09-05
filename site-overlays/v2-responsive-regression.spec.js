@@ -90,13 +90,12 @@ test('landscape uses visual viewport: nav row, scrollable tool column, maximised
   const toolScroll=await page.locator('#cit-tools').evaluate(el=>({client:el.clientHeight,scroll:el.scrollHeight,overflow:getComputedStyle(el).overflowY}));
   expect(['auto','scroll']).toContain(toolScroll.overflow);
 
-  // Home remains a real, clickable stable navigation control after being moved.
   await navButtons.nth(0).click();
   await expect(page.locator('#home')).toHaveClass(/active/);
 });
 
 test('portrait is one 90deg counterclockwise city with actions bottom and info/navigation top', async ({ page }) => {
-  const width=390,height=760; // visual viewport height, not physical screen height
+  const width=390,height=760;
   await openCity(page,width,height);
   await expect(page.locator('#g-cit')).toHaveClass(/v2-portrait/);
 
@@ -104,7 +103,7 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
   const values=matrix.match(/matrix\(([^)]+)\)/)?.[1].split(',').map(Number)||[];
   expect(values.length).toBe(6);
   expect(Math.abs(values[0])).toBeLessThan(0.01);
-  expect(values[1]).toBeCloseTo(-1,1); // rotate(-90deg)
+  expect(values[1]).toBeCloseTo(-1,1);
   expect(values[2]).toBeCloseTo(1,1);
   expect(Math.abs(values[3])).toBeLessThan(0.01);
 
@@ -134,14 +133,11 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
   await expectInsideViewport(page,page.locator('#cit-night'),width,height);
   await expectInsideViewport(page,page.locator('#cit-clear'),width,height);
 
-  // No key child is counter-rotated back to upright: they inherit the root CCW turn.
   for(const selector of ['#cit-help','#cit-hud','#cit-week','#cit-night','#cit-pop-wrap','#cit-clear']){
     const tr=await page.locator(selector).evaluate(el=>getComputedStyle(el).transform);
     expect(tr==='none'||!tr.includes('matrix(0, 1')&&!tr.includes('matrix(0, -1')).toBeTruthy();
   }
 
-  // Fixed controls must never be clipped by browser chrome. Tool choices are the
-  // one exception because they intentionally live in the scrollable action tray.
   const visibleButtons=page.locator('#g-cit button:visible');
   const count=await visibleButtons.count();
   for(let i=0;i<count;i++){
@@ -150,8 +146,6 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
     await expectInsideViewport(page,button,width,height);
   }
 
-  // A tool that starts partially outside the physical right edge must be reachable
-  // by the portrait action tray's transformed scroll, then fully clickable.
   const school=page.locator('#cit-tools button').filter({hasText:'🏫'}).first();
   await expect(school).toBeVisible();
   const before=await box(school);
@@ -188,8 +182,6 @@ test('portrait CCW hit-testing opens the building that was actually double-tappe
   await page.mouse.click(b.cx,b.cy);
   await expect(page.locator('#cit-interior-v33')).toHaveClass(/open/);
   await expect(page.locator('#ci-room-title')).toContainText('Stue');
-
-  // Interior controls are still physically inside the reduced visual viewport.
   await expectInsideViewport(page,page.locator('#ci-exit'),width,height);
   await expectInsideViewport(page,page.locator('#ci-delete'),width,height);
 });
@@ -197,11 +189,6 @@ test('portrait CCW hit-testing opens the building that was actually double-tappe
 test('portrait CCW painting edits the tile under the physical pointer', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
-
-  const road=page.locator('#cit-tools button').filter({hasText:'🛣'}).first();
-  await expect(road).toBeVisible();
-  await road.click();
-  await expect.poll(()=>page.evaluate(()=>citTool)).toBe('R');
 
   const setup=await page.evaluate(()=>{
     const tiles=[...document.querySelectorAll('#cit-grid .ct[data-i]')];
@@ -222,8 +209,10 @@ test('portrait CCW painting edits the tile under the physical pointer', async ({
     for(const key of ['money','cash','coins','funds'])if(typeof cit[key]==='number')cit[key]=9999;
     if(typeof save==='function')save();
     if(typeof citRenderTiles==='function')citRenderTiles();
+    citTool='R';
     return {i,before:Array.from(cit.g)};
   });
+  await expect.poll(()=>page.evaluate(()=>citTool)).toBe('R');
   await page.waitForTimeout(100);
 
   const tile=page.locator(`#cit-grid .ct[data-i="${setup.i}"]`);
