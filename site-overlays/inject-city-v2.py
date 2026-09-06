@@ -15,9 +15,9 @@ js = (root / 'city-v2-responsive.js').read_text(encoding='utf-8')
 if '</head>' not in html or '</body>' not in html:
     raise SystemExit('expected closing head/body tags')
 
-# Older generated builds had an inline tile mapper written specifically for the
-# old clockwise portrait transform. Update it when present, but do not require
-# it because the later camera patch replaces this block in current builds.
+# Older generated builds can still contain this direct tile mapper. The corrected
+# v2 portrait orientation now follows the stable +90deg screen transform, so its
+# inverse is the same clientY/right-edge mapping used by stable portrait.
 paint_pattern = re.compile(
     r"\s*const rotated=matchMedia\('\(orientation:portrait\)'\)\.matches\s*&&\s*getComputedStyle\(\$\('#g-cit'\)\)\.transform\s*!==\s*'none';"
     r"\s*const localX=rotated\s*\?\s*\(e\.clientY-r\.top\)\s*:\s*\(e\.clientX-r\.left\);"
@@ -26,14 +26,13 @@ paint_pattern = re.compile(
 paint_replacement = """
     const cityRoot=$('#g-cit');
     const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle(cityRoot).transform!=='none';
-    const ccw=rotated && cityRoot.classList.contains('v2-portrait');
-    const localX=ccw ? (r.bottom-e.clientY) : rotated ? (e.clientY-r.top) : (e.clientX-r.left);
-    const localY=ccw ? (e.clientX-r.left) : rotated ? (r.right-e.clientX) : (e.clientY-r.top);"""
+    const localX=rotated ? (e.clientY-r.top) : (e.clientX-r.left);
+    const localY=rotated ? (r.right-e.clientX) : (e.clientY-r.top);"""
 html, paint_count = paint_pattern.subn(paint_replacement, html, count=1)
 
-# Current stable builds use the camera patch's localOf() mapper. Its portrait
-# branch was also written for the old clockwise root transform. In /v2 portrait,
-# invert the new counterclockwise root rotation before camera inversion.
+# Current stable builds use the camera patch's localOf() mapper. Keep the stable
+# portrait inverse explicitly in the generated /v2 copy so camera hit-testing
+# remains tied to the corrected visual rotation.
 camera_pattern = re.compile(
     r"const localOf=e=>\{\s*const r=v\.getBoundingClientRect\(\);\s*"
     r"return rotated\(\)\s*\?\s*\{x:e\.clientY-r\.top,\s*y:r\.right-e\.clientX\}\s*"
@@ -41,21 +40,15 @@ camera_pattern = re.compile(
 )
 camera_replacement = """const localOf=e=>{
     const r=v.getBoundingClientRect();
-    const cityRoot=$('#g-cit');
-    const isRotated=rotated();
-    const ccw=isRotated && cityRoot.classList.contains('v2-portrait');
-    return ccw
-      ? {x:r.bottom-e.clientY,y:e.clientX-r.left}
-      : isRotated
-        ? {x:e.clientY-r.top,y:r.right-e.clientX}
-        : {x:e.clientX-r.left,y:e.clientY-r.top};
+    return rotated()
+      ? {x:e.clientY-r.top,y:r.right-e.clientX}
+      : {x:e.clientX-r.left,y:e.clientY-r.top};
   };"""
 html, camera_count = camera_pattern.subn(camera_replacement, html, count=1)
 if camera_count != 1:
     raise SystemExit('could not adapt stable camera pointer mapping')
 
-# Building double-click hit-testing is part of the stable v33 overlay and uses
-# the old clockwise mapping until this v2-only generated copy is adapted.
+# Building double-click hit-testing uses the same inverse transform as the camera.
 interior_pattern = re.compile(
     r"\s*const rotated=matchMedia\('\(orientation:portrait\)'\)\.matches\s*&&\s*getComputedStyle\(document\.getElementById\('g-cit'\)\)\.transform\s*!==\s*'none';"
     r"\s*const local=rotated\?\{x:e\.clientY-r\.top,y:r\.right-e\.clientX\}:\{x:e\.clientX-r\.left,y:e\.clientY-r\.top\};"
@@ -63,13 +56,13 @@ interior_pattern = re.compile(
 interior_replacement = """
     const cityRoot=document.getElementById('g-cit');
     const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle(cityRoot).transform!=='none';
-    const ccw=rotated && cityRoot.classList.contains('v2-portrait');
-    const local=ccw?{x:r.bottom-e.clientY,y:e.clientX-r.left}:rotated?{x:e.clientY-r.top,y:r.right-e.clientX}:{x:e.clientX-r.left,y:e.clientY-r.top};"""
+    const local=rotated?{x:e.clientY-r.top,y:r.right-e.clientX}:{x:e.clientX-r.left,y:e.clientY-r.top};"""
 html, interior_count = interior_pattern.subn(interior_replacement, html, count=1)
 if interior_count != 1:
     raise SystemExit('could not adapt stable interior tile pointer mapping')
 
-# Interior dragging also needs coordinates in the counterclockwise local system.
+# Interior dragging starts from an unrotated canvas mapper, so explicitly invert
+# the corrected portrait transform and account for the swapped physical bounds.
 canvas_pattern = re.compile(
     r"\s*const c=document\.getElementById\('ci-canvas'\),r=c\.getBoundingClientRect\(\);"
     r"\s*return \{x:\(e\.clientX-r\.left\)/Math\.max\(1,r\.width\)\*100,y:\(e\.clientY-r\.top\)/Math\.max\(1,r\.height\)\*100\};"
@@ -77,10 +70,10 @@ canvas_pattern = re.compile(
 canvas_replacement = """
     const c=document.getElementById('ci-canvas'),r=c.getBoundingClientRect();
     const cityRoot=document.getElementById('g-cit');
-    const ccw=matchMedia('(orientation:portrait)').matches && cityRoot.classList.contains('v2-portrait') && getComputedStyle(cityRoot).transform!=='none';
-    const x=ccw?(r.bottom-e.clientY):(e.clientX-r.left);
-    const y=ccw?(e.clientX-r.left):(e.clientY-r.top);
-    return {x:x/Math.max(1,ccw?r.height:r.width)*100,y:y/Math.max(1,ccw?r.width:r.height)*100};"""
+    const rotated=matchMedia('(orientation:portrait)').matches && getComputedStyle(cityRoot).transform!=='none';
+    const x=rotated?(e.clientY-r.top):(e.clientX-r.left);
+    const y=rotated?(r.right-e.clientX):(e.clientY-r.top);
+    return {x:x/Math.max(1,rotated?r.height:r.width)*100,y:y/Math.max(1,rotated?r.width:r.height)*100};"""
 html, canvas_count = canvas_pattern.subn(canvas_replacement, html, count=1)
 if canvas_count != 1:
     raise SystemExit('could not adapt stable interior canvas pointer mapping')
