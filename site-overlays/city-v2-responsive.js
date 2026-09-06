@@ -99,7 +99,6 @@
     const hud=q('#cit-hud',ui.c),stats=q('#cit-pop-wrap',ui.c),week=q('#cit-week',ui.c);
     [hud,stats,week].filter(Boolean).forEach(el=>{if(el.parentNode!==right)right.appendChild(el);});
 
-    // Keep navigation first, then information. Any remaining status widgets stay after these.
     const ordered=[statusNav,hud,stats,week].filter(Boolean);
     ordered.forEach((el,i)=>{
       const ref=right.children[i];
@@ -133,7 +132,9 @@
       const dx=t.clientX-touchState.x,dy=t.clientY-touchState.y;
       if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
       if(Math.abs(dx)>=Math.abs(dy)){
-        tools.scrollTop=touchState.scrollTop-dx;
+        // With the corrected +90deg root, increasing local scrollTop moves the
+        // physical tool strip to the right, so follow a horizontal finger drag.
+        tools.scrollTop=touchState.scrollTop+dx;
         touchState.moved=true;
         e.preventDefault();
       }
