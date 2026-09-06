@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#321c3a">
+  <title>Kakefall</title>
+  <style>
+    :root{font-family:Inter,ui-rounded,"SF Pro Rounded",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark;--ink:#fff8ef;--muted:#e6d6e5;--panel:#291731d9;--panel2:#3a2044;--edge:#ffffff20;--accent:#ffd166}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%;background:#180f20;color:var(--ink);overscroll-behavior:none}
+    body{min-height:100dvh;overflow:hidden;background:radial-gradient(circle at 20% 0%,#643050 0 18%,transparent 45%),radial-gradient(circle at 90% 100%,#2b5161 0 15%,transparent 42%),linear-gradient(160deg,#241229,#120d19 72%)}
+    button{font:inherit;color:inherit}
+    #app{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));max-width:1100px;margin:auto}
+    header{display:flex;align-items:center;gap:10px;min-height:52px}
+    .icon-btn,.control{border:1px solid var(--edge);background:#2b1934e6;box-shadow:0 6px 18px #0004;border-radius:16px;min-width:50px;min-height:50px;display:grid;place-items:center;touch-action:manipulation;cursor:pointer}
+    .icon-btn:active,.control:active{transform:translateY(1px) scale(.97)}
+    #home{font-size:25px;text-decoration:none}
+    .title-wrap{min-width:0;flex:1}
+    h1{font-size:clamp(20px,4.3vw,32px);line-height:1;margin:0;font-weight:900;letter-spacing:.01em}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #pause{font-size:20px}
+    main{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(96px,170px);gap:10px;align-items:stretch}
+    .board-shell{min-height:0;display:grid;place-items:center;position:relative;border:1px solid var(--edge);border-radius:22px;background:#100b17b8;box-shadow:inset 0 0 36px #0008,0 18px 45px #0004;overflow:hidden}
+    #board{display:block;max-width:100%;max-height:100%;width:auto;height:auto;touch-action:none}
+    .side{min-height:0;display:flex;flex-direction:column;gap:8px;overflow:auto;scrollbar-width:none}
+    .side::-webkit-scrollbar{display:none}
+    .panel{border:1px solid var(--edge);border-radius:18px;background:var(--panel);padding:9px;box-shadow:0 8px 22px #0003}
+    .label{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.12em}
+    .value{font-size:clamp(18px,3.6vw,28px);font-weight:900;margin-top:3px}
+    .mini-canvas{width:100%;aspect-ratio:1.55/1;display:block;margin-top:4px}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .stat{background:#ffffff0b;border-radius:12px;padding:7px;min-width:0}
+    .stat .value{font-size:16px}
+    #status{font-size:11px;line-height:1.35;color:#f3e6f0}
+    footer{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    .control{min-width:0;min-height:54px;font-size:22px;padding:0;border-radius:16px}
+    .control small{font-size:9px;display:block;color:var(--muted);line-height:1;margin-top:-5px}
+    #drop{background:linear-gradient(180deg,#6a3d70,#43234b)}
+    #rotate{background:linear-gradient(180deg,#704355,#4a2937)}
+    .overlay{position:absolute;inset:0;display:grid;place-items:center;background:#110b17b8;backdrop-filter:blur(6px);padding:20px;z-index:3}
+    .overlay[hidden]{display:none}
+    .card{width:min(330px,90%);text-align:center;border:1px solid var(--edge);border-radius:24px;padding:22px;background:#2a1733f2;box-shadow:0 20px 60px #0008}
+    .card h2{font-size:28px;margin:0 0 8px}.card p{margin:8px 0 18px;color:var(--muted);line-height:1.45}.primary{border:0;border-radius:16px;background:linear-gradient(180deg,#ffd66b,#f1a84b);color:#2a1723;font-weight:900;padding:13px 18px;min-width:150px;font-size:17px;cursor:pointer}
+    .legend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;font-size:10px;color:var(--muted);margin-top:12px}.legend span{padding:5px 8px;border-radius:999px;background:#ffffff0b}
+    @media (orientation:portrait){#app{max-width:620px}main{grid-template-columns:minmax(0,1fr) 96px}.side{gap:6px}.panel{padding:7px;border-radius:15px}.mini-canvas{aspect-ratio:1.25/1}.subtitle{font-size:11px}footer{gap:6px}.control{min-height:52px}}
+    @media (orientation:landscape) and (max-height:560px){#app{grid-template-rows:auto minmax(0,1fr);grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head controls" "main controls";gap:8px;padding:8px max(8px,env(safe-area-inset-right)) 8px max(8px,env(safe-area-inset-left))}header{grid-area:head;min-height:44px}.icon-btn{min-width:44px;min-height:44px;border-radius:14px}main{grid-area:main;grid-template-columns:minmax(0,1fr) 130px;gap:8px}footer{grid-area:controls;grid-template-columns:68px;grid-template-rows:repeat(5,1fr);width:68px}.control{min-height:0;height:100%;border-radius:14px}.subtitle{display:none}.panel{padding:7px}.stat .value{font-size:14px}.value{font-size:18px}.mini-canvas{aspect-ratio:1.8/1}}
+    @media (max-width:390px){main{grid-template-columns:minmax(0,1fr) 84px}.stats{grid-template-columns:1fr}.panel{padding:6px}.label{font-size:9px}.value{font-size:17px}#status{font-size:10px}.control{font-size:20px}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <a id="home" class="icon-btn" href="../" aria-label="Tilbake til spilloversikten">🏡</a>
+    <div class="title-wrap"><h1>Kakefall</h1><div class="subtitle">Fyll rader og samle fire like kakestykker.</div></div>
+    <button id="pause" class="icon-btn" type="button" aria-label="Pause">⏸</button>
+  </header>
+  <main>
+    <section class="board-shell" aria-label="Spillebrett">
+      <canvas id="board" width="300" height="600"></canvas>
+      <div id="overlay" class="overlay" hidden>
+        <div class="card">
+          <h2 id="overlay-title">Pause</h2>
+          <p id="overlay-text">Spillet er satt på pause.</p>
+          <button id="overlay-button" class="primary" type="button">Fortsett</button>
+          <div class="legend"><span>← → flytt</span><span>↑ roter</span><span>mellomrom slipp</span><span>C hold</span></div>
+        </div>
+      </div>
+    </section>
+    <aside class="side">
+      <div class="panel"><div class="label">Neste</div><canvas id="next" class="mini-canvas" width="180" height="112"></canvas></div>
+      <div class="panel"><div class="label">Hold</div><canvas id="hold" class="mini-canvas" width="180" height="112"></canvas></div>
+      <div class="panel stats">
+        <div class="stat"><div class="label">Poeng</div><div id="score" class="value">0</div></div>
+        <div class="stat"><div class="label">Rekord</div><div id="best" class="value">0</div></div>
+        <div class="stat"><div class="label">Nivå</div><div id="level" class="value">1</div></div>
+        <div class="stat"><div class="label">Rader</div><div id="lines" class="value">0</div></div>
+      </div>
+      <div class="panel"><div class="label">Kakebonus</div><div id="status">Koble minst fire like farger for bonus.</div></div>
+    </aside>
+  </main>
+  <footer aria-label="Spillkontroller">
+    <button id="left" class="control" type="button" aria-label="Venstre">◀</button>
+    <button id="rotate" class="control" type="button" aria-label="Roter">↻</button>
+    <button id="right" class="control" type="button" aria-label="Høyre">▶</button>
+    <button id="hold-btn" class="control" type="button" aria-label="Hold brikke">▣<small>HOLD</small></button>
+    <button id="drop" class="control" type="button" aria-label="Slipp helt ned">▼<small>SLIPP</small></button>
+  </footer>
+</div>
+<script>
+  document.getElementById('home').addEventListener('click', (event) => {
+    if (window.parent !== window) {
+      event.preventDefault();
+      window.parent.postMessage({type:'spill-cake-close'}, '*');
+    }
+  });
+</script>
+<script src="game.js"></script>
+</body>
+</html>
