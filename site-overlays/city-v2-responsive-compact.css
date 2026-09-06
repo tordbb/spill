@@ -1,5 +1,4 @@
-/* Compact the portrait top/status strip along the rotated local Y axis.
-   Local element heights become physical widths after the -90deg city rotation. */
+/* Compact status widgets plus the phone-layout follow-up for /v2 only. */
 #g-cit.v2-portrait #cit-right {
   justify-content:center !important;
   gap:3px !important;
@@ -67,4 +66,189 @@
   font-size:9px !important;
   line-height:1 !important;
   overflow:hidden !important;
+}
+
+/* Landscape: reserve a real instruction row instead of drawing instructions over
+   the map. The camera viewport stretches independently in width and height. */
+#g-cit.v2-landscape .stage-wrap {
+  grid-template-columns:clamp(122px,15vw,158px) minmax(0,1fr) clamp(80px,9vw,104px) !important;
+  grid-template-rows:auto minmax(0,1fr) !important;
+  align-items:stretch !important;
+}
+#g-cit.v2-landscape #v2-side {
+  grid-column:1 !important;
+  grid-row:1 / 3 !important;
+  height:100% !important;
+}
+#g-cit.v2-landscape #cit-right {
+  grid-column:3 !important;
+  grid-row:1 / 3 !important;
+  height:100% !important;
+}
+#g-cit.v2-landscape #cit-help {
+  position:relative !important;
+  inset:auto !important;
+  grid-column:2 !important;
+  grid-row:1 !important;
+  width:100% !important;
+  max-width:none !important;
+  min-height:0 !important;
+  padding:2px 7px !important;
+  align-self:start !important;
+}
+#g-cit.v2-landscape #cit-help-main {
+  min-height:22px !important;
+  font-size:12px !important;
+  line-height:1.15 !important;
+}
+#g-cit.v2-landscape #cit-help-tip {
+  font-size:11px !important;
+  line-height:1.1 !important;
+}
+#g-cit.v2-landscape #cit-viewport {
+  grid-column:2 !important;
+  grid-row:2 !important;
+  width:100% !important;
+  height:100% !important;
+  align-self:stretch !important;
+  justify-self:stretch !important;
+}
+
+/* Stats/settings are allowed to scroll internally, but their cards themselves
+   must always remain inside the browser's actual visual viewport. */
+#g-cit.v2-city-layout #cit-v18-stats,
+#g-cit.v2-city-layout #cit-settings {
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  padding:6px !important;
+}
+#g-cit.v2-city-layout .v18-stats-card,
+#g-cit.v2-city-layout #cit-settings-card {
+  box-sizing:border-box !important;
+  max-width:calc(100% - 4px) !important;
+  max-height:calc(100% - 4px) !important;
+  overflow:auto !important;
+  margin:auto !important;
+}
+
+/* Portrait: use the orientation requested in the phone screenshot. With the
+   root rotated this way, local left is the physical top. The four local columns
+   therefore become status, instructions, map and frequent actions from top to
+   bottom on the physical phone. */
+#g-cit.v2-city-layout.v2-portrait {
+  left:var(--v2-vw,100dvw) !important;
+  top:0 !important;
+  width:var(--v2-vh,100dvh) !important;
+  height:var(--v2-vw,100dvw) !important;
+  transform:rotate(90deg) !important;
+  transform-origin:0 0 !important;
+}
+#g-cit.v2-portrait .stage-wrap {
+  grid-template-columns:clamp(88px,17vmin,104px) clamp(52px,10vmin,64px) minmax(0,1fr) clamp(116px,21vmin,138px) !important;
+  grid-template-rows:minmax(0,1fr) !important;
+  gap:4px !important;
+  padding:4px !important;
+}
+#g-cit.v2-portrait #cit-right {
+  grid-column:1 !important;
+  grid-row:1 !important;
+}
+#g-cit.v2-portrait #cit-help {
+  position:relative !important;
+  inset:auto !important;
+  grid-column:2 !important;
+  grid-row:1 !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:5px !important;
+  padding:3px !important;
+}
+/* The root rotation turns a local vertical text line into the physical top row.
+   The 180deg inline correction keeps Norwegian text readable in that row. */
+#g-cit.v2-portrait #cit-help-main,
+#g-cit.v2-portrait #cit-help-tip {
+  writing-mode:vertical-rl !important;
+  text-orientation:mixed !important;
+  white-space:nowrap !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  transform:rotate(180deg) !important;
+}
+#g-cit.v2-portrait #cit-viewport {
+  grid-column:3 !important;
+  grid-row:1 !important;
+  width:100% !important;
+  height:100% !important;
+  align-self:stretch !important;
+  justify-self:stretch !important;
+}
+#g-cit.v2-portrait #v2-side {
+  grid-column:4 !important;
+  grid-row:1 !important;
+}
+
+@media (max-height:520px) and (orientation:landscape) {
+  #g-cit.v2-landscape .stage-wrap {
+    grid-template-columns:120px minmax(0,1fr) 82px !important;
+    grid-template-rows:auto minmax(0,1fr) !important;
+  }
+  #g-cit.v2-landscape #cit-help {
+    position:relative !important;
+    inset:auto !important;
+  }
+  #g-cit.v2-landscape .v18-stats-card {
+    width:min(500px,calc(100% - 4px)) !important;
+    padding:8px !important;
+  }
+  #g-cit.v2-landscape .v18-stats-title {
+    font-size:18px !important;
+    margin-bottom:5px !important;
+  }
+  #g-cit.v2-landscape .v18-stats-rows { gap:4px !important; }
+  #g-cit.v2-landscape .v18-stat-row {
+    padding:4px 7px !important;
+    grid-template-columns:28px minmax(86px,1fr) 48px 58px !important;
+    gap:4px !important;
+  }
+  #g-cit.v2-landscape .v18-stat-icon { font-size:20px !important; }
+  #g-cit.v2-landscape .v18-stat-label,
+  #g-cit.v2-landscape .v18-stat-num { font-size:13px !important; }
+  #g-cit.v2-landscape .v18-stats-close {
+    margin-top:6px !important;
+    height:34px !important;
+  }
+  #g-cit.v2-landscape #cit-settings-card {
+    width:min(620px,calc(100% - 4px)) !important;
+    padding:8px !important;
+  }
+  #g-cit.v2-landscape .cit-size-btn {
+    min-height:54px !important;
+    font-size:17px !important;
+  }
+  #g-cit.v2-landscape #cit-size-options {
+    gap:6px !important;
+    margin-bottom:8px !important;
+  }
+  #g-cit.v2-landscape .cit-setting-row { padding:3px 5px !important; }
+  #g-cit.v2-landscape #cit-settings-close {
+    height:36px !important;
+    margin-top:5px !important;
+  }
+}
+
+@media (max-width:390px) and (orientation:portrait) {
+  #g-cit.v2-portrait .stage-wrap {
+    grid-template-columns:88px 58px minmax(0,1fr) 120px !important;
+    grid-template-rows:minmax(0,1fr) !important;
+  }
+  #g-cit.v2-portrait #cit-help {
+    position:relative !important;
+    inset:auto !important;
+  }
 }
