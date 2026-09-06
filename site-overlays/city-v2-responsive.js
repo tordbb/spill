@@ -47,6 +47,8 @@
   }
 
   function findSettings(c,home){
+    const direct=q('#cit-settings-btn',c);
+    if(direct)return direct;
     const top=q('.top-bar',c);
     const pool=qa('button,[role="button"]',top||c).filter(el=>el!==home&&el.id!=='cit-clear');
     return pool.find(el=>(el.textContent||'').includes('⚙'))||pool.find(el=>/(settings?|innstill|gear|cog)/.test(label(el)))||null;
@@ -66,12 +68,16 @@
     const toolScroll=make('div','v2-tool-scroll');
     const quick=make('div','v2-quick-actions');
     const statusNav=make('div','v2-status-nav');
+    const topLeft=make('div','v2-top-left');
+    const topCenter=make('div','v2-top-center');
+    const topRight=make('div','v2-top-right');
 
     if(nav.parentNode!==side)side.appendChild(nav);
     if(toolZone.parentNode!==side)side.appendChild(toolZone);
     if(toolScroll.parentNode!==toolZone)toolZone.appendChild(toolScroll);
     if(quick.parentNode!==toolZone)toolZone.appendChild(quick);
     if(tools.parentNode!==toolScroll)toolScroll.appendChild(tools);
+    [topLeft,topCenter,topRight].forEach(el=>{if(el.parentNode!==statusNav)statusNav.appendChild(el);});
 
     const top=q('.top-bar',c);
     const home=findHome(c);
@@ -83,32 +89,33 @@
     if(viewport.parentNode!==stage)stage.appendChild(viewport);
     if(right.parentNode!==stage)stage.appendChild(right);
 
-    return {c,stage,viewport,tools,right,help,source,side,nav,toolZone,toolScroll,quick,statusNav,home,settings};
+    return {c,stage,viewport,tools,right,help,source,side,nav,toolZone,toolScroll,quick,statusNav,topLeft,topCenter,topRight,home,settings};
   }
 
   function movePortrait(ui){
-    const {right,statusNav,home,settings,nav,quick}=ui;
+    const {right,statusNav,topLeft,topCenter,topRight,home,settings,nav,quick}=ui;
     if(statusNav.parentNode!==right)right.insertBefore(statusNav,right.firstChild);
-    [home,settings].filter(Boolean).forEach(el=>{if(el.parentNode!==statusNav)statusNav.appendChild(el);});
-    if(nav.childNodes.length===0)nav.textContent='';
+    [topLeft,topCenter,topRight].forEach(el=>{if(el.parentNode!==statusNav)statusNav.appendChild(el);});
+    if(home&&home.parentNode!==topLeft)topLeft.appendChild(home);
 
     const night=q('#cit-night',ui.c),edit=q('#cit-edit-actions',ui.c);
     if(edit&&edit.parentNode!==quick)quick.appendChild(edit);
     if(night&&night.parentNode!==quick)quick.appendChild(night);
 
     const hud=q('#cit-hud',ui.c),stats=q('#cit-pop-wrap',ui.c),week=q('#cit-week',ui.c);
-    [hud,stats,week].filter(Boolean).forEach(el=>{if(el.parentNode!==right)right.appendChild(el);});
+    [hud,week].filter(Boolean).forEach(el=>{if(el.parentNode!==topCenter)topCenter.appendChild(el);});
+    [stats,settings].filter(Boolean).forEach(el=>{if(el.parentNode!==topRight)topRight.appendChild(el);});
 
-    const ordered=[statusNav,hud,stats,week].filter(Boolean);
-    ordered.forEach((el,i)=>{
-      const ref=right.children[i];
-      if(ref!==el)right.insertBefore(el,ref||null);
-    });
+    if(right.firstElementChild!==statusNav)right.insertBefore(statusNav,right.firstElementChild||null);
+    if(nav.childNodes.length===0)nav.textContent='';
   }
 
   function moveLandscape(ui){
     const {right,statusNav,home,settings,nav,quick}=ui;
     [home,settings].filter(Boolean).forEach(el=>{if(el.parentNode!==nav)nav.appendChild(el);});
+
+    const hud=q('#cit-hud',ui.c),stats=q('#cit-pop-wrap',ui.c),week=q('#cit-week',ui.c);
+    [hud,week,stats].filter(Boolean).forEach(el=>{if(el.parentNode!==right)right.appendChild(el);});
     if(statusNav.parentNode===right)statusNav.remove();
 
     const edit=q('#cit-edit-actions',ui.c),night=q('#cit-night',ui.c);
@@ -132,8 +139,6 @@
       const dx=t.clientX-touchState.x,dy=t.clientY-touchState.y;
       if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
       if(Math.abs(dx)>=Math.abs(dy)){
-        // With the corrected +90deg root, increasing local scrollTop moves the
-        // physical tool strip to the right, so follow a horizontal finger drag.
         tools.scrollTop=touchState.scrollTop+dx;
         touchState.moved=true;
         e.preventDefault();
