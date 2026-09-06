@@ -1,5 +1,5 @@
 from pathlib import Path
-import json
+import shutil
 import sys
 
 if len(sys.argv) != 3:
@@ -16,10 +16,12 @@ if '</head>' not in html or '</body>' not in html:
 
 if mode == 'home':
     source_root = Path(__file__).resolve().parent.parent
-    cake_html = (source_root / 'cake' / 'index.html').read_text(encoding='utf-8')
-    cake_js = (source_root / 'cake' / 'game.js').read_text(encoding='utf-8')
-    cake_html = cake_html.replace('<script src="game.js"></script>', f'<script>\n{cake_js}\n</script>')
-    cake_doc = json.dumps(cake_html, ensure_ascii=False).replace('</script>', '<\\/script>')
+    cake_source = source_root / 'cake'
+    publish_root = html_path.parent
+    for cake_target in (publish_root / 'cake', publish_root / 'v2' / 'cake'):
+        cake_target.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(cake_source / 'index.html', cake_target / 'index.html')
+        shutil.copy2(cake_source / 'game.js', cake_target / 'game.js')
 
     css = r'''
 #card-cave {
@@ -61,64 +63,39 @@ if mode == 'home':
 }
 #card-cake .cake-icon { position:relative; z-index:1; filter:drop-shadow(0 3px 2px #0005); }
 #card-cake .mini { position:relative; z-index:1; }
-#cake-game-frame {
-  position:fixed;
-  inset:0;
-  z-index:100000;
-  width:100vw;
-  height:100dvh;
-  border:0;
-  background:#180f20;
-}
 '''
-    js = rf'''
-(() => {{
+    js = r'''
+(() => {
   'use strict';
   const grid = document.querySelector('#home .menu-grid');
   if (!grid) return;
 
-  if (!document.getElementById('card-cave')) {{
+  if (!document.getElementById('card-cave')) {
     const cave = document.createElement('button');
     cave.type = 'button';
     cave.className = 'menu-card';
     cave.id = 'card-cave';
     cave.setAttribute('aria-label', 'Cave Flight');
     cave.innerHTML = '<span class="cave-ship">🚀</span><span class="mini">⛰️ ✨ ⛰️</span>';
-    cave.addEventListener('click', () => {{
+    cave.addEventListener('click', () => {
       window.location.href = new URL('cave/', window.location.href).href;
-    }});
+    });
     grid.appendChild(cave);
-  }}
+  }
 
-  if (!document.getElementById('card-cake')) {{
+  if (!document.getElementById('card-cake')) {
     const cake = document.createElement('button');
     cake.type = 'button';
     cake.className = 'menu-card';
     cake.id = 'card-cake';
     cake.setAttribute('aria-label', 'Kakefall');
     cake.innerHTML = '<span class="cake-icon">🍰</span><span class="mini">▦ ▣ ▦</span>';
-    cake.addEventListener('click', () => {{
-      if (document.getElementById('cake-game-frame')) return;
-      const frame = document.createElement('iframe');
-      frame.id = 'cake-game-frame';
-      frame.title = 'Kakefall';
-      frame.setAttribute('allow', 'fullscreen');
-      frame.srcdoc = {cake_doc};
-      document.body.appendChild(frame);
-      document.body.style.overflow = 'hidden';
-    }});
+    cake.addEventListener('click', () => {
+      window.location.href = new URL('cake/', window.location.href).href;
+    });
     grid.appendChild(cake);
-  }}
-
-  window.addEventListener('message', (event) => {{
-    if (!event.data || event.data.type !== 'spill-cake-close') return;
-    const frame = document.getElementById('cake-game-frame');
-    if (frame && event.source === frame.contentWindow) {{
-      frame.remove();
-      document.body.style.overflow = '';
-    }}
-  }});
-}})();
+  }
+})();
 '''
     html = html.replace('</head>', f'\n<style id="cave-launcher-style">\n{css}\n</style>\n</head>', 1)
     html = html.replace('</body>', f'\n<script id="cave-launcher-card">\n{js}\n</script>\n</body>', 1)
