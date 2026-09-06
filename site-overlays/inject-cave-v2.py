@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 import sys
 
 if len(sys.argv) != 3:
@@ -14,6 +15,14 @@ if '</head>' not in html or '</body>' not in html:
     raise SystemExit('expected closing head/body tags')
 
 if mode == 'home':
+    source_root = Path(__file__).resolve().parent.parent
+    cake_source = source_root / 'cake'
+    publish_root = html_path.parent
+    for cake_target in (publish_root / 'cake', publish_root / 'v2' / 'cake'):
+        cake_target.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(cake_source / 'index.html', cake_target / 'index.html')
+        shutil.copy2(cake_source / 'game.js', cake_target / 'game.js')
+
     css = r'''
 #card-cave {
   background:linear-gradient(145deg,#284b63,#102a3a);
@@ -36,23 +45,56 @@ if mode == 'home':
 #card-cave::after { right:-12%; transform:rotate(-18deg); }
 #card-cave .cave-ship { position:relative; z-index:1; filter:drop-shadow(0 3px 2px #0005); }
 #card-cave .mini { position:relative; z-index:1; }
+#card-cake {
+  background:linear-gradient(145deg,#6a304f,#37203f);
+  color:#fff;
+  overflow:hidden;
+}
+#card-cake::before {
+  content:'';
+  position:absolute;
+  inset:auto 8% 8% 8%;
+  height:28%;
+  background:repeating-linear-gradient(90deg,#ff6b8a 0 18%,#ffb347 18% 36%,#ffe169 36% 54%,#72d6a8 54% 72%,#63b9ff 72% 90%,#a98bff 90% 100%);
+  border-radius:9px;
+  opacity:.72;
+  box-shadow:0 3px 0 #b7744f;
+  pointer-events:none;
+}
+#card-cake .cake-icon { position:relative; z-index:1; filter:drop-shadow(0 3px 2px #0005); }
+#card-cake .mini { position:relative; z-index:1; }
 '''
     js = r'''
 (() => {
   'use strict';
   const grid = document.querySelector('#home .menu-grid');
-  if (!grid || document.getElementById('card-cave')) return;
+  if (!grid) return;
 
-  const card = document.createElement('button');
-  card.type = 'button';
-  card.className = 'menu-card';
-  card.id = 'card-cave';
-  card.setAttribute('aria-label', 'Cave Flight');
-  card.innerHTML = '<span class="cave-ship">🚀</span><span class="mini">⛰️ ✨ ⛰️</span>';
-  card.addEventListener('click', () => {
-    window.location.href = new URL('cave/', window.location.href).href;
-  });
-  grid.appendChild(card);
+  if (!document.getElementById('card-cave')) {
+    const cave = document.createElement('button');
+    cave.type = 'button';
+    cave.className = 'menu-card';
+    cave.id = 'card-cave';
+    cave.setAttribute('aria-label', 'Cave Flight');
+    cave.innerHTML = '<span class="cave-ship">🚀</span><span class="mini">⛰️ ✨ ⛰️</span>';
+    cave.addEventListener('click', () => {
+      window.location.href = new URL('cave/', window.location.href).href;
+    });
+    grid.appendChild(cave);
+  }
+
+  if (!document.getElementById('card-cake')) {
+    const cake = document.createElement('button');
+    cake.type = 'button';
+    cake.className = 'menu-card';
+    cake.id = 'card-cake';
+    cake.setAttribute('aria-label', 'Kakefall');
+    cake.innerHTML = '<span class="cake-icon">🍰</span><span class="mini">▦ ▣ ▦</span>';
+    cake.addEventListener('click', () => {
+      window.location.href = new URL('cake/', window.location.href).href;
+    });
+    grid.appendChild(cake);
+  }
 })();
 '''
     html = html.replace('</head>', f'\n<style id="cave-launcher-style">\n{css}\n</style>\n</head>', 1)
