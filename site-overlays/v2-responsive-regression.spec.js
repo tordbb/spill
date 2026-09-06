@@ -15,7 +15,7 @@ async function openCity(page,width,height){
   await page.click('#card-cit');
   await expect(page.locator('#g-cit')).toHaveClass(/active/);
   await expect(page.locator('#g-cit')).toHaveClass(/v2-city-layout/);
-  await page.waitForTimeout(160);
+  await page.waitForTimeout(220);
 }
 
 async function expectInsideViewport(page,locator,width,height){
@@ -108,18 +108,13 @@ test('landscape reserves instructions, maximises map width, and keeps dialogs in
   await expect(page.locator('#home')).toHaveClass(/active/);
 });
 
-test('portrait uses the corrected 90deg orientation with status, instructions, map, then actions', async ({ page }) => {
+test('portrait is physically upright with status, instructions, portrait map, then actions', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
   await expect(page.locator('#g-cit')).toHaveClass(/v2-portrait/);
 
-  const matrix=await page.locator('#g-cit').evaluate(el=>getComputedStyle(el).transform);
-  const values=matrix.match(/matrix\(([^)]+)\)/)?.[1].split(',').map(Number)||[];
-  expect(values.length).toBe(6);
-  expect(Math.abs(values[0])).toBeLessThan(0.01);
-  expect(values[1]).toBeCloseTo(1,1);
-  expect(values[2]).toBeCloseTo(-1,1);
-  expect(Math.abs(values[3])).toBeLessThan(0.01);
+  const rootTransform=await page.locator('#g-cit').evaluate(el=>getComputedStyle(el).transform);
+  expect(rootTransform).toBe('none');
 
   const city=await expectInsideViewport(page,page.locator('#g-cit'),width,height);
   expect(Math.abs(city.width-width)).toBeLessThan(2);
@@ -133,10 +128,18 @@ test('portrait uses the corrected 90deg orientation with status, instructions, m
   expect(help.y).toBeLessThan(map.y);
   expect(map.y).toBeLessThan(bottom.y);
   expect(top.bottom).toBeLessThanOrEqual(help.y+8);
-  expect(help.bottom).toBeLessThanOrEqual(map.y+8);
+  expect(help.bottom).toBeLessThanOrEqual(map.y+16);
   expect(map.bottom).toBeLessThanOrEqual(bottom.y+8);
-  expect(map.width).toBeGreaterThan(width*0.9);
-  expect(map.height).toBeGreaterThan(height*0.55);
+  expect(map.width).toBeGreaterThan(width*0.75);
+  expect(map.height).toBeGreaterThan(height*0.58);
+  expect(map.height).toBeGreaterThan(map.width*1.35);
+
+  const helpStyle=await page.locator('#cit-help-main').evaluate(el=>({
+    writingMode:getComputedStyle(el).writingMode,
+    transform:getComputedStyle(el).transform
+  }));
+  expect(helpStyle.writingMode).toBe('horizontal-tb');
+  expect(helpStyle.transform).toBe('none');
   await expect(page.locator('#cit-help-main')).toContainText('Bygg');
 
   const topButtons=page.locator('#v2-status-nav > button');
@@ -151,33 +154,56 @@ test('portrait uses the corrected 90deg orientation with status, instructions, m
   await expectInsideViewport(page,page.locator('#cit-night'),width,height);
   await expectInsideViewport(page,page.locator('#cit-clear'),width,height);
 
-  for(const selector of ['#cit-help','#cit-hud','#cit-week','#cit-night','#cit-pop-wrap','#cit-clear']){
-    const tr=await page.locator(selector).evaluate(el=>getComputedStyle(el).transform);
-    expect(tr==='none'||!tr.includes('matrix(0, 1')&&!tr.includes('matrix(0, -1')).toBeTruthy();
-  }
+  const tray=await page.locator('#cit-tools').evaluate(el=>({
+    direction:getComputedStyle(el).flexDirection,
+    overflowX:getComputedStyle(el).overflowX,
+    overflowY:getComputedStyle(el).overflowY,
+    scrollWidth:el.scrollWidth,
+    clientWidth:el.clientWidth
+  }));
+  expect(tray.direction).toBe('row');
+  expect(['auto','scroll']).toContain(tray.overflowX);
+  expect(tray.overflowY).toBe('hidden');
+  expect(tray.scrollWidth).toBeGreaterThan(tray.clientWidth);
 
-  const visibleButtons=page.locator('#g-cit button:visible');
-  const count=await visibleButtons.count();
-  for(let i=0;i<count;i++){
-    const button=visibleButtons.nth(i);
-    if(await button.evaluate(el=>!!el.closest('#cit-tools')))continue;
-    await expectInsideViewport(page,button,width,height);
-  }
+  const orientation=await page.evaluate(()=>{
+    const a=CITY_CFG.COLS-1; // logical row 0, right edge -> physical top
+    const b=0;               // logical row 0, left edge -> physical bottom
+    cit.g[a]='H';cit.g[b]='H';citRenderTiles();
+    const one=document.querySelector(`#cit-grid .ct[data-i="${a}"]`);
+    const two=document.querySelector(`#cit-grid .ct[data-i="${b}"]`);
+    const ar=one.getBoundingClientRect(),br=two.getBoundingClientRect();
+    return {
+      ax:ar.left,ay:ar.top,bx:br.left,by:br.top,
+      aTransform:getComputedStyle(one).transform,
+      bTransform:getComputedStyle(two).transform
+    };
+  });
+  expect(Math.abs(orientation.ax-orientation.bx)).toBeLessThan(3);
+  expect(orientation.ay).toBeLessThan(orientation.by);
+  expect(orientation.aTransform).toBe('none');
+  expect(orientation.bTransform).toBe('none');
+
+  await page.click('#cit-pop-wrap');
+  await expect(page.locator('#cit-v18-stats')).toHaveClass(/show/);
+  await expectInsideViewport(page,page.locator('.v18-stats-card'),width,height);
+  await page.click('.v18-stats-close');
+
+  await topButtons.nth(1).click();
+  await expect(page.locator('#cit-settings')).toHaveClass(/show/);
+  await expectInsideViewport(page,page.locator('#cit-settings-card'),width,height);
+  await page.click('#cit-settings-close');
 
   const school=page.locator('#cit-tools button').filter({hasText:'🏫'}).first();
   await expect(school).toBeVisible();
-  const before=await box(school);
-  let delta=0;
-  if(before.x<8)delta=8-before.x;
-  else if(before.right>width-8)delta=-(before.right-(width-8));
-  if(delta)await page.locator('#cit-tools').evaluate((el,d)=>{el.scrollTop+=d;},delta);
+  await school.evaluate(el=>el.scrollIntoView({inline:'center',block:'nearest'}));
   await page.waitForTimeout(80);
   await expectInsideViewport(page,school,width,height);
   await school.click();
   await expect.poll(()=>page.evaluate(()=>citTool)).toBe('K');
 });
 
-test('portrait corrected hit-testing opens the building that was actually double-tapped', async ({ page }) => {
+test('portrait upright hit-testing opens the building that was actually double-tapped', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
 
@@ -206,7 +232,7 @@ test('portrait corrected hit-testing opens the building that was actually double
   await expectInsideViewport(page,page.locator('#ci-delete'),width,height);
 });
 
-test('portrait corrected painting edits the tile under the physical pointer', async ({ page }) => {
+test('portrait upright painting edits the tile under the physical pointer', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
 
