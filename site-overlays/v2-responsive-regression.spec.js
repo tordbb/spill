@@ -53,7 +53,7 @@ test('/v2 home replicates the stable root and Cave Flight stays inside /v2', asy
   await expect(page).toHaveURL(/\/v2\/?$/);
 });
 
-test('landscape uses visual viewport: nav row, scrollable tool column, maximised map, visible status', async ({ page }) => {
+test('landscape reserves instructions, maximises map width, and keeps dialogs inside the visual viewport', async ({ page }) => {
   const width=844,height=350;
   await openCity(page,width,height);
   await expect(page.locator('#g-cit')).toHaveClass(/v2-landscape/);
@@ -65,6 +65,7 @@ test('landscape uses visual viewport: nav row, scrollable tool column, maximised
   const side=await expectInsideViewport(page,page.locator('#v2-side'),width,height);
   const nav=await expectInsideViewport(page,page.locator('#v2-nav'),width,height);
   const tools=await expectInsideViewport(page,page.locator('#v2-tool-zone'),width,height);
+  const help=await expectInsideViewport(page,page.locator('#cit-help'),width,height);
   const map=await expectInsideViewport(page,page.locator('#cit-viewport'),width,height);
   const status=await expectInsideViewport(page,page.locator('#cit-right'),width,height);
 
@@ -72,9 +73,12 @@ test('landscape uses visual viewport: nav row, scrollable tool column, maximised
   expect(nav.y).toBeLessThan(tools.y);
   expect(nav.bottom).toBeLessThanOrEqual(tools.y+2);
   expect(tools.height).toBeGreaterThan(side.height*0.68);
-  expect(side.right).toBeLessThanOrEqual(map.x+8);
-  expect(map.right).toBeLessThanOrEqual(status.x+8);
-  expect(map.width).toBeGreaterThan(width*0.45);
+  expect(help.y).toBeLessThan(map.y);
+  expect(help.bottom).toBeLessThanOrEqual(map.y+2);
+  expect(Math.abs(map.x-side.right)).toBeLessThan(10);
+  expect(Math.abs(status.x-map.right)).toBeLessThan(10);
+  expect(map.width).toBeGreaterThan(width*0.68);
+  expect(map.height).toBeLessThan(height-20);
 
   const navButtons=page.locator('#v2-nav > button');
   await expect(navButtons).toHaveCount(2);
@@ -90,11 +94,21 @@ test('landscape uses visual viewport: nav row, scrollable tool column, maximised
   const toolScroll=await page.locator('#cit-tools').evaluate(el=>({client:el.clientHeight,scroll:el.scrollHeight,overflow:getComputedStyle(el).overflowY}));
   expect(['auto','scroll']).toContain(toolScroll.overflow);
 
+  await page.click('#cit-pop-wrap');
+  await expect(page.locator('#cit-v18-stats')).toHaveClass(/show/);
+  await expectInsideViewport(page,page.locator('.v18-stats-card'),width,height);
+  await page.click('.v18-stats-close');
+
+  await navButtons.nth(1).click();
+  await expect(page.locator('#cit-settings')).toHaveClass(/show/);
+  await expectInsideViewport(page,page.locator('#cit-settings-card'),width,height);
+  await page.click('#cit-settings-close');
+
   await navButtons.nth(0).click();
   await expect(page.locator('#home')).toHaveClass(/active/);
 });
 
-test('portrait is one 90deg counterclockwise city with actions bottom and info/navigation top', async ({ page }) => {
+test('portrait uses the corrected 90deg orientation with status, instructions, map, then actions', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
   await expect(page.locator('#g-cit')).toHaveClass(/v2-portrait/);
@@ -103,8 +117,8 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
   const values=matrix.match(/matrix\(([^)]+)\)/)?.[1].split(',').map(Number)||[];
   expect(values.length).toBe(6);
   expect(Math.abs(values[0])).toBeLessThan(0.01);
-  expect(values[1]).toBeCloseTo(-1,1);
-  expect(values[2]).toBeCloseTo(1,1);
+  expect(values[1]).toBeCloseTo(1,1);
+  expect(values[2]).toBeCloseTo(-1,1);
   expect(Math.abs(values[3])).toBeLessThan(0.01);
 
   const city=await expectInsideViewport(page,page.locator('#g-cit'),width,height);
@@ -112,14 +126,18 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
   expect(Math.abs(city.height-height)).toBeLessThan(2);
 
   const top=await expectInsideViewport(page,page.locator('#cit-right'),width,height);
+  const help=await expectInsideViewport(page,page.locator('#cit-help'),width,height);
   const map=await expectInsideViewport(page,page.locator('#cit-viewport'),width,height);
   const bottom=await expectInsideViewport(page,page.locator('#v2-side'),width,height);
-  expect(top.y).toBeLessThan(map.y);
+  expect(top.y).toBeLessThan(help.y);
+  expect(help.y).toBeLessThan(map.y);
   expect(map.y).toBeLessThan(bottom.y);
-  expect(top.bottom).toBeLessThanOrEqual(map.y+8);
+  expect(top.bottom).toBeLessThanOrEqual(help.y+8);
+  expect(help.bottom).toBeLessThanOrEqual(map.y+8);
   expect(map.bottom).toBeLessThanOrEqual(bottom.y+8);
-  expect(map.width).toBeGreaterThan(width*0.55);
-  expect(map.height).toBeGreaterThan(height*0.35);
+  expect(map.width).toBeGreaterThan(width*0.9);
+  expect(map.height).toBeGreaterThan(height*0.55);
+  await expect(page.locator('#cit-help-main')).toContainText('Bygg');
 
   const topButtons=page.locator('#v2-status-nav > button');
   await expect(topButtons).toHaveCount(2);
@@ -149,15 +167,17 @@ test('portrait is one 90deg counterclockwise city with actions bottom and info/n
   const school=page.locator('#cit-tools button').filter({hasText:'🏫'}).first();
   await expect(school).toBeVisible();
   const before=await box(school);
-  const needed=Math.max(0,before.right-(width-8));
-  await page.locator('#cit-tools').evaluate((el,delta)=>{el.scrollTop+=delta;},needed+12);
+  let delta=0;
+  if(before.x<8)delta=8-before.x;
+  else if(before.right>width-8)delta=-(before.right-(width-8));
+  if(delta)await page.locator('#cit-tools').evaluate((el,d)=>{el.scrollTop+=d;},delta);
   await page.waitForTimeout(80);
   await expectInsideViewport(page,school,width,height);
   await school.click();
   await expect.poll(()=>page.evaluate(()=>citTool)).toBe('K');
 });
 
-test('portrait CCW hit-testing opens the building that was actually double-tapped', async ({ page }) => {
+test('portrait corrected hit-testing opens the building that was actually double-tapped', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
 
@@ -186,7 +206,7 @@ test('portrait CCW hit-testing opens the building that was actually double-tappe
   await expectInsideViewport(page,page.locator('#ci-delete'),width,height);
 });
 
-test('portrait CCW painting edits the tile under the physical pointer', async ({ page }) => {
+test('portrait corrected painting edits the tile under the physical pointer', async ({ page }) => {
   const width=390,height=760;
   await openCity(page,width,height);
 
