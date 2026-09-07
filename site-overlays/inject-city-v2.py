@@ -11,8 +11,10 @@ html = html_path.read_text(encoding='utf-8')
 css = (root / 'city-v2-responsive.css').read_text(encoding='utf-8')
 css += '\n' + (root / 'city-v2-responsive-compact.css').read_text(encoding='utf-8')
 css += '\n' + (root / 'city-v2-portrait-upright.css').read_text(encoding='utf-8')
+css += '\n' + (root / 'city-v2-polish.css').read_text(encoding='utf-8')
 js = (root / 'city-v2-responsive.js').read_text(encoding='utf-8')
 js += '\n' + (root / 'city-v2-portrait-upright.js').read_text(encoding='utf-8')
+js += '\n' + (root / 'city-v2-polish.js').read_text(encoding='utf-8')
 
 if '</head>' not in html or '</body>' not in html:
     raise SystemExit('expected closing head/body tags')
@@ -142,11 +144,25 @@ fit_replacement = """
   const byH=Math.floor((vh - 14) / CITY_CFG.ROWS);"""
 html, fit_count = fit_pattern.subn(fit_replacement, html, count=1)
 
+# The v18 stats dialog previously treated a dwelling as existing only when it
+# was connected to the road network. That under-counted real vacant houses.
+# Capacity for homes is physical housing stock: every H/M tile counts, while
+# occupancy is still derived from unique current household home indices.
+stats_home_pattern = re.compile(
+    r"const homeTiles = \[\];\s*"
+    r"cit\.g\.forEach\(\(t,i\)=>\{\s*if \(\(t==='H'\|\|t==='M'\) && citConnected\(i,act\)\) homeTiles\.push\(i\);\s*\}\);"
+)
+stats_home_replacement = """const homeTiles = [];
+    cit.g.forEach((t,i)=>{ if (t==='H'||t==='M') homeTiles.push(i); });"""
+html, stats_home_count = stats_home_pattern.subn(stats_home_replacement, html, count=1)
+if stats_home_count != 1:
+    raise SystemExit('could not correct v2 housing stats')
+
 print(
     'v2 generated adaptations: '
     f'paint={paint_count} camera={camera_count} camera_cell={camera_cell_count} '
     f'interior={interior_count} interior_cell={interior_cell_count} '
-    f'canvas={canvas_count} fit={fit_count}'
+    f'canvas={canvas_count} fit={fit_count} stats_home={stats_home_count}'
 )
 
 head = f'\n<style id="city-v2-responsive-style">\n{css}\n</style>\n'
