@@ -18,6 +18,8 @@ jobs:
         run: |
           set -euxo pipefail
           node --check site-overlays/city-v2-responsive.js
+          node --check site-overlays/city-v2-portrait-upright.js
+          node --check site-overlays/city-v2-polish.js
           python -m py_compile site-overlays/inject-city-v2.py
 
       - name: Build stable root and generated v2 artifact
@@ -75,9 +77,17 @@ jobs:
             exit 1
           fi
 
+      - name: Upload generated v2 preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-preview
+          path: dist
+          if-no-files-found: error
+          retention-days: 2
+
       - name: Run v2 browser regressions
         run: |
           npm install --no-save @playwright/test@1.55.0
           npx playwright install chromium
           python3 -m http.server 4173 --directory dist >/tmp/spill-v2-http.log 2>&1 &
-          npx playwright test site-overlays/v2-responsive-regression.spec.js --reporter=line
+          npx playwright test site-overlays/v2-responsive-regression.spec.js site-overlays/v2-polish-regression.spec.js --reporter=line
