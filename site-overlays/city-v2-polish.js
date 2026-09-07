@@ -5,11 +5,6 @@
   const DEFAULT_ZOOM=1.8;
   let migratingSmallBoard=false;
 
-  function nativePortrait(){
-    const c=q('#g-cit');
-    return !!(c&&c.classList.contains('v2-portrait')&&getComputedStyle(c).transform==='none');
-  }
-
   function ensureSupportedBoard(){
     let changed=false;
     try{
@@ -43,8 +38,8 @@
       if(small)small.remove();
       const medium=q('#cit-size-options .cit-size-btn[data-size="M"] span:last-child');
       const large=q('#cit-size-options .cit-size-btn[data-size="L"] span:last-child');
-      if(medium)medium.textContent='20×30';
-      if(large)large.textContent='40×60';
+      if(medium&&medium.textContent!=='20×30')medium.textContent='20×30';
+      if(large&&large.textContent!=='40×60')large.textContent='40×60';
       if(changed&&typeof save==='function')save();
     }catch(_e){migratingSmallBoard=false;}
   }
@@ -63,8 +58,8 @@
       card.insertBefore(row,close);
     }
     if(clear.parentNode!==row)row.appendChild(clear);
-    clear.setAttribute('aria-label','Tøm byen');
-    clear.title='Tøm byen';
+    if(clear.getAttribute('aria-label')!=='Tøm byen')clear.setAttribute('aria-label','Tøm byen');
+    if(clear.title!=='Tøm byen')clear.title='Tøm byen';
     if(clear.dataset.v2SettingsClear!=='1'){
       clear.dataset.v2SettingsClear='1';
       clear.addEventListener('click',()=>{
@@ -84,8 +79,9 @@
     const h=parseFloat(g.style.height)||g.clientHeight||0;
     if(!w||!h)return;
     g.querySelectorAll('.cit-bus-route-layer').forEach(svg=>{
-      svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
-      svg.setAttribute('preserveAspectRatio','none');
+      const target=`0 0 ${w} ${h}`;
+      if(svg.getAttribute('viewBox')!==target)svg.setAttribute('viewBox',target);
+      if(svg.getAttribute('preserveAspectRatio')!=='none')svg.setAttribute('preserveAspectRatio','none');
     });
   }
 
