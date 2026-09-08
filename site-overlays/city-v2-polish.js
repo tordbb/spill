@@ -5,6 +5,11 @@
   const DEFAULT_ZOOM=1.8;
   let migratingSmallBoard=false;
 
+  function nativePortrait(){
+    const c=q('#g-cit');
+    return !!(c&&c.classList.contains('v2-portrait')&&getComputedStyle(c).transform==='none');
+  }
+
   function ensureSupportedBoard(){
     let changed=false;
     try{
@@ -96,23 +101,53 @@
     citRenderBusNetwork=wrapped;
   }
 
-  /* A new session starts zoomed in so the map uses the allocated screen area.
-     Scale 1 remains the complete-board view, so normal pinch zoom can still
-     return all the way out. Keep the physical left/top board edge anchored. */
-  function primeDefaultCamera(){
-    const c=q('#g-cit');
-    if(!c||c.dataset.v2DefaultCamera==='1'||typeof citCam==='undefined')return;
-    c.dataset.v2DefaultCamera='1';
-    citCam.scale=DEFAULT_ZOOM;
-    citCam.x=0;
-    citCam.y=0;
+  /* Native portrait rotates logical map coordinates CCW without rotating the DOM.
+     Logical column 0 (the original left/start edge) is therefore the physical
+     bottom of the portrait board. At zoom > 1, align that scaled bottom edge to
+     the viewport bottom so the starter area remains the initial field of view. */
+  function defaultCamera(){
+    const v=q('#cit-viewport');
+    let y=0;
+    if(nativePortrait()&&v){
+      const h=v.clientHeight||parseFloat(v.style.height)||0;
+      if(h>0)y=h*(1-DEFAULT_ZOOM);
+    }
+    return {scale:DEFAULT_ZOOM,x:0,y};
   }
-  primeDefaultCamera();
+
+  function applyDefaultCamera(){
+    if(typeof citCam==='undefined')return false;
+    const next=defaultCamera();
+    citCam.scale=next.scale;
+    citCam.x=next.x;
+    citCam.y=next.y;
+    if(typeof citApplyCamera==='function')citApplyCamera();
+    return true;
+  }
+
+  function primeDefaultCamera(){
+    const c=q('#g-cit'),v=q('#cit-viewport');
+    if(!c||c.dataset.v2DefaultCamera==='1'||!v||!v.clientWidth||!v.clientHeight)return false;
+    if(!applyDefaultCamera())return false;
+    c.dataset.v2DefaultCamera='1';
+    return true;
+  }
+
+  if(typeof citFitBoard==='function'&&!citFitBoard.__v2PolishWrapped){
+    const base=citFitBoard;
+    const wrapped=function(){
+      const out=base.apply(this,arguments);
+      primeDefaultCamera();
+      syncBusRouteViewBox();
+      return out;
+    };
+    wrapped.__v2PolishWrapped=true;
+    citFitBoard=wrapped;
+  }
 
   if(typeof citResetCamera==='function'&&!citResetCamera.__v2PolishWrapped){
     const wrapped=function(){
-      citCam={scale:DEFAULT_ZOOM,x:0,y:0};
-      if(typeof citApplyCamera==='function')citApplyCamera();
+      applyDefaultCamera();
     };
     wrapped.__v2PolishWrapped=true;
     citResetCamera=wrapped;
@@ -148,6 +183,9 @@
     observer.observe(city,{childList:true,subtree:true});
   }
 
+  requestAnimationFrame(()=>{
+    try{if(typeof citFitBoard==='function')citFitBoard();}catch(_e){}
+  });
   addEventListener('resize',()=>requestAnimationFrame(syncBusRouteViewBox),{passive:true});
   addEventListener('orientationchange',()=>setTimeout(syncBusRouteViewBox,80),{passive:true});
 })();
