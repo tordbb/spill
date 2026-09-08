@@ -22,7 +22,7 @@ test('capture browser-verified v2 city views', async ({page})=>{
     const cols=CITY_CFG.COLS;
     cit.g=Array(CITY_CFG.COLS*CITY_CFG.ROWS).fill(0);
     const road=[];
-    for(let c=23;c<=28;c++){const i=2*cols+c;cit.g[i]='R';road.push(i);}
+    for(let c=3;c<=10;c++){const i=7*cols+c;cit.g[i]='R';road.push(i);}
     cit.busLines=[{id:1,stops:[road[0],road[road.length-1]]}];
     citBusSelectedLine=1;
     citTool='BUS';
@@ -42,7 +42,6 @@ test('capture browser-verified v2 city views', async ({page})=>{
   await expect(page.locator('#cit-settings')).toHaveClass(/show/);
   await page.screenshot({path:`${OUT}/portrait-settings.png`});
 
-  await page.goto(V2);
   await openCity(page,844,350);
   await page.screenshot({path:`${OUT}/landscape-main.png`});
   await page.locator('#v2-nav > button').nth(1).click();
