@@ -142,17 +142,26 @@ test('portrait is physically upright with status, instructions, portrait map, th
   expect(helpStyle.transform).toBe('none');
   await expect(page.locator('#cit-help-main')).toContainText('Bygg');
 
-  const topButtons=page.locator('#v2-status-nav > button');
-  await expect(topButtons).toHaveCount(2);
-  await expectInsideViewport(page,topButtons.nth(0),width,height);
-  await expectInsideViewport(page,topButtons.nth(1),width,height);
+  const topLeft=page.locator('#v2-top-left');
+  const topCenter=page.locator('#v2-top-center');
+  const topRight=page.locator('#v2-top-right');
+  await expectInsideViewport(page,topLeft,width,height);
+  await expectInsideViewport(page,topCenter,width,height);
+  await expectInsideViewport(page,topRight,width,height);
+
+  const homeButton=page.locator('#v2-top-left .nav-home');
+  const settingsButton=page.locator('#v2-top-right #cit-settings-btn');
+  await expectInsideViewport(page,homeButton,width,height);
+  await expectInsideViewport(page,settingsButton,width,height);
   await expectInsideViewport(page,page.locator('#cit-hud'),width,height);
   await expectInsideViewport(page,page.locator('#cit-pop-wrap'),width,height);
   await expectInsideViewport(page,page.locator('#cit-week'),width,height);
 
   await expectInsideViewport(page,page.locator('#cit-tools'),width,height);
   await expectInsideViewport(page,page.locator('#cit-night'),width,height);
-  await expectInsideViewport(page,page.locator('#cit-clear'),width,height);
+  await expect(page.locator('#cit-clear')).not.toBeVisible();
+  await expect(page.locator('#cit-clear')).toHaveAttribute('aria-label','Tøm byen');
+  await expect(page.locator('#cit-clear')).toHaveJSProperty('parentElement',await page.locator('#v2-clear-setting').elementHandle());
 
   const tray=await page.locator('#cit-tools').evaluate(el=>({
     direction:getComputedStyle(el).flexDirection,
@@ -189,9 +198,10 @@ test('portrait is physically upright with status, instructions, portrait map, th
   await expectInsideViewport(page,page.locator('.v18-stats-card'),width,height);
   await page.click('.v18-stats-close');
 
-  await topButtons.nth(1).click();
+  await settingsButton.click();
   await expect(page.locator('#cit-settings')).toHaveClass(/show/);
   await expectInsideViewport(page,page.locator('#cit-settings-card'),width,height);
+  await expectInsideViewport(page,page.locator('#cit-clear'),width,height);
   await page.click('#cit-settings-close');
 
   const school=page.locator('#cit-tools button').filter({hasText:'🏫'}).first();
