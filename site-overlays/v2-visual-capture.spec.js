@@ -33,8 +33,20 @@ test('capture browser-verified v2 city views', async ({page})=>{
   await page.waitForTimeout(120);
   await page.screenshot({path:`${OUT}/portrait-bus-route.png`});
 
+  await page.evaluate(()=>{
+    cit.g=Array(CITY_CFG.COLS*CITY_CFG.ROWS).fill(0);
+    const homes=[citIdx(2,2),citIdx(8,18),citIdx(15,27)];
+    homes.forEach(i=>cit.g[i]='H');
+    cit.ppl=[{h:homes[0],pref:'O',fam:false}];
+    cit.busLines=[];
+    citBusSelectedLine=null;
+    citRenderTiles();
+    citHud();
+  });
   await page.click('#cit-pop-wrap');
   await expect(page.locator('#cit-v18-stats')).toHaveClass(/show/);
+  await expect(page.locator('.v18-stat-row').filter({hasText:'Boliger'})).toContainText('1/3');
+  await expect(page.locator('.v18-stat-row').filter({hasText:'Boliger'})).toContainText('2 ledig');
   await page.screenshot({path:`${OUT}/portrait-stats.png`});
   await page.click('.v18-stats-close');
 
