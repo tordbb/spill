@@ -1,14 +1,16 @@
-# City /v2 visual verification workflow
+# City main + /v2 visual verification workflow
 
-Use this skill for responsive layout, map-camera, orientation, coordinate-system, modal, or touch changes in `/v2` city.
+Use this skill for responsive layout, map-camera, orientation, coordinate-system, modal, or touch changes in the main city or its `/v2` mirror.
 
 This supplements `skills/ui-delivery-browser-regression.md`. The key rule is: do not call a responsive city change finished from source inspection or geometry assertions alone. Render the generated artifact and inspect it visually at the user's viewport.
 
 ## 1. Start from the generated artifact
 
-The published app is assembled by `.github/workflows/pages.yml` from the compressed stable source, patches, and overlays. Always test the generated `dist/v2/index.html`, not a hand-written approximation.
+The published app is assembled by `.github/workflows/pages.yml` from the compressed stable source, patches, and overlays. Always test the generated `dist/index.html` for the main app and `dist/v2/index.html` for the mirror, not a hand-written approximation.
 
 The PR workflow should upload the generated `dist` directory as a short-lived `v2-preview` artifact before browser tests. This makes the exact CI-built HTML available for visual inspection even when a browser regression fails.
+
+When the responsive redesign is shared between main and `/v2`, verify that both generated artifacts contain the intended implementation and that only path-specific marker/navigation differences remain.
 
 ## 2. Reproduce the user's physical viewport
 
@@ -28,6 +30,8 @@ Capture screenshots of the actual rendered city and inspect them before merging.
 - Settings open;
 - Stats open;
 - any dynamic overlay affected by the change, such as a selected bus route or building interior.
+
+For a stable-root promotion, these screenshots must come from `/`, not only from `/v2`.
 
 Confirm that text, icons, buildings, weekday labels, and controls point in the intended physical direction. A correct CSS matrix is not sufficient evidence.
 
@@ -79,14 +83,14 @@ Before merge:
 1. CI build succeeds.
 2. Browser regressions succeed.
 3. Download the PR `v2-preview` artifact.
-4. Render it in Chromium at the target portrait and landscape viewports.
+4. Render the path actually being changed (`/`, `/v2`, or both) in Chromium at the target portrait and landscape viewports.
 5. Inspect screenshots and affected interactions visually.
 
 After merge:
 
 1. Wait for the GitHub Pages deployment to succeed.
 2. Download the exact Pages artifact for the merge commit.
-3. Render `/v2` from that artifact again.
+3. Render the deployed main city and `/v2` mirror from that artifact when they share the implementation.
 4. Repeat the key portrait/landscape screenshots and interactions.
 
 Only then report the change as deployed and visually verified.

@@ -8,6 +8,23 @@ if len(sys.argv) != 2:
 html_path = Path(sys.argv[1])
 root = Path(__file__).resolve().parent
 html = html_path.read_text(encoding='utf-8')
+
+# The stable-root build now promotes this exact responsive redesign before it is
+# copied to /v2. If that promoted copy reaches this injector, do not reapply the
+# generated coordinate patches or scripts; only relabel the markers for /v2.
+main_style_marker = 'city-main-responsive-style'
+main_script_marker = 'city-main-responsive-script'
+v2_style_marker = 'city-v2-responsive-style'
+v2_script_marker = 'city-v2-responsive-script'
+if main_style_marker in html or main_script_marker in html:
+    if main_style_marker not in html or main_script_marker not in html:
+        raise SystemExit('incomplete promoted responsive city markers')
+    html = html.replace(main_style_marker, v2_style_marker, 1)
+    html = html.replace(main_script_marker, v2_script_marker, 1)
+    html_path.write_text(html, encoding='utf-8')
+    print('v2 responsive city already promoted on root; relabeled markers only')
+    raise SystemExit(0)
+
 css = (root / 'city-v2-responsive.css').read_text(encoding='utf-8')
 css += '\n' + (root / 'city-v2-responsive-compact.css').read_text(encoding='utf-8')
 css += '\n' + (root / 'city-v2-portrait-upright.css').read_text(encoding='utf-8')
