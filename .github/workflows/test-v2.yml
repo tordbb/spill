@@ -91,3 +91,16 @@ jobs:
           npx playwright install chromium
           python3 -m http.server 4173 --directory dist >/tmp/spill-v2-http.log 2>&1 &
           npx playwright test site-overlays/v2-responsive-regression.spec.js site-overlays/v2-polish-regression.spec.js --reporter=line
+
+      - name: Capture v2 visual verification
+        run: |
+          rm -rf visual-captures
+          npx playwright test site-overlays/v2-visual-capture.spec.js --reporter=line
+
+      - name: Upload v2 visual verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-visual-captures
+          path: visual-captures
+          if-no-files-found: error
+          retention-days: 2
