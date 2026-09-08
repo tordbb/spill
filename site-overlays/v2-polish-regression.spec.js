@@ -54,16 +54,17 @@ test('portrait top groups, vertical week, settings clear, minimum board and defa
   const moon=await rect(page.locator('#cit-night'));
   expect(moon.height).toBeGreaterThan(quick.height*0.78);
 
+  const viewport=await rect(page.locator('#cit-viewport'));
   const cam=await page.evaluate(()=>({scale:citCam.scale,x:citCam.x,y:citCam.y}));
   expect(cam.scale).toBeGreaterThan(1.65);
   expect(cam.scale).toBeLessThan(1.95);
   expect(Math.abs(cam.x)).toBeLessThan(1);
-  expect(Math.abs(cam.y)).toBeLessThan(1);
+  const expectedY=viewport.height*(1-cam.scale);
+  expect(Math.abs(cam.y-expectedY)).toBeLessThan(2);
 
-  const viewport=await rect(page.locator('#cit-viewport'));
   const zoomedGrid=await rect(page.locator('#cit-grid'));
   expect(Math.abs(zoomedGrid.x-viewport.x)).toBeLessThan(2);
-  expect(Math.abs(zoomedGrid.y-viewport.y)).toBeLessThan(2);
+  expect(Math.abs(zoomedGrid.bottom-viewport.bottom)).toBeLessThan(2);
   expect(zoomedGrid.width).toBeGreaterThan(viewport.width*1.65);
   expect(zoomedGrid.height).toBeGreaterThan(viewport.height*1.65);
   const bg=await page.locator('#cit-grid').evaluate(el=>getComputedStyle(el).backgroundImage);
