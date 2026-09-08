@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import subprocess
 import sys
 
 MARKER = 'city-stable-guidance-v22-script'
 SILENT_MARKER = 'site-silent-v23-script'
 BENCH_TOKEN = '__BENCH__'
 CHAIR = '\U0001FA91'
+MAIN_STYLE_MARKER = 'city-main-responsive-style'
+MAIN_SCRIPT_MARKER = 'city-main-responsive-script'
+V2_STYLE_MARKER = 'city-v2-responsive-style'
+V2_SCRIPT_MARKER = 'city-v2-responsive-script'
 
 
 def main() -> None:
@@ -39,6 +44,19 @@ def main() -> None:
     if SILENT_MARKER not in html:
         raise SystemExit('silent-mode overlay was not installed in stable build')
 
+    target.write_text(html, encoding='utf-8')
+
+    # The /v2 responsive redesign has completed browser and visual verification.
+    # Promote that exact generated adapter to the normal root build. Use distinct
+    # main markers so the existing build guard can still distinguish root from
+    # the mirrored /v2 artifact.
+    adapter = Path(__file__).with_name('inject-city-v2.py')
+    subprocess.run([sys.executable, str(adapter), str(target)], check=True)
+    html = target.read_text(encoding='utf-8')
+    if V2_STYLE_MARKER not in html or V2_SCRIPT_MARKER not in html:
+        raise SystemExit('responsive city promotion did not install expected markers')
+    html = html.replace(V2_STYLE_MARKER, MAIN_STYLE_MARKER, 1)
+    html = html.replace(V2_SCRIPT_MARKER, MAIN_SCRIPT_MARKER, 1)
     target.write_text(html, encoding='utf-8')
 
 
