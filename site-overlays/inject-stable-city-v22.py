@@ -5,6 +5,7 @@ import sys
 
 MARKER = 'city-stable-guidance-v22-script'
 SILENT_MARKER = 'site-silent-v23-script'
+SUDOKU10_MARKER = 'sudoku-10x10-v24-script'
 BENCH_TOKEN = '__BENCH__'
 CHAIR = '\U0001FA91'
 MAIN_STYLE_MARKER = 'city-main-responsive-style'
@@ -31,6 +32,9 @@ def main() -> None:
     if SILENT_MARKER not in html:
         js = Path(__file__).with_name('site-silent-v23.js').read_text(encoding='utf-8')
         scripts.append(f'\n<script id="{SILENT_MARKER}">\n{js}\n</script>\n')
+    if SUDOKU10_MARKER not in html:
+        js = Path(__file__).with_name('sudoku-10x10-v24.js').read_text(encoding='utf-8')
+        scripts.append(f'\n<script id="{SUDOKU10_MARKER}">\n{js}\n</script>\n')
 
     if scripts:
         if '</body>' not in html:
@@ -43,6 +47,8 @@ def main() -> None:
         raise SystemExit('bench token was not installed in stable city build')
     if SILENT_MARKER not in html:
         raise SystemExit('silent-mode overlay was not installed in stable build')
+    if SUDOKU10_MARKER not in html:
+        raise SystemExit('10x10 Sudoku overlay was not installed in stable build')
 
     target.write_text(html, encoding='utf-8')
 
