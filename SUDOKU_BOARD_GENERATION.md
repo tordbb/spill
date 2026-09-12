@@ -472,3 +472,98 @@ That combination avoids both major failure modes:
 
 1. ambiguous boards with multiple valid animal placements; and
 2. technically unique boards that feel arbitrary because the player must guess.
+
+
+---
+
+## 12. 10×10 extension
+
+The same puzzle model also supports **10×10** boards. The board size should be treated as a level property rather than a global constant.
+
+For an `N×N` board, where the currently supported values are `N = 6` and `N = 10`:
+
+- there are exactly `N` rows and `N` columns;
+- there are exactly `N` orthogonally connected regions;
+- there are exactly `N` animals;
+- `solution[row] = column` remains the solution representation;
+- every solution column occurs exactly once;
+- consecutive solution rows still satisfy `abs(solution[r] - solution[r - 1]) > 1`;
+- every region contains exactly one solution animal.
+
+For 10×10, use region labels `A..J`.
+
+### Exact solver
+
+The exact solver is unchanged conceptually. Replace every hard-coded `6` by `N`:
+
+```text
+search(row, previousColumn):
+    if solution_count >= 2:
+        return
+
+    if row == N:
+        solution_count += 1
+        return
+
+    for column in 0..N-1:
+        region = regionAt(row, column)
+
+        if column is already used:
+            continue
+        if region is already used:
+            continue
+        if row > 0 and abs(column - previousColumn) <= 1:
+            continue
+
+        mark column and region used
+        search(row + 1, column)
+        unmark column and region
+```
+
+The larger search space makes early stopping, bit sets and candidate pruning more useful on 10×10, but the acceptance rule is still exactly one solution.
+
+### Human solver
+
+Forced singles, crowding/common-neighbour elimination and Hall-style locks all generalize directly to 10×10. Continue checking the same source/target dimension pairs and `k = 1..3`.
+
+A 10×10 candidate is accepted only when the deterministic human solver reaches all ten animals without search or guessing and its result matches the exact solution.
+
+### Region generation and repair
+
+Random connected growth is much less likely to produce a strong unique 10×10 puzzle than a 6×6 puzzle. A practical generator can therefore use this stricter pipeline:
+
+1. choose a valid 10-animal solution skeleton;
+2. grow ten connected regions from the ten solution cells;
+3. prefer assignments that eliminate alternative complete placements;
+4. count remaining exact solutions;
+5. if only a small number of alternatives remain, allow small boundary-cell transfers between adjacent regions;
+6. after every repair, re-run **all** structural, connectivity, exact-solver and human-solver checks from scratch.
+
+A repair is never itself proof that a board is valid.
+
+### Visual quality on 10×10
+
+The larger grid makes badly unbalanced regions more noticeable. Reject candidates with isolated/single-cell regions and strongly prefer sets where no one region dominates the board. The exact numeric size limits are a curation choice, not a puzzle rule.
+
+As with 6×6, transformations are useful for testing but should not be used to pad a level set. Compare new boards against rotations/reflections and keep genuinely different region structures.
+
+### Level data
+
+Game code should infer the board dimension from the level, for example from `solution.length`, so 6×6 and 10×10 levels can coexist in one progression.
+
+The acceptance checklist in section 8 therefore reads dynamically:
+
+- [ ] `N×N` grid.
+- [ ] `N` orthogonally connected regions.
+- [ ] One animal in every row, column and region.
+- [ ] No two solution animals touch.
+- [ ] Independent exact solution count is exactly 1.
+- [ ] Human-style solver reaches all `N` animals without guessing.
+- [ ] Human result matches the exact/generated solution.
+- [ ] Difficulty is measured from the strongest deduction used.
+- [ ] Region shapes are readable and varied.
+- [ ] The level is not a rotated/reflected clone of another level.
+
+The core recipe remains:
+
+> **solution first → connected regions → exact uniqueness proof → human-logic proof → difficulty/variety curation**
