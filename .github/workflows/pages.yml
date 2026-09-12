@@ -28,6 +28,7 @@ jobs:
         run: |
           set -euxo pipefail
           node --check site-overlays/city-stable-guidance-v22.js
+          node --check site-overlays/sudoku-10x10-v24.js
           node --check site-overlays/city-v2-responsive.js
           node --check site-overlays/city-visual-v23.js
           node --check site-overlays/city-visual-v24.js
@@ -150,6 +151,8 @@ jobs:
           test -s dist/cave/index.html
           grep -q 'city-functional-v18-script' dist/index.html
           grep -q 'city-stable-guidance-v22-script' dist/index.html
+          grep -q 'sudoku-10x10-v24-script' dist/index.html
+          grep -Fq 'BBBBFFFDAA' dist/index.html
           grep -Fq 'Bygg, trykk 🌙, og byen får en ny dag' dist/index.html
           grep -q 'stable-bench-icon' dist/index.html
           grep -q 'city-functional-v18-script' dist/new/city/index.html
@@ -199,6 +202,10 @@ jobs:
           fi
           if grep -q 'city-stable-guidance-v22-script' dist/new/city/index.html; then
             echo 'ERROR: stable city guidance overlay must not be published under /new/'
+            exit 1
+          fi
+          if grep -q 'sudoku-10x10-v24-script' dist/new/sudoku/index.html; then
+            echo 'ERROR: 10x10 Sudoku overlay must not be published under /new/'
             exit 1
           fi
           if grep -Fq "CCDBEE','CCDEEF','CDDDEF" dist/new/city/index.html; then
